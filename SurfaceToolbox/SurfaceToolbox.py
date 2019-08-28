@@ -4,6 +4,7 @@ import string
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 
+
 class SurfaceToolbox(ScriptedLoadableModule):
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
@@ -21,6 +22,7 @@ Click apply to activate the pipeline and then click the Toggle button to compare
     self.parent.acknowledgementText = """
 This module was developed by Luca Antiga, Orobix Srl, with a little help from Steve Pieper, Isomics, Inc.
 """
+
 
 def numericInputFrame(parent, label, tooltip, minimum, maximum, step, decimals):
   inputFrame = qt.QFrame(parent)
@@ -57,7 +59,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     self.parent.layout().addWidget(inputModelSelectorFrame)
 
     inputModelSelectorLabel = qt.QLabel("Input Model: ", inputModelSelectorFrame)
-    inputModelSelectorLabel.setToolTip( "Select the input model")
+    inputModelSelectorLabel.setToolTip("Select the input model")
     inputModelSelectorFrame.layout().addWidget(inputModelSelectorLabel)
 
     inputModelSelector = slicer.qMRMLNodeComboBox(inputModelSelectorFrame)
@@ -76,7 +78,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     self.parent.layout().addWidget(outputModelSelectorFrame)
 
     outputModelSelectorLabel = qt.QLabel("Output Model: ", outputModelSelectorFrame)
-    outputModelSelectorLabel.setToolTip( "Select the output model")
+    outputModelSelectorLabel.setToolTip("Select the output model")
     outputModelSelectorFrame.layout().addWidget(outputModelSelectorLabel)
 
     outputModelSelector = slicer.qMRMLNodeComboBox(outputModelSelectorFrame)
@@ -90,7 +92,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     outputModelSelector.showChildNodeTypes = False
     outputModelSelector.baseName = "Model"
     outputModelSelector.selectNodeUponCreation = True
-    outputModelSelector.setMRMLScene( slicer.mrmlScene )
+    outputModelSelector.setMRMLScene(slicer.mrmlScene)
     outputModelSelectorFrame.layout().addWidget(outputModelSelector)
 
     decimationButton = qt.QPushButton("Decimation")
@@ -100,9 +102,10 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(decimationFrame)
     decimationFormLayout = qt.QFormLayout(decimationFrame)
 
-    reductionFrame, reductionSlider, reductionSpinBox = numericInputFrame(self.parent,"Reduction:",
+    reductionFrame, reductionSlider, reductionSpinBox = numericInputFrame(
+      self.parent, "Reduction:",
       "Specifies the desired reduction in the total number of polygons (e.g., if Reduction is set"
-      +" to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0,1.0,0.05,2)
+      " to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0, 1.0, 0.05, 2)
     decimationFormLayout.addWidget(reductionFrame)
 
     boundaryDeletionCheckBox = qt.QCheckBox("Boundary deletion")
@@ -124,27 +127,32 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     smoothingFormLayout.addWidget(laplaceMethodFrame)
     laplaceMethodFormLayout = qt.QFormLayout(laplaceMethodFrame)
 
-    laplaceIterationsFrame, laplaceIterationsSlider, laplaceIterationsSpinBox = numericInputFrame(self.parent,"Iterations:",
+    laplaceIterationsFrame, laplaceIterationsSlider, laplaceIterationsSpinBox = numericInputFrame(
+      self.parent, "Iterations:",
       "Determines the maximum number of smoothing iterations. Higher value allows more smoothing."
-      +" In general, small relaxation factors and large numbers of iterations are more stable than"
-      +" larger relaxation factors and smaller numbers of iterations. ",0.0,500.0,1.0,0)
+      " In general, small relaxation factors and large numbers of iterations are more stable than"
+      "larger relaxation factors and smaller numbers of iterations.", 0.0, 500.0, 1.0, 0)
     laplaceMethodFormLayout.addWidget(laplaceIterationsFrame)
 
-    laplaceRelaxationFrame, laplaceRelaxationSlider, laplaceRelaxationSpinBox = numericInputFrame(self.parent,"Relaxation:",
-      "Specifies how much points may be displaced during each iteration. Higher value results in more smoothing.",0.0,1.0,0.1,1)
+    laplaceRelaxationFrame, laplaceRelaxationSlider, laplaceRelaxationSpinBox = numericInputFrame(
+      self.parent, "Relaxation:",
+      "Specifies how much points may be displaced during each iteration. "
+      "Higher value results in more smoothing.", 0.0, 1.0, 0.1, 1)
     laplaceMethodFormLayout.addWidget(laplaceRelaxationFrame)
 
     taubinMethodFrame = qt.QFrame(self.parent)
     smoothingFormLayout.addWidget(taubinMethodFrame)
     taubinMethodFormLayout = qt.QFormLayout(taubinMethodFrame)
 
-    taubinIterationsFrame, taubinIterationsSlider, taubinIterationsSpinBox = numericInputFrame(self.parent,"Iterations:",
+    taubinIterationsFrame, taubinIterationsSlider, taubinIterationsSpinBox = numericInputFrame(
+      self.parent, "Iterations:",
       "Determines the maximum number of smoothing iterations. Higher value allows more accurate smoothing."
-      +" Typically 10-20 iterations are enough.",0.0,100.0,1.0,0)
+      " Typically 10-20 iterations are enough.", 0.0, 100.0, 1.0, 0)
     taubinMethodFormLayout.addWidget(taubinIterationsFrame)
 
-    taubinPassBandFrame, taubinPassBandSlider, taubinPassBandSpinBox = numericInputFrame(self.parent,"Pass Band:",
-      "Number between 0 and 2. Lower values produce more smoothing.",0.0,2.0,0.0001,4)
+    taubinPassBandFrame, taubinPassBandSlider, taubinPassBandSpinBox = numericInputFrame(
+      self.parent, "Pass Band:",
+      "Number between 0 and 2. Lower values produce more smoothing.", 0.0, 2.0, 0.0001, 4)
     taubinMethodFormLayout.addWidget(taubinPassBandFrame)
 
     boundarySmoothingCheckBox = qt.QCheckBox("Boundary Smoothing")
@@ -168,7 +176,8 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     splittingCheckBox = qt.QCheckBox("Splitting")
     normalsFormLayout.addWidget(splittingCheckBox)
 
-    featureAngleFrame, featureAngleSlider, featureAngleSpinBox = numericInputFrame(self.parent,"Feature Angle:","Tooltip",0.0,180.0,1.0,0)
+    featureAngleFrame, featureAngleSlider, featureAngleSpinBox = numericInputFrame(
+      self.parent, "Feature Angle:", "Tooltip", 0.0, 180.0, 1.0, 0)
     normalsFormLayout.addWidget(featureAngleFrame)
 
     mirrorButton = qt.QPushButton("Mirror")
@@ -202,10 +211,11 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(fillHolesFrame)
     fillHolesFormLayout = qt.QFormLayout(fillHolesFrame)
 
-    fillHolesSizeFrame, fillHolesSizeSlider, fillHolesSizeSpinBox = numericInputFrame(self.parent,"Maximum hole size:",
+    fillHolesSizeFrame, fillHolesSizeSlider, fillHolesSizeSpinBox = numericInputFrame(
+      self.parent, "Maximum hole size:",
       "Specifies the maximum size of holes that will be filled. This is represented as a radius to the bounding"
-      +" circumsphere containing the hole. Note that this is an approximate area; the actual area cannot be"
-      +" computed without first triangulating the hole. "
+      " circumsphere containing the hole. Note that this is an approximate area; the actual area cannot be"
+      " computed without first triangulating the hole. "
       , 0.0, 1000, 0.1, 1)
     fillHolesFormLayout.addWidget(fillHolesSizeFrame)
 
@@ -264,13 +274,14 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       connectivity = False
 
     scope_locals = locals()
+
     def connect(obj, evt, cmd):
       def callback(*args):
         current_locals = scope_locals.copy()
-        current_locals.update({'args':args})
+        current_locals.update({'args': args})
         exec(cmd, globals(), current_locals)
         updateGUI()
-      obj.connect(evt,callback)
+      obj.connect(evt, callback)
 
     def updateGUI():
 
