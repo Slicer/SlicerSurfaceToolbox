@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<executable>
+  <category>Surface Models.Advanced</category>
+  <title>FillHoles</title>
+  <description><![CDATA[This is a CLI module that can be bundled in an extension]]></description>
+  <version>0.0.1</version>
+  <documentation-url>http://www.example.com/Slicer/Modules/Decimation</documentation-url>
+  <license>Slicer</license>
+  <contributor>Ben Wilson (Kitware)</contributor>
+  <acknowledgements></acknowledgements>
+  <parameters>
+    <label>IO</label>
+    <description><![CDATA[Input/output parameters]]></description>
+    <geometry>
+      <name>inputVolume</name>
+      <label>Input Volume</label>
+      <channel>input</channel>
+      <index>0</index>
+      <description><![CDATA[Input volume]]></description>
+    </geometry>
+    <geometry>
+      <name>outputVolume</name>
+      <label>Output Volume</label>
+      <channel>output</channel>
+      <index>1</index>
+      <description><![CDATA[Output Volume]]></description>
+    </geometry>
+    <double>
+      <name>holes</name>
+      <label>Maximum Hole Size</label>
+      <longflag>--holes</longflag>
+      <description><![CDATA[Set Maximum Hole Size.]]></description>
+      <default>1000.0</default>
+      <constraints>
+        <minimum>0.0</minimum>
+        <maximum>1000.0</maximum>
+      </constraints>
+    </double>
+  </parameters>
+</executable>
