@@ -89,6 +89,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     inputModelSelector.showChildNodeTypes = False
     inputModelSelector.setMRMLScene( slicer.mrmlScene )
     inputModelSelectorFrame.layout().addWidget(inputModelSelector)
+    self.inputModelSelector = inputModelSelector
 
     outputModelSelectorFrame = qt.QFrame(self.parent)
     outputModelSelectorFrame.setLayout(qt.QHBoxLayout())
@@ -111,8 +112,11 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     outputModelSelector.selectNodeUponCreation = True
     outputModelSelector.setMRMLScene(slicer.mrmlScene)
     outputModelSelectorFrame.layout().addWidget(outputModelSelector)
+    self.outputModelSelector = outputModelSelector
 
+    # Decimation
     decimationButton = qt.QPushButton("Decimation")
+    decimationButton.objectName = "DecimationButton"
     decimationButton.checkable = True
     self.layout.addWidget(decimationButton)
     decimationFrame = qt.QFrame(self.parent)
@@ -128,7 +132,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     boundaryDeletionCheckBox = qt.QCheckBox("Boundary deletion")
     decimationFormLayout.addWidget(boundaryDeletionCheckBox)
 
+    # Smoothing
     smoothingButton = qt.QPushButton("Smoothing")
+    smoothingButton.objectName = "SmoothingButton"
     smoothingButton.checkable = True
     self.layout.addWidget(smoothingButton)
     smoothingFrame = qt.QFrame(self.parent)
@@ -175,7 +181,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     boundarySmoothingCheckBox = qt.QCheckBox("Boundary Smoothing")
     smoothingFormLayout.addWidget(boundarySmoothingCheckBox)
 
+    # Normals
     normalsButton = qt.QPushButton("Normals")
+    normalsButton.objectName = "NormalsButton"
     normalsButton.checkable = True
     self.layout.addWidget(normalsButton)
     normalsFrame = qt.QFrame(self.parent)
@@ -197,7 +205,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       self.parent, "Feature Angle:", "Tooltip", 0.0, 180.0, 1.0, 0)
     normalsFormLayout.addWidget(featureAngleFrame)
 
+    # Mirror
     mirrorButton = qt.QPushButton("Mirror")
+    mirrorButton.objectName = "MirrorButton"
     mirrorButton.checkable = True
     self.layout.addWidget(mirrorButton)
     mirrorFrame = qt.QFrame(self.parent)
@@ -216,11 +226,15 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     mirrorZCheckBox.setToolTip("Flip model along its Z axis")
     mirrorFormLayout.addWidget(mirrorZCheckBox)
 
+    # Cleaner
     cleanerButton = qt.QPushButton("Cleaner")
+    cleanerButton.objectName = "CleanerButton"
     cleanerButton.checkable = True
     self.layout.addWidget(cleanerButton)
 
+    # Fill holes
     fillHolesButton = qt.QPushButton("Fill holes")
+    fillHolesButton.objectName = "FillHolesButton"
     fillHolesButton.checkable = True
     self.layout.addWidget(fillHolesButton)
 
@@ -236,7 +250,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       , 0.0, 1000, 0.1, 1)
     fillHolesFormLayout.addWidget(fillHolesSizeFrame)
 
+    # Connectivity
     connectivityButton = qt.QPushButton("Connectivity")
+    connectivityButton.objectName = "ConnectivityButton"
     connectivityButton.checkable = True
     self.layout.addWidget(connectivityButton)
     #connectivityFrame = qt.QFrame(self.parent)
@@ -249,7 +265,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     # - pick a region interactively
     # - turn a multiple connected surface into a model hierarchy
 
+    # Scale Mesh
     scaleButton = qt.QPushButton("Scale Mesh")
+    scaleButton.objectName = "ScaleMeshButton"
     scaleButton.checkable = True
     self.layout.addWidget(scaleButton)
     scaleFrame = qt.QFrame(self.parent)
@@ -271,7 +289,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       "Specifies the desired scale along an axis.", 0, 50.0, .5, 2)
     scaleFormLayout.addWidget(scaleZFrame)
 
+    # Translate Mesh
     translateButton = qt.QPushButton("Translate Mesh")
+    translateButton.objectName = "TranslateMeshButton"
     translateButton.checkable = True
     self.layout.addWidget(translateButton)
     translateFrame = qt.QFrame(self.parent)
@@ -293,7 +313,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       "Specifies the desired translation along an axis.", -100.0, 100.0, 5, 2)
     translateFormLayout.addWidget(transZFrame)
 
+    # Relax Polygons
     relaxButton = qt.QPushButton("Relax Polygons")
+    relaxButton.objectName = "RelaxPolygonsButton"
     relaxButton.checkable = True
     self.layout.addWidget(relaxButton)
     relaxFrame = qt.QFrame(self.parent)
@@ -306,11 +328,15 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       " to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0, 100.0, .5, 2)
     relaxFormLayout.addWidget(relaxIterationsFrame)
 
+    # Borders Out
     borderButton = qt.QPushButton("Borders Out")
+    borderButton.objectName = "BordersOutButton"
     borderButton.checkable = True
     self.layout.addWidget(borderButton)
 
+    # Translate center to origin.
     originButton = qt.QPushButton("Translate center to origin")
+    originButton.objectName = "TranslateCenterToOriginButton"
     originButton.checkable = True
     self.layout.addWidget(originButton)
 
@@ -323,6 +349,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
     buttonFrame.layout().addWidget(toggleModelsButton)
 
     applyButton = qt.QPushButton("Apply")
+    applyButton.objectName = "ApplyButton"
     applyButton.toolTip = "Filter surface."
     buttonFrame.layout().addWidget(applyButton)
 
@@ -340,9 +367,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       boundaryDeletion = False
       smoothing = False
       smoothingMethod = "Laplace"
-      laplaceIterations = 100.0
+      laplaceIterations = 100
       laplaceRelaxation = 0.5
-      taubinIterations = 30.0
+      taubinIterations = 30
       taubinPassBand = 0.1
       boundarySmoothing = True
       normals = False
@@ -486,9 +513,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
       state.boundaryDeletion = checkDefine(state.boundaryDeletion, node.GetParameter("DecimateBoundary"))
       state.smoothing = checkDefine(state.smoothing, node.GetParameter("smoothing"))
       state.smoothingMethod = checkDefine(state.smoothingMethod, node.GetParameter("smoothingMethod"))
-      state.laplaceIterations = float(checkDefine(state.laplaceIterations, node.GetParameter("SmoothingLaplaceIterations")))
+      state.laplaceIterations = int(checkDefine(state.laplaceIterations, node.GetParameter("SmoothingLaplaceIterations")))
       state.laplaceRelaxation = float(checkDefine(state.laplaceIterations, node.GetParameter("SmoothingLaplaceRelaxation")))
-      state.taubinIterations = float(checkDefine(state.taubinIterations, node.GetParameter("SmoothingTaubinIterations")))
+      state.taubinIterations = int(checkDefine(state.taubinIterations, node.GetParameter("SmoothingTaubinIterations")))
       state.taubinPassBand = float(checkDefine(state.taubinPassBand, node.GetParameter("SmoothingTaubinPassBand")))
       state.boundarySmoothing = checkDefine(state.boundarySmoothing, node.GetParameter("SmoothingTaubinBoundary"))
       state.normals = checkDefine(state.normals, node.GetParameter("normals"))
@@ -720,7 +747,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
         smoothing = vtk.vtkSmoothPolyDataFilter()
         smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingLaplaceBoundary")))
         smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingLaplaceIterations")))
-        smoothing.SetRelaxationFactor(int(state.parameterNode.GetParameter("SmoothingLaplaceRelaxation")))
+        smoothing.SetRelaxationFactor(float(state.parameterNode.GetParameter("SmoothingLaplaceRelaxation")))
         smoothing.SetInputConnection(surface)
         surface = smoothing.GetOutputPort()
       elif state.parameterNode.GetParameter("smoothingMethod"):
@@ -905,13 +932,42 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     #
     import SampleData
     SampleData.downloadFromURL(
-      nodeNames='FA',
-      fileNames='FA.nrrd',
-      uris='http://slicer.kitware.com/midas3/download?items=5767',
-      checksums='SHA256:12d17fba4f2e1f1a843f0757366f28c3f3e1a8bb38836f0de2a32bb1cd476560')
+      nodeNames='cow',
+      fileNames='cow.vtp',
+      loadFileTypes='ModelFile',
+      uris='https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/d5aa4901d186902f90e17bf3b5917541cb6cb8cf223bfeea736631df4c047652',
+      checksums='SHA256:d5aa4901d186902f90e17bf3b5917541cb6cb8cf223bfeea736631df4c047652')
     self.delayDisplay('Finished with download and loading')
 
-    volumeNode = slicer.util.getNode(pattern="FA")
+    modelNode = slicer.util.getNode(pattern="cow_1")
+
     logic = SurfaceToolboxLogic()
-    self.assertIsNotNone( logic )
+    self.assertIsNotNone(logic)
+
+    slicer.util.selectModule(slicer.modules.surfacetoolbox)
+    slicer.modules.SurfaceToolboxWidget.inputModelSelector.setCurrentNode(modelNode)
+    outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "output")
+    slicer.modules.SurfaceToolboxWidget.outputModelSelector.setCurrentNode(outputModelNode)
+    self.delayDisplay('Module selected, input and output configured')
+
+    for buttonName in [
+      "DecimationButton",
+      "SmoothingButton",
+      "NormalsButton",
+      "MirrorButton",
+      "CleanerButton",
+      "FillHolesButton",
+      "ConnectivityButton",
+      "ScaleMeshButton",
+      "TranslateMeshButton",
+      "RelaxPolygonsButton",
+      "BordersOutButton",
+      "TranslateCenterToOriginButton"
+    ]:
+      button = slicer.util.findChild(slicer.modules.SurfaceToolboxWidget.parent, buttonName)
+      button.click()
+
+    applyButton = slicer.util.findChild(slicer.modules.SurfaceToolboxWidget.parent, "ApplyButton")
+    applyButton.click()
+
     self.delayDisplay('Test passed!')
