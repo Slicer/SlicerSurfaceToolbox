@@ -4,6 +4,7 @@ import unittest
 import string
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
+from slicer.util import VTKObservationMixin
 
 
 class SurfaceToolbox(ScriptedLoadableModule):
@@ -48,7 +49,11 @@ def numericInputFrame(parent, label, tooltip, minimum, maximum, step, decimals):
   return inputFrame, inputSlider, inputSpinBox
 
 
-class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
+class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
+
+  def __init__(self, parent):
+    ScriptedLoadableModuleWidget.__init__(self, parent)
+    VTKObservationMixin.__init__(self)
 
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
@@ -666,10 +671,44 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget):
 
     self.updateGUI = updateGUI
 
+    # Connect observers to scene events
+    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
+    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
+    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndImportEvent, self.onSceneEndImport)
+
+  def enter(self):
+    """Runs whenever the module is reopened
+    """
+    # Set parameter set node if absent
+    self.selectParameterNode()
+
+  def selectParameterNode(self):
+    if self.parameterNodeSelector.currentNode() is None:
+      parameterNode = self.logic.getParameterNode()
+      self.parameterNodeSelector.setCurrentNodeID(parameterNode.GetID())
+
+  def onSceneStartClose(self, caller, event):
+    pass
+
+  def onSceneEndClose(self, caller, event):
+    if self.parent.isEntered:
+      self.selectParameterNode()
+
+  def onSceneEndImport(self, caller, event):
+    if self.parent.isEntered:
+      self.selectParameterNode()
+
+  def cleanup(self):
+    self.removeObservers()
+
 
 class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
   """Perform filtering
   """
+
+  def __init__(self, parent=None):
+    ScriptedLoadableModuleLogic.__init__(self, parent)
+    self.isSingletonParameterNode = False
 
   @staticmethod
   def parameterDefine(state, parameter, value):
@@ -913,6 +952,8 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     """
     self.setUp()
     self.test_SurfaceToolbox1()
+    self.setUp()
+    self.test_SurfaceToolbox2()
 
   def test_SurfaceToolbox1(self):
     """ Ideally you should have several levels of tests.  At the lowest level
@@ -965,9 +1006,14 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
       "TranslateCenterToOriginButton"
     ]:
       button = slicer.util.findChild(slicer.modules.SurfaceToolboxWidget.parent, buttonName)
-      button.click()
+      if not button.checked:
+        button.click()
 
     applyButton = slicer.util.findChild(slicer.modules.SurfaceToolboxWidget.parent, "ApplyButton")
     applyButton.click()
 
     self.delayDisplay('Test passed!')
+
+  def test_SurfaceToolbox2(self):
+    """Re-run first test to ensure using the module after clearing the scene works as expected"""
+    self.test_SurfaceToolbox1()
