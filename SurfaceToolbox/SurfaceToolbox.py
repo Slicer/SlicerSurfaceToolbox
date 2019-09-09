@@ -734,9 +734,13 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
   def applyFilters(self, state, updateProcess):
     self.loadParameters(state)
+
     surface = state.inputModelNode.GetPolyDataConnection()
 
-    self.parameterDefine(state, "inputVolume", state.inputModelNode.GetID())
+    if state.outputModelNode.GetPolyData() is None:
+      state.outputModelNode.SetAndObserveMesh(vtk.vtkPolyData())
+    state.outputModelNode.GetPolyData().DeepCopy(state.inputModelNode.GetPolyData())
+
     self.parameterDefine(state, "outputVolume", state.outputModelNode.GetID())
 
     # define which selections were made
@@ -760,7 +764,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.parameterDefine(state, "DecimateReduction", str(state.reduction))
       self.parameterDefine(state, "DecimateBoundary", str(state.boundaryDeletion))
 
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "Decimate": float(state.parameterNode.GetParameter("DecimateReduction")),
                     "Boundary": bool(state.parameterNode.GetParameter("DecimateBoundary"))}
@@ -806,7 +810,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.parameterDefine(state, "NormalsSplitting", str(state.splitting))
       self.parameterDefine(state, "NormalsAngle", str(state.featureAngle))
 
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "orient": bool(state.parameterNode.GetParameter("NormalsOrient")),
                     "flip": bool(state.parameterNode.GetParameter("NormalsFlip")),
@@ -824,7 +828,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.parameterDefine(state, "MirroryAxis", str(state.mirrorY))
       self.parameterDefine(state, "MirrorzAxis", str(state.mirrorZ))
 
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "xAxis": bool(state.parameterNode.GetParameter("MirrorxAxis")),
                     "yAxis": bool(state.parameterNode.GetParameter("MirroryAxis")),
@@ -836,7 +840,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     if str(state.parameterNode.GetParameter("cleaner")) == "True":
       state.processValue = "Cleaner..."
       updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume")}
       cleanerMaker = slicer.modules.cleaner
       slicer.cli.runSync(cleanerMaker, None, parameters)
@@ -848,7 +852,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
       self.parameterDefine(state, "HolesMaximum", str(state.fillHolesSize))
 
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "holes": float(state.parameterNode.GetParameter("HolesMaximum"))}
       fillHolesMaker = slicer.modules.fillholes
@@ -858,7 +862,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     if str(state.parameterNode.GetParameter("connectivity")) == "True":
       state.processValue = "Connectivity..."
       updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume")}
       connectivityMaker = slicer.modules.connectivity
       slicer.cli.runSync(connectivityMaker, None, parameters)
@@ -872,7 +876,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.parameterDefine(state, "ScaleDimY", str(state.scaleY))
       self.parameterDefine(state, "ScaleDimZ", str(state.scaleZ))
 
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "dimX": float(state.parameterNode.GetParameter("ScaleDimX")),
                     "dimY": float(state.parameterNode.GetParameter("ScaleDimY")),
@@ -889,7 +893,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.parameterDefine(state, "TransDimY", str(state.transY))
       self.parameterDefine(state, "TransDimZ", str(state.transZ))
 
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "dimX": float(state.parameterNode.GetParameter("TransDimX")),
                     "dimY": float(state.parameterNode.GetParameter("TransDimY")),
@@ -904,7 +908,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
       self.parameterDefine(state, "RelaxIterations", str(state.relaxIterations))
 
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "Iterations": float(state.parameterNode.GetParameter("RelaxIterations"))}
       relaxMaker = slicer.modules.relaxpolygons
@@ -914,7 +918,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     if str(state.parameterNode.GetParameter("border")) == "True":
       state.processValue = "Changing Borders..."
       updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume")}
       borderMaker = slicer.modules.bordersout
       slicer.cli.runSync(borderMaker, None, parameters)
@@ -923,7 +927,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     if str(state.parameterNode.GetParameter("origin")) == "True":
       state.processValue = "Moving Origin..."
       updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("inputVolume"),
+      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume")}
       originMaker = slicer.modules.mc2origin
       slicer.cli.runSync(originMaker, None, parameters)
