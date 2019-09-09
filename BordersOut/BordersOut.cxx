@@ -32,7 +32,7 @@ int main (int argc, char * argv[])
     vtkNew<vtkFeatureEdges> boundaryEdges;
     boundaryEdges->SetInputData(meshinC->GetOutput());
     boundaryEdges->BoundaryEdgesOn();
-    //boundaryEdges->FeatureEdgesOff();
+    boundaryEdges->FeatureEdgesOff();
     boundaryEdges->NonManifoldEdgesOff();
     boundaryEdges->ManifoldEdgesOff();
     boundaryEdges->Update();
