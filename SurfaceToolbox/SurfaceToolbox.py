@@ -13,12 +13,14 @@ class SurfaceToolbox(ScriptedLoadableModule):
     self.parent.title = "Surface Toolbox"
     self.parent.categories = ["Surface Models"]
     self.parent.dependencies = []
-    self.parent.contributors = ["Luca Antiga (Orobix), Ron Kikinis (Brigham and Women's Hospital), Ben Wilson (Kitware)"] # replace with "Firstname Lastname (Org)"
+    self.parent.contributors = [
+      "Luca Antiga (Orobix), Ron Kikinis (Brigham and Women's Hospital), Ben Wilson (Kitware)"]
     self.parent.helpText = """
 This module supports various cleanup and optimization processes on surface models.
 Select the input and output models, and then enable the stages of the pipeline by selecting the buttons.
 Stages that include parameters will open up when they are enabled.
-Click apply to activate the pipeline and then click the Toggle button to compare the model before and after the operation.
+Click apply to activate the pipeline and then click the Toggle button to compare the model before and after
+ the operation.
 """
     self.parent.helpText += self.getDefaultModuleDocumentationLink()
     self.parent.acknowledgementText = """
@@ -54,6 +56,12 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   def __init__(self, parent):
     ScriptedLoadableModuleWidget.__init__(self, parent)
     VTKObservationMixin.__init__(self)
+
+    self.logic = None
+    self.parameterNodeSelector = None
+    self.inputModelSelector = None
+    self.outputModelSelector = None
+    self.updateGUIFromState = None
 
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
@@ -92,7 +100,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     inputModelSelector.noneEnabled = True
     inputModelSelector.showHidden = False
     inputModelSelector.showChildNodeTypes = False
-    inputModelSelector.setMRMLScene( slicer.mrmlScene )
+    inputModelSelector.setMRMLScene(slicer.mrmlScene)
     inputModelSelectorFrame.layout().addWidget(inputModelSelector)
     self.inputModelSelector = inputModelSelector
 
@@ -251,8 +259,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.parent, "Maximum hole size:",
       "Specifies the maximum size of holes that will be filled. This is represented as a radius to the bounding"
       " circumsphere containing the hole. Note that this is an approximate area; the actual area cannot be"
-      " computed without first triangulating the hole. "
-      , 0.0, 1000, 0.1, 1)
+      " computed without first triangulating the hole. ", 0.0, 1000, 0.1, 1)
     fillHolesFormLayout.addWidget(fillHolesSizeFrame)
 
     # Connectivity
@@ -260,9 +267,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     connectivityButton.objectName = "ConnectivityButton"
     connectivityButton.checkable = True
     self.layout.addWidget(connectivityButton)
-    #connectivityFrame = qt.QFrame(self.parent)
-    #self.layout.addWidget(connectivityFrame)
-    #connectivityFormLayout = qt.QFormLayout(connectivityFrame)
+    # connectivityFrame = qt.QFrame(self.parent)
+    # self.layout.addWidget(connectivityFrame)
+    # connectivityFormLayout = qt.QFormLayout(connectivityFrame)
 
     # TODO: connectivity could be
     # - largest connected
@@ -739,7 +746,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     self.parameterDefine(state, "mirror", state.mirror)
     self.parameterDefine(state, "cleaner", state.cleaner)
     self.parameterDefine(state, "fillHoles", state.fillHoles)
-    self.parameterDefine(state, "connectivity",state.connectivity)
+    self.parameterDefine(state, "connectivity", state.connectivity)
     self.parameterDefine(state, "scale", state.scale)
     self.parameterDefine(state, "translate", state.translate)
     self.parameterDefine(state, "relax", state.relax)
@@ -809,7 +816,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       slicer.cli.runSync(normalsMaker, None, parameters)
       surface = state.outputModelNode.GetPolyDataConnection()
 
-    if str(state.parameterNode.GetParameter("mirror"))  == "True":
+    if str(state.parameterNode.GetParameter("mirror")) == "True":
       state.processValue = "Mirror..."
       updateProcess(state.processValue)
 
