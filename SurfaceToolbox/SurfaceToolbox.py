@@ -215,7 +215,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     normalsFormLayout.addWidget(splittingCheckBox)
 
     featureAngleFrame, featureAngleSlider, featureAngleSpinBox = numericInputFrame(
-      self.parent, "Feature Angle:", "Tooltip", 0.0, 180.0, 1.0, 0)
+      self.parent, "Feature Angle:", "Feature Angle for Splitting", 0.0, 180.0, 1.0, 0)
     normalsFormLayout.addWidget(featureAngleFrame)
 
     # Mirror
@@ -447,10 +447,10 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       autoOrientNormalsCheckBox.checked = state.autoOrientNormals
       flipNormalsCheckBox.checked = state.flipNormals
       splittingCheckBox.checked = state.splitting
-      featureAngleFrame.visible = state.splitting
+      featureAngleFrame.enabled = state.splitting
       featureAngleSlider.value = state.featureAngle
       featureAngleSpinBox.value = state.featureAngle
-      featureAngleFrame.visible = state.splitting
+      featureAngleFrame.enabled = state.splitting
 
       mirrorButton.checked = state.mirror
       mirrorFrame.visible = state.mirror
@@ -788,16 +788,16 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       # Keeping default python.
       if state.parameterNode.GetParameter("smoothingMethod") == "Laplace":
         smoothing = vtk.vtkSmoothPolyDataFilter()
-        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingLaplaceBoundary")))
+        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingLaplaceBoundary") == "True"))
         smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingLaplaceIterations")))
         smoothing.SetRelaxationFactor(float(state.parameterNode.GetParameter("SmoothingLaplaceRelaxation")))
         smoothing.SetInputConnection(surface)
         surface = smoothing.GetOutputPort()
-      elif state.parameterNode.GetParameter("smoothingMethod"):
+      else:  # "Taubin"
         smoothing = vtk.vtkWindowedSincPolyDataFilter()
-        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingTaubinBoundary")))
+        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingTaubinBoundary") == "True"))
         smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingTaubinIterations")))
-        smoothing.SetPassBand(int(state.parameterNode.GetParameter("SmoothingTaubinPassBand")))
+        smoothing.SetPassBand(float(state.parameterNode.GetParameter("SmoothingTaubinPassBand")))
         smoothing.SetInputConnection(surface)
         surface = smoothing.GetOutputPort()
 
@@ -812,9 +812,10 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
       parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "orient": bool(state.parameterNode.GetParameter("NormalsOrient")),
-                    "flip": bool(state.parameterNode.GetParameter("NormalsFlip")),
-                    "splitting": bool(state.parameterNode.GetParameter("NormalsAngle")), "angle": state.featureAngle}
+                    "orient": bool(state.parameterNode.GetParameter("NormalsOrient") == "True"),
+                    "flip": bool(state.parameterNode.GetParameter("NormalsFlip") == "True"),
+                    "splitting": bool(state.parameterNode.GetParameter("NormalsSplitting") == "True"),
+                    "angle": float(state.parameterNode.GetParameter("NormalsAngle"))}
 
       normalsMaker = slicer.modules.normals
       slicer.cli.runSync(normalsMaker, None, parameters)
