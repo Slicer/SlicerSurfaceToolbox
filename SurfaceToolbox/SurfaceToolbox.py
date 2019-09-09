@@ -215,7 +215,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     normalsFormLayout.addWidget(splittingCheckBox)
 
     featureAngleFrame, featureAngleSlider, featureAngleSpinBox = numericInputFrame(
-      self.parent, "Feature Angle:", "Tooltip", 0.0, 180.0, 1.0, 0)
+      self.parent, "Feature Angle:", "Feature Angle for Splitting", 0.0, 180.0, 1.0, 0)
     normalsFormLayout.addWidget(featureAngleFrame)
 
     # Mirror
@@ -447,10 +447,10 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       autoOrientNormalsCheckBox.checked = state.autoOrientNormals
       flipNormalsCheckBox.checked = state.flipNormals
       splittingCheckBox.checked = state.splitting
-      featureAngleFrame.visible = state.splitting
+      featureAngleFrame.enabled = state.splitting
       featureAngleSlider.value = state.featureAngle
       featureAngleSpinBox.value = state.featureAngle
-      featureAngleFrame.visible = state.splitting
+      featureAngleFrame.enabled = state.splitting
 
       mirrorButton.checked = state.mirror
       mirrorFrame.visible = state.mirror
