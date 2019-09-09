@@ -415,14 +415,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     def updateGUI():
 
-      def button_stylesheet(active):
-        if active:
-          return "background-color: green"
-        else:
-          return ""
-
       decimationButton.checked = state.decimation
-      #decimationButton.setStyleSheet(button_stylesheet(state.decimation))
       decimationFrame.visible = state.decimation
       boundaryDeletionCheckBox.checked = state.boundaryDeletion
       reductionSlider.value = state.reduction
