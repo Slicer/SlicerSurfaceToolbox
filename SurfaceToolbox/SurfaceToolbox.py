@@ -410,10 +410,10 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         current_locals = scope_locals.copy()
         current_locals.update({'args': args})
         exec(cmd, globals(), current_locals)
-        updateGUI()
+        updateGUIFromState()
       obj.connect(evt, callback)
 
-    def updateGUI():
+    def updateGUIFromState():
 
       decimationButton.checked = state.decimation
       decimationFrame.visible = state.decimation
@@ -541,7 +541,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       state.relaxIterations = float(checkDefine(state.relaxIterations, node.GetParameter("RelaxIterations")))
       state.border = checkDefine(state.border, node.GetParameter("border"))
       state.origin = checkDefine(state.origin, node.GetParameter("origin"))
-      updateGUI()
+      updateGUIFromState()
 
     def initializeModelNode(node):
       displayNode = slicer.vtkMRMLModelDisplayNode()
@@ -626,7 +626,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     def updateProcess(value):
       """Display changing process value"""
-      updateGUI()
+      updateGUIFromState()
       if state.processValue != "Apply":
           applyButton.text = value
       applyButton.repaint()
@@ -642,13 +642,13 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       else:
         state.inputModelNode.GetModelDisplayNode().VisibilityOn()
         state.outputModelNode.GetModelDisplayNode().VisibilityOff()
-      updateGUI()
+      updateGUIFromState()
       applyButton.text = "Apply"
 
     applyButton.connect('clicked()', onApply)
 
     def onToggleModels():
-      updateGUI()
+      updateGUIFromState()
       if state.inputModelNode.GetModelDisplayNode().GetVisibility():
         state.inputModelNode.GetModelDisplayNode().VisibilityOff()
         state.outputModelNode.GetModelDisplayNode().VisibilityOn()
@@ -660,9 +660,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     toggleModelsButton.connect('clicked()', onToggleModels)
 
-    updateGUI()
+    updateGUIFromState()
 
-    self.updateGUI = updateGUI
+    self.updateGUIFromState = updateGUIFromState
 
     # Connect observers to scene events
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
