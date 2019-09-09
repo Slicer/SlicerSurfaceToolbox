@@ -788,16 +788,16 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       # Keeping default python.
       if state.parameterNode.GetParameter("smoothingMethod") == "Laplace":
         smoothing = vtk.vtkSmoothPolyDataFilter()
-        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingLaplaceBoundary")))
+        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingLaplaceBoundary") == "True"))
         smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingLaplaceIterations")))
         smoothing.SetRelaxationFactor(float(state.parameterNode.GetParameter("SmoothingLaplaceRelaxation")))
         smoothing.SetInputConnection(surface)
         surface = smoothing.GetOutputPort()
-      elif state.parameterNode.GetParameter("smoothingMethod"):
+      else:  # "Taubin"
         smoothing = vtk.vtkWindowedSincPolyDataFilter()
-        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingTaubinBoundary")))
+        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingTaubinBoundary") == "True"))
         smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingTaubinIterations")))
-        smoothing.SetPassBand(int(state.parameterNode.GetParameter("SmoothingTaubinPassBand")))
+        smoothing.SetPassBand(float(state.parameterNode.GetParameter("SmoothingTaubinPassBand")))
         smoothing.SetInputConnection(surface)
         surface = smoothing.GetOutputPort()
 
