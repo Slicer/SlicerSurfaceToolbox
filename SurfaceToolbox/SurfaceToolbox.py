@@ -812,9 +812,10 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
       parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "orient": bool(state.parameterNode.GetParameter("NormalsOrient")),
-                    "flip": bool(state.parameterNode.GetParameter("NormalsFlip")),
-                    "splitting": bool(state.parameterNode.GetParameter("NormalsAngle")), "angle": state.featureAngle}
+                    "orient": bool(state.parameterNode.GetParameter("NormalsOrient") == "True"),
+                    "flip": bool(state.parameterNode.GetParameter("NormalsFlip") == "True"),
+                    "splitting": bool(state.parameterNode.GetParameter("NormalsSplitting") == "True"),
+                    "angle": float(state.parameterNode.GetParameter("NormalsAngle"))}
 
       normalsMaker = slicer.modules.normals
       slicer.cli.runSync(normalsMaker, None, parameters)
