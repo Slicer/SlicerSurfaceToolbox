@@ -830,9 +830,9 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
       parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "xAxis": bool(state.parameterNode.GetParameter("MirrorxAxis")),
-                    "yAxis": bool(state.parameterNode.GetParameter("MirroryAxis")),
-                    "zAxis": bool(state.parameterNode.GetParameter("MirrorzAxis"))}
+                    "xAxis": bool(state.parameterNode.GetParameter("MirrorxAxis") == "True"),
+                    "yAxis": bool(state.parameterNode.GetParameter("MirroryAxis") == "True"),
+                    "zAxis": bool(state.parameterNode.GetParameter("MirrorzAxis") == "True")}
       mirrorMaker = slicer.modules.mirror
       slicer.cli.runSync(mirrorMaker, None, parameters)
       surface = state.outputModelNode.GetPolyDataConnection()
