@@ -2,9 +2,9 @@
 <executable>
   <category>Surface Models.Advanced</category>
   <title>meshValues</title>
-  <description><![CDATA[This is a CLI module that can be bundled in an extension]]></description>
+  <description><![CDATA[Find the points and cells in a mesh.]]></description>
   <version>0.0.1</version>
-  <documentation-url>http://www.example.com/Slicer/Modules/meshValues</documentation-url>
+  <documentation-url>https://www.slicer.org/wiki/Documentation/Nightly/Modules/SurfaceToolbox</documentation-url>
   <license>Slicer</license>
   <contributor>Ben Wilson (Kitware)</contributor>
   <acknowledgements></acknowledgements>

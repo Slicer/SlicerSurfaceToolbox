@@ -873,15 +873,15 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       state.processValue = "Scale..."
       updateProcess(state.processValue)
 
-      self.parameterDefine(state, "ScaleDimX", str(state.scaleX))
-      self.parameterDefine(state, "ScaleDimY", str(state.scaleY))
-      self.parameterDefine(state, "ScaleDimZ", str(state.scaleZ))
+      self.parameterDefine(state, "scale.dimX", str(state.scaleX))
+      self.parameterDefine(state, "scale.dimY", str(state.scaleY))
+      self.parameterDefine(state, "scale.dimZ", str(state.scaleZ))
 
       parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "dimX": float(state.parameterNode.GetParameter("ScaleDimX")),
-                    "dimY": float(state.parameterNode.GetParameter("ScaleDimY")),
-                    "dimZ": float(state.parameterNode.GetParameter("ScaleDimZ"))}
+                    "dimX": float(state.parameterNode.GetParameter("scale.dimX")),
+                    "dimY": float(state.parameterNode.GetParameter("scale.dimY")),
+                    "dimZ": float(state.parameterNode.GetParameter("scale.dimZ"))}
       scaleMaker = slicer.modules.scalemesh
       slicer.cli.runSync(scaleMaker, None, parameters)
       surface = state.outputModelNode.GetPolyDataConnection()
@@ -890,15 +890,15 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       state.processValue = "Translating..."
       updateProcess(state.processValue)
 
-      self.parameterDefine(state, "TransDimX", str(state.transX))
-      self.parameterDefine(state, "TransDimY", str(state.transY))
-      self.parameterDefine(state, "TransDimZ", str(state.transZ))
+      self.parameterDefine(state, "trans.dimX", str(state.transX))
+      self.parameterDefine(state, "trans.dimY", str(state.transY))
+      self.parameterDefine(state, "trans.dimZ", str(state.transZ))
 
       parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "dimX": float(state.parameterNode.GetParameter("TransDimX")),
-                    "dimY": float(state.parameterNode.GetParameter("TransDimY")),
-                    "dimZ": float(state.parameterNode.GetParameter("TransDimZ"))}
+                    "dimX": float(state.parameterNode.GetParameter("trans.DimX")),
+                    "dimY": float(state.parameterNode.GetParameter("trans.DimY")),
+                    "dimZ": float(state.parameterNode.GetParameter("trans.DimZ"))}
       transMaker = slicer.modules.translatemesh
       slicer.cli.runSync(transMaker, None, parameters)
       surface = state.outputModelNode.GetPolyDataConnection()
@@ -907,11 +907,11 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       state.processValue = "Relaxing..."
       updateProcess(state.processValue)
 
-      self.parameterDefine(state, "RelaxIterations", str(state.relaxIterations))
+      self.parameterDefine(state, "relax.Iterations", str(state.relaxIterations))
 
       parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
                     "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "Iterations": float(state.parameterNode.GetParameter("RelaxIterations"))}
+                    "Iterations": float(state.parameterNode.GetParameter("relax.Iterations"))}
       relaxMaker = slicer.modules.relaxpolygons
       slicer.cli.runSync(relaxMaker, None, parameters)
       surface = state.outputModelNode.GetPolyDataConnection()

@@ -2,9 +2,9 @@
 <executable>
   <category>Surface Models.Advanced</category>
   <title>volumePolyData</title>
-  <description><![CDATA[This is a CLI module that can be bundled in an extension]]></description>
+  <description><![CDATA[Provide volume count for the PolyData through the std output. It supports only closed surfaces.]]></description>
   <version>0.0.1</version>
-  <documentation-url>http://www.example.com/Slicer/Modules/volumePolyData</documentation-url>
+  <documentation-url>https://www.slicer.org/wiki/Documentation/Nightly/Modules/SurfaceToolbox</documentation-url>
   <license>Slicer</license>
   <contributor>Ben Wilson (Kitware)</contributor>
   <acknowledgements></acknowledgements>
