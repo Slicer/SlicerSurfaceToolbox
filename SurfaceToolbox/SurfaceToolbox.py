@@ -34,21 +34,14 @@ def numericInputFrame(parent, label, tooltip, minimum, maximum, step, decimals):
   inputLabel = qt.QLabel(label, inputFrame)
   inputLabel.setToolTip(tooltip)
   inputFrame.layout().addWidget(inputLabel)
-  inputSpinBox = qt.QDoubleSpinBox(inputFrame)
-  inputSpinBox.setToolTip(tooltip)
-  inputSpinBox.minimum = minimum
-  inputSpinBox.maximum = maximum
-  inputSpinBox.singleStep = step
-  inputSpinBox.decimals = decimals
-  inputFrame.layout().addWidget(inputSpinBox)
-  inputSlider = ctk.ctkDoubleSlider(inputFrame)
+  inputSlider = ctk.ctkSliderWidget(inputFrame)
   inputSlider.minimum = minimum
   inputSlider.maximum = maximum
-  inputSlider.orientation = 1
   inputSlider.singleStep = step
+  inputSlider.decimals = decimals
   inputSlider.setToolTip(tooltip)
   inputFrame.layout().addWidget(inputSlider)
-  return inputFrame, inputSlider, inputSpinBox
+  return inputFrame, inputSlider
 
 
 class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
@@ -136,13 +129,14 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.layout.addWidget(decimationFrame)
     decimationFormLayout = qt.QFormLayout(decimationFrame)
 
-    reductionFrame, reductionSlider, reductionSpinBox = numericInputFrame(
+    reductionFrame, reductionSlider = numericInputFrame(
       self.parent, "Reduction:",
       "Specifies the desired reduction in the total number of polygons (e.g., if Reduction is set"
-      " to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0, 1.0, 0.05, 2)
+      " to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0, 0.999, 0.01, 2)
     decimationFormLayout.addWidget(reductionFrame)
 
     boundaryDeletionCheckBox = qt.QCheckBox("Boundary deletion")
+    boundaryDeletionCheckBox.setToolTip("If disabled then boundaries will not be modified by decimation (it uses DecimatePro algorithm, which tends to create more ill-shaped triangles).")
     decimationFormLayout.addWidget(boundaryDeletionCheckBox)
 
     # Smoothing
@@ -163,14 +157,14 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     smoothingFormLayout.addWidget(laplaceMethodFrame)
     laplaceMethodFormLayout = qt.QFormLayout(laplaceMethodFrame)
 
-    laplaceIterationsFrame, laplaceIterationsSlider, laplaceIterationsSpinBox = numericInputFrame(
+    laplaceIterationsFrame, laplaceIterationsSlider = numericInputFrame(
       self.parent, "Iterations:",
       "Determines the maximum number of smoothing iterations. Higher value allows more smoothing."
       " In general, small relaxation factors and large numbers of iterations are more stable than"
       "larger relaxation factors and smaller numbers of iterations.", 0.0, 500.0, 1.0, 0)
     laplaceMethodFormLayout.addWidget(laplaceIterationsFrame)
 
-    laplaceRelaxationFrame, laplaceRelaxationSlider, laplaceRelaxationSpinBox = numericInputFrame(
+    laplaceRelaxationFrame, laplaceRelaxationSlider = numericInputFrame(
       self.parent, "Relaxation:",
       "Specifies how much points may be displaced during each iteration. "
       "Higher value results in more smoothing.", 0.0, 1.0, 0.1, 1)
@@ -180,13 +174,13 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     smoothingFormLayout.addWidget(taubinMethodFrame)
     taubinMethodFormLayout = qt.QFormLayout(taubinMethodFrame)
 
-    taubinIterationsFrame, taubinIterationsSlider, taubinIterationsSpinBox = numericInputFrame(
+    taubinIterationsFrame, taubinIterationsSlider = numericInputFrame(
       self.parent, "Iterations:",
       "Determines the maximum number of smoothing iterations. Higher value allows more accurate smoothing."
       " Typically 10-20 iterations are enough.", 0.0, 100.0, 1.0, 0)
     taubinMethodFormLayout.addWidget(taubinIterationsFrame)
 
-    taubinPassBandFrame, taubinPassBandSlider, taubinPassBandSpinBox = numericInputFrame(
+    taubinPassBandFrame, taubinPassBandSlider = numericInputFrame(
       self.parent, "Pass Band:",
       "Number between 0 and 2. Lower values produce more smoothing.", 0.0, 2.0, 0.0001, 4)
     taubinMethodFormLayout.addWidget(taubinPassBandFrame)
@@ -214,7 +208,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     splittingCheckBox = qt.QCheckBox("Splitting")
     normalsFormLayout.addWidget(splittingCheckBox)
 
-    featureAngleFrame, featureAngleSlider, featureAngleSpinBox = numericInputFrame(
+    featureAngleFrame, featureAngleSlider = numericInputFrame(
       self.parent, "Feature Angle:", "Feature Angle for Splitting", 0.0, 180.0, 1.0, 0)
     normalsFormLayout.addWidget(featureAngleFrame)
 
@@ -255,7 +249,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.layout.addWidget(fillHolesFrame)
     fillHolesFormLayout = qt.QFormLayout(fillHolesFrame)
 
-    fillHolesSizeFrame, fillHolesSizeSlider, fillHolesSizeSpinBox = numericInputFrame(
+    fillHolesSizeFrame, fillHolesSizeSlider = numericInputFrame(
       self.parent, "Maximum hole size:",
       "Specifies the maximum size of holes that will be filled. This is represented as a radius to the bounding"
       " circumsphere containing the hole. Note that this is an approximate area; the actual area cannot be"
@@ -286,17 +280,17 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.layout.addWidget(scaleFrame)
     scaleFormLayout = qt.QFormLayout(scaleFrame)
 
-    scaleXFrame, scaleXSlider, scaleXSpinBox = numericInputFrame(
+    scaleXFrame, scaleXSlider = numericInputFrame(
       self.parent, "Scale X:",
       "Specifies the desired scale along an axis.", 0, 50.0, .5, 2)
     scaleFormLayout.addWidget(scaleXFrame)
 
-    scaleYFrame, scaleYSlider, scaleYSpinBox = numericInputFrame(
+    scaleYFrame, scaleYSlider = numericInputFrame(
       self.parent, "Scale Y:",
       "Specifies the desired scale along an axis.", 0, 50.0, .5, 2)
     scaleFormLayout.addWidget(scaleYFrame)
 
-    scaleZFrame, scaleZSlider, scaleZSpinBox = numericInputFrame(
+    scaleZFrame, scaleZSlider = numericInputFrame(
       self.parent, "Scale Z:",
       "Specifies the desired scale along an axis.", 0, 50.0, .5, 2)
     scaleFormLayout.addWidget(scaleZFrame)
@@ -310,17 +304,17 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.layout.addWidget(translateFrame)
     translateFormLayout = qt.QFormLayout(translateFrame)
 
-    transXFrame, transXSlider, transXSpinBox = numericInputFrame(
+    transXFrame, transXSlider = numericInputFrame(
       self.parent, "Translate X:",
       "Specifies the desired translation along an axis.", -100.0, 100.0, 5, 2)
     translateFormLayout.addWidget(transXFrame)
 
-    transYFrame, transYSlider, transYSpinBox = numericInputFrame(
+    transYFrame, transYSlider = numericInputFrame(
       self.parent, "Translate Y:",
       "Specifies the desired translation along an axis.", -100.0, 100.0, 5, 2)
     translateFormLayout.addWidget(transYFrame)
 
-    transZFrame, transZSlider, transZSpinBox = numericInputFrame(
+    transZFrame, transZSlider = numericInputFrame(
       self.parent, "Translate Z:",
       "Specifies the desired translation along an axis.", -100.0, 100.0, 5, 2)
     translateFormLayout.addWidget(transZFrame)
@@ -334,7 +328,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.layout.addWidget(relaxFrame)
     relaxFormLayout = qt.QFormLayout(relaxFrame)
 
-    relaxIterationsFrame, relaxIterationsSlider, relaxIterationsSpinBox = numericInputFrame(
+    relaxIterationsFrame, relaxIterationsSlider = numericInputFrame(
       self.parent, "Iterations:",
       "Specifies the desired reduction in the total number of polygons (e.g., if Reduction is set"
       " to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0, 100.0, .5, 2)
@@ -376,7 +370,7 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       outputModelNode = None
       decimation = False
       reduction = 0.8
-      boundaryDeletion = False
+      boundaryDeletion = True
       smoothing = False
       smoothingMethod = "Laplace"
       laplaceIterations = 100
@@ -426,20 +420,15 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       decimationFrame.visible = state.decimation
       boundaryDeletionCheckBox.checked = state.boundaryDeletion
       reductionSlider.value = state.reduction
-      reductionSpinBox.value = state.reduction
 
       smoothingButton.checked = state.smoothing
       smoothingFrame.visible = state.smoothing
       laplaceMethodFrame.visible = state.smoothingMethod == "Laplace"
       laplaceIterationsSlider.value = state.laplaceIterations
-      laplaceIterationsSpinBox.value = state.laplaceIterations
       laplaceRelaxationSlider.value = state.laplaceRelaxation
-      laplaceRelaxationSpinBox.value = state.laplaceRelaxation
       taubinMethodFrame.visible = state.smoothingMethod == "Taubin"
       taubinIterationsSlider.value = state.taubinIterations
-      taubinIterationsSpinBox.value = state.taubinIterations
       taubinPassBandSlider.value = state.taubinPassBand
-      taubinPassBandSpinBox.value = state.taubinPassBand
       boundarySmoothingCheckBox.checked = state.boundarySmoothing
 
       normalsButton.checked = state.normals
@@ -449,7 +438,6 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       splittingCheckBox.checked = state.splitting
       featureAngleFrame.enabled = state.splitting
       featureAngleSlider.value = state.featureAngle
-      featureAngleSpinBox.value = state.featureAngle
       featureAngleFrame.enabled = state.splitting
 
       mirrorButton.checked = state.mirror
@@ -463,32 +451,24 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       fillHolesButton.checked = state.fillHoles
       fillHolesFrame.visible = state.fillHoles
       fillHolesSizeSlider.value = state.fillHolesSize
-      fillHolesSizeSpinBox.value = state.fillHolesSize
 
       connectivityButton.checked = state.connectivity
 
       scaleButton.checked = state.scale
       scaleFrame.visible = state.scale
       scaleXSlider.value = state.scaleX
-      scaleXSpinBox.value = state.scaleX
       scaleYSlider.value = state.scaleY
-      scaleYSpinBox.value = state.scaleY
       scaleZSlider.value = state.scaleZ
-      scaleZSpinBox.value = state.scaleZ
 
       translateButton.checked = state.translate
       translateFrame.visible = state.translate
       transXSlider.value = state.transX
-      transXSpinBox.value = state.transX
       transYSlider.value = state.transY
-      transYSpinBox.value = state.transY
       transZSlider.value = state.transZ
-      transZSpinBox.value = state.transZ
 
       relaxButton.checked = state.relax
       relaxFrame.visible = state.relax
       relaxIterationsSlider.value = state.relaxIterations
-      relaxIterationsSpinBox.value = state.relaxIterations
 
       borderButton.checked = state.border
 
@@ -569,21 +549,16 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     connect(decimationButton, 'clicked(bool)', 'state.decimation = args[0]')
     connect(reductionSlider, 'valueChanged(double)', 'state.reduction = args[0]')
-    connect(reductionSpinBox, 'valueChanged(double)', 'state.reduction = args[0]')
     connect(boundaryDeletionCheckBox, 'stateChanged(int)', 'state.boundaryDeletion = bool(args[0])')
 
     connect(smoothingButton, 'clicked(bool)', 'state.smoothing = args[0]')
     connect(smoothingMethodCombo, 'currentIndexChanged(QString)', 'state.smoothingMethod = args[0]')
 
     connect(laplaceIterationsSlider, 'valueChanged(double)', 'state.laplaceIterations = int(args[0])')
-    connect(laplaceIterationsSpinBox, 'valueChanged(double)', 'state.laplaceIterations = int(args[0])')
     connect(laplaceRelaxationSlider, 'valueChanged(double)', 'state.laplaceRelaxation = args[0]')
-    connect(laplaceRelaxationSpinBox, 'valueChanged(double)', 'state.laplaceRelaxation = args[0]')
 
     connect(taubinIterationsSlider, 'valueChanged(double)', 'state.taubinIterations = int(args[0])')
-    connect(taubinIterationsSpinBox, 'valueChanged(double)', 'state.taubinIterations = int(args[0])')
     connect(taubinPassBandSlider, 'valueChanged(double)', 'state.taubinPassBand = args[0]')
-    connect(taubinPassBandSpinBox, 'valueChanged(double)', 'state.taubinPassBand = args[0]')
 
     connect(boundarySmoothingCheckBox, 'stateChanged(int)', 'state.boundarySmoothing = bool(args[0])')
 
@@ -592,7 +567,6 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     connect(flipNormalsCheckBox, 'toggled(bool)', 'state.flipNormals = bool(args[0])')
     connect(splittingCheckBox, 'stateChanged(int)', 'state.splitting = bool(args[0])')
     connect(featureAngleSlider, 'valueChanged(double)', 'state.featureAngle = args[0]')
-    connect(featureAngleSpinBox, 'valueChanged(double)', 'state.featureAngle = args[0]')
 
     connect(mirrorButton, 'clicked(bool)', 'state.mirror = args[0]')
     connect(mirrorXCheckBox, 'toggled(bool)', 'state.mirrorX = bool(args[0])')
@@ -603,29 +577,21 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     connect(fillHolesButton, 'clicked(bool)', 'state.fillHoles = args[0]')
     connect(fillHolesSizeSlider, 'valueChanged(double)', 'state.fillHolesSize = args[0]')
-    connect(fillHolesSizeSpinBox, 'valueChanged(double)', 'state.fillHolesSize = args[0]')
 
     connect(connectivityButton, 'clicked(bool)', 'state.connectivity = args[0]')
 
     connect(scaleButton, 'clicked(bool)', 'state.scale = args[0]')
     connect(scaleXSlider, 'valueChanged(double)', 'state.scaleX = args[0]')
-    connect(scaleXSpinBox, 'valueChanged(double)', 'state.scaleX = args[0]')
     connect(scaleYSlider, 'valueChanged(double)', 'state.scaleY = args[0]')
-    connect(scaleYSpinBox, 'valueChanged(double)', 'state.scaleY = args[0]')
     connect(scaleZSlider, 'valueChanged(double)', 'state.scaleZ = args[0]')
-    connect(scaleZSpinBox, 'valueChanged(double)', 'state.scaleZ = args[0]')
 
     connect(translateButton, 'clicked(bool)', 'state.translate = args[0]')
     connect(transXSlider, 'valueChanged(double)', 'state.transX = args[0]')
-    connect(transXSpinBox, 'valueChanged(double)', 'state.transX = args[0]')
     connect(transYSlider, 'valueChanged(double)', 'state.transY = args[0]')
-    connect(transYSpinBox, 'valueChanged(double)', 'state.transY = args[0]')
     connect(transZSlider, 'valueChanged(double)', 'state.transZ = args[0]')
-    connect(transZSpinBox, 'valueChanged(double)', 'state.transZ = args[0]')
 
     connect(relaxButton, 'clicked(bool)', 'state.relax = args[0]')
     connect(relaxIterationsSlider, 'valueChanged(double)', 'state.relaxIterations = args[0]')
-    connect(relaxIterationsSpinBox, 'valueChanged(double)', 'state.relaxIterations = args[0]')
 
     connect(borderButton, 'clicked(bool)', 'state.border = args[0]')
 
@@ -733,212 +699,225 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
         state.parameterNode.SetAttribute(parameterName, state.parameterNode.GetParameter(str(parameterName)))
 
   def applyFilters(self, state, updateProcess):
-    self.loadParameters(state)
+    slicer.app.pauseRender()
+    qt.QApplication.setOverrideCursor(qt.Qt.WaitCursor)
+    try:
+      self.loadParameters(state)
 
-    surface = state.inputModelNode.GetPolyDataConnection()
+      surface = state.inputModelNode.GetPolyDataConnection()
 
-    if state.outputModelNode.GetPolyData() is None:
-      state.outputModelNode.SetAndObserveMesh(vtk.vtkPolyData())
-    state.outputModelNode.GetPolyData().DeepCopy(state.inputModelNode.GetPolyData())
+      if state.outputModelNode.GetPolyData() is None:
+        state.outputModelNode.SetAndObserveMesh(vtk.vtkPolyData())
+      state.outputModelNode.GetPolyData().DeepCopy(state.inputModelNode.GetPolyData())
 
-    self.parameterDefine(state, "outputVolume", state.outputModelNode.GetID())
+      self.parameterDefine(state, "outputVolume", state.outputModelNode.GetID())
 
-    # define which selections were made
-    self.parameterDefine(state, "decimation", state.decimation)
-    self.parameterDefine(state, "smoothing", state.smoothing)
-    self.parameterDefine(state, "normals", state.normals)
-    self.parameterDefine(state, "mirror", state.mirror)
-    self.parameterDefine(state, "cleaner", state.cleaner)
-    self.parameterDefine(state, "fillHoles", state.fillHoles)
-    self.parameterDefine(state, "connectivity", state.connectivity)
-    self.parameterDefine(state, "scale", state.scale)
-    self.parameterDefine(state, "translate", state.translate)
-    self.parameterDefine(state, "relax", state.relax)
-    self.parameterDefine(state, "border", state.border)
-    self.parameterDefine(state, "origin", state.origin)
+      # define which selections were made
+      self.parameterDefine(state, "decimation", state.decimation)
+      self.parameterDefine(state, "smoothing", state.smoothing)
+      self.parameterDefine(state, "normals", state.normals)
+      self.parameterDefine(state, "mirror", state.mirror)
+      self.parameterDefine(state, "cleaner", state.cleaner)
+      self.parameterDefine(state, "fillHoles", state.fillHoles)
+      self.parameterDefine(state, "connectivity", state.connectivity)
+      self.parameterDefine(state, "scale", state.scale)
+      self.parameterDefine(state, "translate", state.translate)
+      self.parameterDefine(state, "relax", state.relax)
+      self.parameterDefine(state, "border", state.border)
+      self.parameterDefine(state, "origin", state.origin)
 
-    if str(state.parameterNode.GetParameter("decimation")) == "True":
-      state.processValue = "Decimation..."
+      if str(state.parameterNode.GetParameter("decimation")) == "True":
+        state.processValue = "Decimation..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "DecimateReduction", str(state.reduction))
+        self.parameterDefine(state, "DecimateBoundary", str(state.boundaryDeletion))
+
+        decimateBoundary = state.parameterNode.GetParameter("DecimateBoundary") == "True"
+        parameters = {"inputModel": state.parameterNode.GetParameter("outputVolume"),
+          "outputModel": state.parameterNode.GetParameter("outputVolume"),
+          "reductionFactor": float(state.parameterNode.GetParameter("DecimateReduction"))}
+        if decimateBoundary:
+          # use default FastQuadric decimation method if boundary can be decimated
+          parameters["method"] = "FastQuadric"
+        else:
+          parameters["method"] = "DecimatePro"
+          parameters["boundaryDeletion"] = False
+
+        decimationMaker = slicer.modules.decimation
+        slicer.cli.runSync(decimationMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("smoothing")) == "True":
+        state.processValue = "Smoothing..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "SmoothingLaplaceBoundary", str(state.boundarySmoothing))
+        self.parameterDefine(state, "SmoothingLaplaceIterations", str(state.laplaceIterations))
+        self.parameterDefine(state, "SmoothingLaplaceRelaxation", str(state.laplaceRelaxation))
+
+        self.parameterDefine(state, "SmoothingTaubinBoundary", str(state.boundarySmoothing))
+        self.parameterDefine(state, "SmoothingTaubinIterations", str(state.taubinIterations))
+        self.parameterDefine(state, "SmoothingTaubinPassBand", str(state.taubinPassBand))
+        self.parameterDefine(state, "smoothingMethod", str(state.smoothingMethod))
+
+        # Keeping default python.
+        if state.parameterNode.GetParameter("smoothingMethod") == "Laplace":
+          smoothing = vtk.vtkSmoothPolyDataFilter()
+          smoothing.SetBoundarySmoothing(state.parameterNode.GetParameter("SmoothingLaplaceBoundary") == "True")
+          smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingLaplaceIterations")))
+          smoothing.SetRelaxationFactor(float(state.parameterNode.GetParameter("SmoothingLaplaceRelaxation")))
+          smoothing.SetInputConnection(surface)
+          surface = smoothing.GetOutputPort()
+        else:  # "Taubin"
+          smoothing = vtk.vtkWindowedSincPolyDataFilter()
+          smoothing.SetBoundarySmoothing(state.parameterNode.GetParameter("SmoothingTaubinBoundary") == "True")
+          smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingTaubinIterations")))
+          smoothing.SetPassBand(float(state.parameterNode.GetParameter("SmoothingTaubinPassBand")))
+          smoothing.SetInputConnection(surface)
+          surface = smoothing.GetOutputPort()
+
+      if str(state.parameterNode.GetParameter("normals")) == "True":
+        state.processValue = "Normals..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "NormalsOrient", str(state.autoOrientNormals))
+        self.parameterDefine(state, "NormalsFlip", str(state.flipNormals))
+        self.parameterDefine(state, "NormalsSplitting", str(state.splitting))
+        self.parameterDefine(state, "NormalsAngle", str(state.featureAngle))
+
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "orient": state.parameterNode.GetParameter("NormalsOrient") == "True",
+                      "flip": state.parameterNode.GetParameter("NormalsFlip") == "True",
+                      "splitting": state.parameterNode.GetParameter("NormalsSplitting") == "True",
+                      "angle": float(state.parameterNode.GetParameter("NormalsAngle"))}
+
+        normalsMaker = slicer.modules.normals
+        slicer.cli.runSync(normalsMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("mirror")) == "True":
+        state.processValue = "Mirror..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "MirrorxAxis", str(state.mirrorX))
+        self.parameterDefine(state, "MirroryAxis", str(state.mirrorY))
+        self.parameterDefine(state, "MirrorzAxis", str(state.mirrorZ))
+
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "xAxis": state.parameterNode.GetParameter("MirrorxAxis") == "True",
+                      "yAxis": state.parameterNode.GetParameter("MirroryAxis") == "True",
+                      "zAxis": state.parameterNode.GetParameter("MirrorzAxis") == "True"}
+        mirrorMaker = slicer.modules.mirror
+        slicer.cli.runSync(mirrorMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("cleaner")) == "True":
+        state.processValue = "Cleaner..."
+        updateProcess(state.processValue)
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
+        cleanerMaker = slicer.modules.cleaner
+        slicer.cli.runSync(cleanerMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("fillHoles")) == "True":
+        state.processValue = "Fill Holes..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "HolesMaximum", str(state.fillHolesSize))
+
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "holes": float(state.parameterNode.GetParameter("HolesMaximum"))}
+        fillHolesMaker = slicer.modules.fillholes
+        slicer.cli.runSync(fillHolesMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("connectivity")) == "True":
+        state.processValue = "Connectivity..."
+        updateProcess(state.processValue)
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
+        connectivityMaker = slicer.modules.connectivity
+        slicer.cli.runSync(connectivityMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("scale")) == "True":
+        state.processValue = "Scale..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "scale.dimX", str(state.scaleX))
+        self.parameterDefine(state, "scale.dimY", str(state.scaleY))
+        self.parameterDefine(state, "scale.dimZ", str(state.scaleZ))
+
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "dimX": float(state.parameterNode.GetParameter("scale.dimX")),
+                      "dimY": float(state.parameterNode.GetParameter("scale.dimY")),
+                      "dimZ": float(state.parameterNode.GetParameter("scale.dimZ"))}
+        scaleMaker = slicer.modules.scalemesh
+        slicer.cli.runSync(scaleMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("translate")) == "True":
+        state.processValue = "Translating..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "trans.dimX", str(state.transX))
+        self.parameterDefine(state, "trans.dimY", str(state.transY))
+        self.parameterDefine(state, "trans.dimZ", str(state.transZ))
+
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "dimX": float(state.parameterNode.GetParameter("trans.DimX")),
+                      "dimY": float(state.parameterNode.GetParameter("trans.DimY")),
+                      "dimZ": float(state.parameterNode.GetParameter("trans.DimZ"))}
+        transMaker = slicer.modules.translatemesh
+        slicer.cli.runSync(transMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("relax")) == "True":
+        state.processValue = "Relaxing..."
+        updateProcess(state.processValue)
+
+        self.parameterDefine(state, "relax.Iterations", str(state.relaxIterations))
+
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "Iterations": float(state.parameterNode.GetParameter("relax.Iterations"))}
+        relaxMaker = slicer.modules.relaxpolygons
+        slicer.cli.runSync(relaxMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("border")) == "True":
+        state.processValue = "Changing Borders..."
+        updateProcess(state.processValue)
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
+        borderMaker = slicer.modules.bordersout
+        slicer.cli.runSync(borderMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      if str(state.parameterNode.GetParameter("origin")) == "True":
+        state.processValue = "Moving Origin..."
+        updateProcess(state.processValue)
+        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
+                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
+        originMaker = slicer.modules.mc2origin
+        slicer.cli.runSync(originMaker, None, parameters)
+        surface = state.outputModelNode.GetPolyDataConnection()
+
+      state.outputModelNode.SetPolyDataConnection(surface)
+      state.processValue = "Apply"
       updateProcess(state.processValue)
 
-      self.parameterDefine(state, "DecimateReduction", str(state.reduction))
-      self.parameterDefine(state, "DecimateBoundary", str(state.boundaryDeletion))
-
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "Decimate": float(state.parameterNode.GetParameter("DecimateReduction")),
-                    "Boundary": bool(state.parameterNode.GetParameter("DecimateBoundary"))}
-      decimationMaker = slicer.modules.decimation
-      slicer.cli.runSync(decimationMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("smoothing")) == "True":
-      state.processValue = "Smoothing..."
-      updateProcess(state.processValue)
-
-      self.parameterDefine(state, "SmoothingLaplaceBoundary", str(state.boundarySmoothing))
-      self.parameterDefine(state, "SmoothingLaplaceIterations", str(state.laplaceIterations))
-      self.parameterDefine(state, "SmoothingLaplaceRelaxation", str(state.laplaceRelaxation))
-
-      self.parameterDefine(state, "SmoothingTaubinBoundary", str(state.boundarySmoothing))
-      self.parameterDefine(state, "SmoothingTaubinIterations", str(state.taubinIterations))
-      self.parameterDefine(state, "SmoothingTaubinPassBand", str(state.taubinPassBand))
-      self.parameterDefine(state, "smoothingMethod", str(state.smoothingMethod))
-
-      # Keeping default python.
-      if state.parameterNode.GetParameter("smoothingMethod") == "Laplace":
-        smoothing = vtk.vtkSmoothPolyDataFilter()
-        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingLaplaceBoundary") == "True"))
-        smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingLaplaceIterations")))
-        smoothing.SetRelaxationFactor(float(state.parameterNode.GetParameter("SmoothingLaplaceRelaxation")))
-        smoothing.SetInputConnection(surface)
-        surface = smoothing.GetOutputPort()
-      else:  # "Taubin"
-        smoothing = vtk.vtkWindowedSincPolyDataFilter()
-        smoothing.SetBoundarySmoothing(bool(state.parameterNode.GetParameter("SmoothingTaubinBoundary") == "True"))
-        smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingTaubinIterations")))
-        smoothing.SetPassBand(float(state.parameterNode.GetParameter("SmoothingTaubinPassBand")))
-        smoothing.SetInputConnection(surface)
-        surface = smoothing.GetOutputPort()
-
-    if str(state.parameterNode.GetParameter("normals")) == "True":
-      state.processValue = "Normals..."
-      updateProcess(state.processValue)
-
-      self.parameterDefine(state, "NormalsOrient", str(state.autoOrientNormals))
-      self.parameterDefine(state, "NormalsFlip", str(state.flipNormals))
-      self.parameterDefine(state, "NormalsSplitting", str(state.splitting))
-      self.parameterDefine(state, "NormalsAngle", str(state.featureAngle))
-
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "orient": bool(state.parameterNode.GetParameter("NormalsOrient") == "True"),
-                    "flip": bool(state.parameterNode.GetParameter("NormalsFlip") == "True"),
-                    "splitting": bool(state.parameterNode.GetParameter("NormalsSplitting") == "True"),
-                    "angle": float(state.parameterNode.GetParameter("NormalsAngle"))}
-
-      normalsMaker = slicer.modules.normals
-      slicer.cli.runSync(normalsMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("mirror")) == "True":
-      state.processValue = "Mirror..."
-      updateProcess(state.processValue)
-
-      self.parameterDefine(state, "MirrorxAxis", str(state.mirrorX))
-      self.parameterDefine(state, "MirroryAxis", str(state.mirrorY))
-      self.parameterDefine(state, "MirrorzAxis", str(state.mirrorZ))
-
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "xAxis": bool(state.parameterNode.GetParameter("MirrorxAxis") == "True"),
-                    "yAxis": bool(state.parameterNode.GetParameter("MirroryAxis") == "True"),
-                    "zAxis": bool(state.parameterNode.GetParameter("MirrorzAxis") == "True")}
-      mirrorMaker = slicer.modules.mirror
-      slicer.cli.runSync(mirrorMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("cleaner")) == "True":
-      state.processValue = "Cleaner..."
-      updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-      cleanerMaker = slicer.modules.cleaner
-      slicer.cli.runSync(cleanerMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("fillHoles")) == "True":
-      state.processValue = "Fill Holes..."
-      updateProcess(state.processValue)
-
-      self.parameterDefine(state, "HolesMaximum", str(state.fillHolesSize))
-
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "holes": float(state.parameterNode.GetParameter("HolesMaximum"))}
-      fillHolesMaker = slicer.modules.fillholes
-      slicer.cli.runSync(fillHolesMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("connectivity")) == "True":
-      state.processValue = "Connectivity..."
-      updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-      connectivityMaker = slicer.modules.connectivity
-      slicer.cli.runSync(connectivityMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("scale")) == "True":
-      state.processValue = "Scale..."
-      updateProcess(state.processValue)
-
-      self.parameterDefine(state, "scale.dimX", str(state.scaleX))
-      self.parameterDefine(state, "scale.dimY", str(state.scaleY))
-      self.parameterDefine(state, "scale.dimZ", str(state.scaleZ))
-
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "dimX": float(state.parameterNode.GetParameter("scale.dimX")),
-                    "dimY": float(state.parameterNode.GetParameter("scale.dimY")),
-                    "dimZ": float(state.parameterNode.GetParameter("scale.dimZ"))}
-      scaleMaker = slicer.modules.scalemesh
-      slicer.cli.runSync(scaleMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("translate")) == "True":
-      state.processValue = "Translating..."
-      updateProcess(state.processValue)
-
-      self.parameterDefine(state, "trans.dimX", str(state.transX))
-      self.parameterDefine(state, "trans.dimY", str(state.transY))
-      self.parameterDefine(state, "trans.dimZ", str(state.transZ))
-
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "dimX": float(state.parameterNode.GetParameter("trans.DimX")),
-                    "dimY": float(state.parameterNode.GetParameter("trans.DimY")),
-                    "dimZ": float(state.parameterNode.GetParameter("trans.DimZ"))}
-      transMaker = slicer.modules.translatemesh
-      slicer.cli.runSync(transMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("relax")) == "True":
-      state.processValue = "Relaxing..."
-      updateProcess(state.processValue)
-
-      self.parameterDefine(state, "relax.Iterations", str(state.relaxIterations))
-
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "Iterations": float(state.parameterNode.GetParameter("relax.Iterations"))}
-      relaxMaker = slicer.modules.relaxpolygons
-      slicer.cli.runSync(relaxMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("border")) == "True":
-      state.processValue = "Changing Borders..."
-      updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-      borderMaker = slicer.modules.bordersout
-      slicer.cli.runSync(borderMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    if str(state.parameterNode.GetParameter("origin")) == "True":
-      state.processValue = "Moving Origin..."
-      updateProcess(state.processValue)
-      parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                    "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-      originMaker = slicer.modules.mc2origin
-      slicer.cli.runSync(originMaker, None, parameters)
-      surface = state.outputModelNode.GetPolyDataConnection()
-
-    state.outputModelNode.SetPolyDataConnection(surface)
-    state.processValue = "Apply"
-    updateProcess(state.processValue)
-
-    self.saveParameters(state)
+      self.saveParameters(state)
+    finally:
+      slicer.app.resumeRender()
+      qt.QApplication.restoreOverrideCursor()
     return True
 
 
