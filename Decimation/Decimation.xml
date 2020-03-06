@@ -2,48 +2,90 @@
 <executable>
   <category>Surface Models.Advanced</category>
   <title>Decimation</title>
-  <description><![CDATA[Perform a topology-preserving reduction of surface triangles.]]></description>
+  <description><![CDATA[Perform a topology-preserving reduction of surface triangles. FastMesh method uses Sven Forstmann's method (https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).]]></description>
   <version>0.0.1</version>
   <documentation-url>https://www.slicer.org/wiki/Documentation/Nightly/Modules/SurfaceToolbox</documentation-url>
   <license>Slicer</license>
-  <contributor>Ben Wilson (Kitware)</contributor>
+  <contributor>Ben Wilson (Kitware), Andras Lasso (PerkLab)</contributor>
   <acknowledgements></acknowledgements>
   <parameters>
-    <label>IO</label>
-    <description><![CDATA[Input/output parameters]]></description>
-
-    <geometry>
-      <name>inputVolume</name>
-      <label>Input Volume</label>
+    <label>Common</label>
+    <description><![CDATA[IO]]></description>
+    <geometry fileExtensions=".obj,.vtp">
+      <name>inputModel</name>
+      <label>Input Model</label>
       <channel>input</channel>
       <index>0</index>
-      <description><![CDATA[Input volume]]></description>
+      <description><![CDATA[Input Model]]></description>
     </geometry>
-    <geometry>
-      <name>outputVolume</name>
-      <label>Output Volume</label>
+    <geometry fileExtensions=".obj,.vtp">
+      <name>outputModel</name>
+      <label>Output Model</label>
       <channel>output</channel>
       <index>1</index>
-      <description><![CDATA[Output Volume]]></description>
+      <description><![CDATA[Output Model]]></description>
     </geometry>
     <double>
-      <name>Decimate</name>
-      <label>Decimate</label>
-      <longflag>--decimate</longflag>
-      <description><![CDATA[Target reduction during decimation, as a decimal percentage reduction in the number of polygons. If 0, no decimation will be done.]]></description>
+      <name>reductionFactor</name>
+      <label>Target reduction factor</label>
+      <longflag>--reductionFactor</longflag>
+      <flag>-r</flag>
+      <description><![CDATA[Target reduction factor during decimation. Ratio of triangles that are requested to be eliminated. 0.8 means that the mesh size is requested to be reduced by 80%.]]></description>
       <default>0.8</default>
       <constraints>
         <minimum>0.0</minimum>
         <maximum>1.0</maximum>
+        <step>0.01</step>
+      </constraints>
+    </double>
+    <string-enumeration>
+      <name>method</name>
+      <label>Method:</label>
+      <description><![CDATA[Decimation algorithm. Quadric methods provide more even element sizes. FastQuadric allows faster execution at the cost of lowered accuracy. DecimatePro can preserve boundary edges but tend to create more ill-shaped triangles.]]></description>
+      <longflag>--method</longflag>
+      <flag>-m</flag>
+      <element>FastQuadric</element>
+      <element>Quadric</element>
+      <element>DecimatePro</element>
+      <default>FastQuadric</default>
+    </string-enumeration>
+  </parameters>
+  <parameters advanced="true">
+    <label>Advanced</label>
+    <boolean>
+      <name>boundaryDeletion</name>
+      <label>DecimatePro Boundary Deletion</label>
+      <channel>input</channel>
+      <longflag>--deleteBoundary</longflag>
+      <description><![CDATA[Enable deletion of boundary points for DecimatePro method. The flag has no effect if other method is used.]]></description>
+      <default>true</default>
+    </boolean>
+    <boolean>
+      <name>lossless</name>
+      <longflag>--lossless</longflag>
+      <channel>input</channel>
+      <description><![CDATA[Lossless remeshing for FastQuadric method. The flag has no effect if other method is used.]]></description>
+      <label>FastQuadric Lossless</label>
+      <default>false</default>
+    </boolean>
+    <double>
+      <name>aggressiveness</name>
+      <label>FastQuadric Aggressiveness</label>
+      <longflag>--aggressiveness</longflag>
+      <description><![CDATA[Balances between accuracy and computation time for FastQuadric method (default = 7.0). The flag has no effect if other method is used.]]></description>
+      <default>7.0</default>
+      <constraints>
+        <minimum>0.0</minimum>
+        <maximum>30.0</maximum>
       </constraints>
     </double>
     <boolean>
-      <name>Boundary</name>
-      <label>Boundary Deletion</label>
-      <channel>Boundary</channel>
-      <longflag>--boundary</longflag>
-      <description><![CDATA[Boundary Deletion on or off]]></description>
-      <default>true</default>
+      <name>verbose</name>
+      <longflag>--verbose</longflag>
+      <channel>input</channel>
+      <description><![CDATA[Print debugging information.]]></description>
+      <label>Verbose</label>
+      <default>false</default>
     </boolean>
   </parameters>
 </executable>
