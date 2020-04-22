@@ -200,7 +200,7 @@ vtkMRMLNode* vtkSlicerParametricSurfaceEditorRule::GetNthInputNode(int n, vtkMRM
   if (n >= this->InputNodeInfo.size())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
-    return false;
+    return nullptr;
     }
   std::string referenceRole = this->GetNthInputNodeReferenceRole(n);
   return surfaceEditorNode->GetNodeReference(referenceRole.c_str());
@@ -217,7 +217,7 @@ vtkMRMLNode* vtkSlicerParametricSurfaceEditorRule::GetNthOutputNode(int n, vtkMR
   if (n >= this->OutputNodeInfo.size())
     {
     vtkErrorMacro("Output node " << n << " is out of range!");
-    return false;
+    return nullptr;
     }
   std::string referenceRole = this->GetNthOutputNodeReferenceRole(n);
   return surfaceEditorNode->GetNodeReference(referenceRole.c_str());
