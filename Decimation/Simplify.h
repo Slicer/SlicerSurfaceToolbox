@@ -27,7 +27,6 @@
 #include <math.h>
 #include <float.h> //FLT_EPSILON, DBL_EPSILON
 
-#define loopj(start_l,end_l) for ( size_t j=start_l;j<end_l;++j )
 
 struct vector3
 {
@@ -376,8 +375,12 @@ namespace Simplify
                 if(t.deleted) continue;
                 if(t.dirty) continue;
 
-                loopj(0,3)if(t.err[j]<threshold)
+                for(size_t j: {0, 1, 2})
                 {
+                    if(t.err[j] >= threshold)
+                    {
+                        continue;
+                    }
 
                     int i0=t.v[ j     ]; Vertex &v0 = vertices[i0];
                     int i1=t.v[(j+1)%3]; Vertex &v1 = vertices[i1];
@@ -464,8 +467,12 @@ namespace Simplify
                 if(t.deleted) continue;
                 if(t.dirty) continue;
 
-                loopj(0,3)if(t.err[j]<threshold)
+                for(size_t j: {0, 1, 2})
                 {
+                    if(t.err[j] >= threshold)
+                    {
+                        continue;
+                    }
                     int i0=t.v[ j     ]; Vertex &v0 = vertices[i0];
                     int i1=t.v[(j+1)%3]; Vertex &v1 = vertices[i1];
 
@@ -633,18 +640,26 @@ namespace Simplify
             for(Triangle& t: triangles)
             {
                 vec3f n,p[3];
-                loopj(0,3) p[j]=vertices[t.v[j]].p;
+                for(size_t j: {0, 1, 2})
+                {
+                    p[j] = vertices[t.v[j]].p;
+                }
                 n.cross(p[1]-p[0],p[2]-p[0]);
                 n.normalize();
                 t.n=n;
-                loopj(0,3) vertices[t.v[j]].q =
-                    vertices[t.v[j]].q+SymetricMatrix(n.x,n.y,n.z,-n.dot(p[0]));
+                for(size_t j: {0, 1, 2})
+                {
+                    vertices[t.v[j]].q = vertices[t.v[j]].q+SymetricMatrix(n.x,n.y,n.z,-n.dot(p[0]));
+                }
             }
             for(Triangle& t: triangles)
             {
                 // Calc Edge Error
                 vec3f p;
-                loopj(0,3) t.err[j]=calculate_error(t.v[j],t.v[(j+1)%3],p);
+                for(size_t j: {0, 1, 2})
+                {
+                    t.err[j] = calculate_error(t.v[j],t.v[(j+1)%3],p);
+                }
                 t.err[3]=min(t.err[0],min(t.err[1],t.err[2]));
             }
         }
@@ -657,7 +672,7 @@ namespace Simplify
         }
         for(Triangle& t: triangles)
         {
-            loopj(0,3) vertices[t.v[j]].tcount++;
+            for(size_t j: {0, 1, 2}) { vertices[t.v[j]].tcount++; }
         }
         int tstart=0;
         for(Vertex& v: vertices)
@@ -672,7 +687,7 @@ namespace Simplify
         for (size_t i = 0; i < triangles.size(); ++i)
         {
             Triangle &t = triangles[i];
-            loopj(0,3)
+            for(size_t j: {0, 1, 2})
             {
                 Vertex &v=vertices[t.v[j]];
                 refs[v.tstart+v.tcount].tid=i;
@@ -695,7 +710,7 @@ namespace Simplify
             {
                 vcount.clear();
                 vids.clear();
-                loopj(0, v.tcount)
+                for(size_t j = 0; j < v.tcount; ++j)
                 {
                     int k=refs[v.tstart+j].tid;
                     Triangle &t=triangles[k];
@@ -717,8 +732,13 @@ namespace Simplify
                             vcount[ofs]++;
                     }
                 }
-                loopj(0,vcount.size()) if(vcount[j]==1)
-                    vertices[vids[j]].border=1;
+                for(size_t j = 0; j < vcount.size(); ++j)
+                {
+                    if(vcount[j] == 1)
+                    {
+                        vertices[vids[j]].border = 1;
+                    }
+               }
             }
         }
     }
@@ -739,7 +759,7 @@ namespace Simplify
                 continue;
             }
             triangles[dst++]=t;
-            loopj(0,3)vertices[t.v[j]].tcount=1;
+            for(size_t j: {0, 1, 2}) { vertices[t.v[j]].tcount=1; }
         }
         triangles.resize(dst);
         dst=0;
@@ -755,7 +775,7 @@ namespace Simplify
         }
         for(Triangle& t: triangles)
         {
-            loopj(0,3)t.v[j]=vertices[t.v[j]].tstart;
+            for(size_t j: {0, 1, 2}) { t.v[j]=vertices[t.v[j]].tstart; }
         }
         vertices.resize(dst);
     }
@@ -963,8 +983,10 @@ namespace Simplify
             for(size_t i = 0; i < triangles.size(); ++i)
             {
                 Triangle& t = triangles[i];
-                loopj(0,3)
-                t.uvs[j] = uvs[uvMap[i][j]];
+                for(size_t j: {0, 1, 2})
+                {
+                    t.uvs[j] = uvs[uvMap[i][j]];
+                }
             }
         }
 
