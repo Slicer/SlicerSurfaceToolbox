@@ -306,7 +306,7 @@ namespace Simplify
         COLOR = 8
     };
     struct Triangle { int v[3];double err[4];int deleted,dirty,attr;vec3f n;vec3f uvs[3];int material; };
-    struct Vertex { vec3f p;int tstart, tcount;SymetricMatrix q;int border;};
+    struct Vertex { vec3f p;int tstart; size_t tcount;SymetricMatrix q;int border;};
     struct Ref { int tid,tvertex; };
     std::vector<Triangle> triangles;
     std::vector<Vertex> vertices;
@@ -408,7 +408,7 @@ namespace Simplify
                     update_triangles(i0,v0,deleted0,deleted_triangles);
                     update_triangles(i0,v1,deleted1,deleted_triangles);
 
-                    int tcount=refs.size()-tstart;
+                    size_t tcount = refs.size() - tstart;
 
                     if(tcount<=v0.tcount)
                     {
@@ -492,14 +492,14 @@ namespace Simplify
                     // not flipped, so remove edge
                     v0.p=p;
                     v0.q=v1.q+v0.q;
-                    int tstart=refs.size();
+                    size_t tstart = refs.size();
 
                     update_triangles(i0,v0,deleted0,deleted_triangles);
                     update_triangles(i0,v1,deleted1,deleted_triangles);
 
-                    int tcount=refs.size()-tstart;
+                    size_t tcount = refs.size() - tstart;
 
-                    if(tcount<=v0.tcount)
+                    if(tcount <= v0.tcount)
                     {
                         // save ram
                         if(tcount)memcpy(&refs[v0.tstart],&refs[tstart],tcount*sizeof(Ref));
@@ -527,7 +527,7 @@ namespace Simplify
         (void)i0; // unused
         (void)v1; // unused
 
-        for(size_t k = 0; k < static_cast<size_t>(v0.tcount); ++k)
+        for(size_t k = 0; k < v0.tcount; ++k)
         {
             Triangle &t=triangles[refs[v0.tstart+k].tid];
             if(t.deleted)continue;
@@ -559,7 +559,7 @@ namespace Simplify
     void update_uvs(int i0,const Vertex &v,const vec3f &p,std::vector<int> &deleted)
     {
         (void)i0; // unused
-        for(size_t k = 0; k < static_cast<size_t>(v.tcount); ++k)
+        for(size_t k = 0; k < v.tcount; ++k)
         {
             Ref &r=refs[v.tstart+k];
             Triangle &t=triangles[r.tid];
@@ -577,7 +577,7 @@ namespace Simplify
     void update_triangles(int i0,Vertex &v,std::vector<int> &deleted,int &deleted_triangles)
     {
         vec3f p;
-        for(size_t k = 0; k < static_cast<size_t>(v.tcount); ++k)
+        for(size_t k = 0; k < v.tcount; ++k)
         {
             Ref &r=refs[v.tstart+k];
             Triangle &t=triangles[r.tid];
@@ -695,7 +695,7 @@ namespace Simplify
             {
                 vcount.clear();
                 vids.clear();
-                loopj(0, static_cast<size_t>(v.tcount))
+                loopj(0, v.tcount)
                 {
                     int k=refs[v.tstart+j].tid;
                     Triangle &t=triangles[k];
