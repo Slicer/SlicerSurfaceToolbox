@@ -868,25 +868,29 @@ namespace Simplify
             if ( line[0] == 'v' && line[1] == 't' )
             {
                 if ( line[2] == ' ' )
-                if(sscanf(line,"vt %lf %lf",
-                    &uv.x,&uv.y)==2)
                 {
-                    uv.z = 0;
-                    uvs.push_back(uv);
-                } else
-                if(sscanf(line,"vt %lf %lf %lf",
-                    &uv.x,&uv.y,&uv.z)==3)
-                {
-                    uvs.push_back(uv);
+                    if(sscanf(line,"vt %lf %lf",
+                        &uv.x,&uv.y)==2)
+                    {
+                        uv.z = 0;
+                        uvs.push_back(uv);
+                    } else
+                    if(sscanf(line,"vt %lf %lf %lf",
+                        &uv.x,&uv.y,&uv.z)==3)
+                    {
+                        uvs.push_back(uv);
+                    }
                 }
             }
             else if ( line[0] == 'v' )
             {
                 if ( line[1] == ' ' )
-                if(sscanf(line,"v %lf %lf %lf",
-                    &v.p.x,    &v.p.y,    &v.p.z)==3)
                 {
-                    vertices.push_back(v);
+                    if(sscanf(line,"v %lf %lf %lf",
+                        &v.p.x,    &v.p.y,    &v.p.z)==3)
+                    {
+                        vertices.push_back(v);
+                    }
                 }
             }
             int integers[9];
