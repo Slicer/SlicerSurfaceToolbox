@@ -27,7 +27,6 @@
 #include <math.h>
 #include <float.h> //FLT_EPSILON, DBL_EPSILON
 
-#define loopi(start_l,end_l) for ( size_t i=start_l;i<end_l;++i )
 #define loopj(start_l,end_l) for ( size_t j=start_l;j<end_l;++j )
 #define loopk(start_l,end_l) for ( size_t k=start_l;k<end_l;++k )
 
@@ -243,7 +242,7 @@ class SymetricMatrix {
 
     // Constructor
 
-    SymetricMatrix(double c=0) { loopi(0,10) m[i] = c;  }
+    SymetricMatrix(double c=0) { for (size_t i = 0; i < 10; ++i) { m[i] = c; } }
 
     SymetricMatrix(    double m11, double m12, double m13, double m14,
                         double m22, double m23, double m24,
@@ -337,10 +336,7 @@ namespace Simplify
     void simplify_mesh(int target_count, double agressiveness=7, bool verbose=false)
     {
         // init
-        loopi(0,triangles.size())
-        {
-            triangles[i].deleted=0;
-        }
+        for(Triangle& t: triangles) { t.deleted=0; }
 
         // main iteration loop
         int deleted_triangles=0;
@@ -359,7 +355,7 @@ namespace Simplify
             }
 
             // clear dirty flag
-            loopi(0,triangles.size()) triangles[i].dirty=0;
+            for(Triangle& triangle: triangles) { triangle.dirty=0; }
 
             //
             // All triangles with edges below the threshold will be removed
@@ -375,9 +371,8 @@ namespace Simplify
             }
 
             // remove vertices & mark deleted triangles
-            loopi(0,triangles.size())
+            for(Triangle& t: triangles)
             {
-                Triangle &t=triangles[i];
                 if(t.err[3]>threshold) continue;
                 if(t.deleted) continue;
                 if(t.dirty) continue;
@@ -439,7 +434,7 @@ namespace Simplify
     void simplify_mesh_lossless(bool verbose=false)
     {
         // init
-        loopi(0,triangles.size()) triangles[i].deleted=0;
+        for(Triangle& t: triangles) { t.deleted=0; }
 
         // main iteration loop
         int deleted_triangles=0;
@@ -451,7 +446,7 @@ namespace Simplify
             // update mesh constantly
             update_mesh(iteration);
             // clear dirty flag
-            loopi(0,triangles.size()) triangles[i].dirty=0;
+            for(Triangle& t: triangles) { t.dirty=0; }
             //
             // All triangles with edges below the threshold will be removed
             //
@@ -464,9 +459,8 @@ namespace Simplify
             }
 
             // remove vertices & mark deleted triangles
-            loopi(0,triangles.size())
+            for(Triangle& t: triangles)
             {
-                Triangle &t=triangles[i];
                 if(t.err[3]>threshold) continue;
                 if(t.deleted) continue;
                 if(t.dirty) continue;
@@ -612,10 +606,14 @@ namespace Simplify
         if(iteration>0) // compact triangles
         {
             int dst=0;
-            loopi(0,triangles.size())
-            if(!triangles[i].deleted)
+            for (Triangle &t: triangles)
             {
-                triangles[dst++]=triangles[i];
+                if(t.deleted)
+                {
+                    continue;
+                }
+                triangles[dst] = t;
+                dst++;
             }
             triangles.resize(dst);
         }
@@ -628,12 +626,13 @@ namespace Simplify
         //
         if( iteration == 0 )
         {
-            loopi(0,vertices.size())
-            vertices[i].q=SymetricMatrix(0.0);
-
-            loopi(0,triangles.size())
+            for(Vertex& v: vertices)
             {
-                Triangle &t=triangles[i];
+                v.q = SymetricMatrix(0.0);
+            }
+
+            for(Triangle& t: triangles)
+            {
                 vec3f n,p[3];
                 loopj(0,3) p[j]=vertices[t.v[j]].p;
                 n.cross(p[1]-p[0],p[2]-p[0]);
@@ -642,30 +641,28 @@ namespace Simplify
                 loopj(0,3) vertices[t.v[j]].q =
                     vertices[t.v[j]].q+SymetricMatrix(n.x,n.y,n.z,-n.dot(p[0]));
             }
-            loopi(0,triangles.size())
+            for(Triangle& t: triangles)
             {
                 // Calc Edge Error
-                Triangle &t=triangles[i];vec3f p;
+                vec3f p;
                 loopj(0,3) t.err[j]=calculate_error(t.v[j],t.v[(j+1)%3],p);
                 t.err[3]=min(t.err[0],min(t.err[1],t.err[2]));
             }
         }
 
         // Init Reference ID list
-        loopi(0,vertices.size())
+        for(Vertex& v: vertices)
         {
-            vertices[i].tstart=0;
-            vertices[i].tcount=0;
+            v.tstart=0;
+            v.tcount=0;
         }
-        loopi(0,triangles.size())
+        for(Triangle& t: triangles)
         {
-            Triangle &t=triangles[i];
             loopj(0,3) vertices[t.v[j]].tcount++;
         }
         int tstart=0;
-        loopi(0,vertices.size())
+        for(Vertex& v: vertices)
         {
-            Vertex &v=vertices[i];
             v.tstart=tstart;
             tstart+=v.tcount;
             v.tcount=0;
@@ -673,9 +670,9 @@ namespace Simplify
 
         // Write References
         refs.resize(triangles.size()*3);
-        loopi(0,triangles.size())
+        for (size_t i = 0; i < triangles.size(); ++i)
         {
-            Triangle &t=triangles[i];
+            Triangle &t = triangles[i];
             loopj(0,3)
             {
                 Vertex &v=vertices[t.v[j]];
@@ -690,12 +687,13 @@ namespace Simplify
         {
             std::vector<int> vcount,vids;
 
-            loopi(0,vertices.size())
-                vertices[i].border=0;
-
-            loopi(0,vertices.size())
+            for(Vertex& v: vertices)
             {
-                Vertex &v=vertices[i];
+                v.border=0;
+            }
+
+            for(Vertex& v: vertices)
+            {
                 vcount.clear();
                 vids.clear();
                 loopj(0, static_cast<size_t>(v.tcount))
@@ -731,29 +729,33 @@ namespace Simplify
     void compact_mesh()
     {
         int dst=0;
-        loopi(0,vertices.size())
+        for(Vertex& v: vertices)
         {
-            vertices[i].tcount=0;
+            v.tcount = 0;
         }
-        loopi(0,triangles.size())
-        if(!triangles[i].deleted)
+        for(Triangle& t: triangles)
         {
-            Triangle &t=triangles[i];
+            if(t.deleted)
+            {
+                continue;
+            }
             triangles[dst++]=t;
             loopj(0,3)vertices[t.v[j]].tcount=1;
         }
         triangles.resize(dst);
         dst=0;
-        loopi(0,vertices.size())
-        if(vertices[i].tcount)
+        for(Vertex& v: vertices)
         {
-            vertices[i].tstart=dst;
-            vertices[dst].p=vertices[i].p;
+            if(v.tcount == 0)
+            {
+                continue;
+            }
+            v.tstart=dst;
+            vertices[dst].p=v.p;
             dst++;
         }
-        loopi(0,triangles.size())
+        for(Triangle& t: triangles)
         {
-            Triangle &t=triangles[i];
             loopj(0,3)t.v[j]=vertices[t.v[j]].tstart;
         }
         vertices.resize(dst);
@@ -959,10 +961,11 @@ namespace Simplify
 
         if ( process_uv && uvs.size() )
         {
-            loopi(0,triangles.size())
+            for(size_t i = 0; i < triangles.size(); ++i)
             {
+                Triangle& t = triangles[i];
                 loopj(0,3)
-                triangles[i].uvs[j] = uvs[uvMap[i][j]];
+                t.uvs[j] = uvs[uvMap[i][j]];
             }
         }
 
@@ -988,38 +991,46 @@ namespace Simplify
         {
             fprintf(file, "mtllib %s\n", mtllib.c_str());
         }
-        loopi(0,vertices.size())
+        for(Vertex& v: vertices)
         {
-            //fprintf(file, "v %lf %lf %lf\n", vertices[i].p.x,vertices[i].p.y,vertices[i].p.z);
-            fprintf(file, "v %g %g %g\n", vertices[i].p.x,vertices[i].p.y,vertices[i].p.z); //more compact: remove trailing zeros
+            //fprintf(file, "v %lf %lf %lf\n", v.p.x, v.p.y, v.p.z);
+            fprintf(file, "v %g %g %g\n", v.p.x, v.p.y, v.p.z); //more compact: remove trailing zeros
         }
         if (has_uv)
         {
-            loopi(0,triangles.size()) if(!triangles[i].deleted)
+            for(Triangle& t: triangles)
             {
-                fprintf(file, "vt %g %g\n", triangles[i].uvs[0].x, triangles[i].uvs[0].y);
-                fprintf(file, "vt %g %g\n", triangles[i].uvs[1].x, triangles[i].uvs[1].y);
-                fprintf(file, "vt %g %g\n", triangles[i].uvs[2].x, triangles[i].uvs[2].y);
+                if(t.deleted)
+                {
+                    continue;
+                }
+                fprintf(file, "vt %g %g\n", t.uvs[0].x, t.uvs[0].y);
+                fprintf(file, "vt %g %g\n", t.uvs[1].x, t.uvs[1].y);
+                fprintf(file, "vt %g %g\n", t.uvs[2].x, t.uvs[2].y);
             }
         }
         int uv = 1;
-        loopi(0,triangles.size()) if(!triangles[i].deleted)
+        for(Triangle& t: triangles)
         {
-            if (triangles[i].material != cur_material)
+            if(t.deleted)
             {
-                cur_material = triangles[i].material;
-                fprintf(file, "usemtl %s\n", materials[triangles[i].material].c_str());
+                continue;
+            }
+            if (t.material != cur_material)
+            {
+                cur_material = t.material;
+                fprintf(file, "usemtl %s\n", materials[t.material].c_str());
             }
             if (has_uv)
             {
-                fprintf(file, "f %d/%d %d/%d %d/%d\n", triangles[i].v[0]+1, uv, triangles[i].v[1]+1, uv+1, triangles[i].v[2]+1, uv+2);
+                fprintf(file, "f %d/%d %d/%d %d/%d\n", t.v[0]+1, uv, t.v[1]+1, uv+1, t.v[2]+1, uv+2);
                 uv += 3;
             }
             else
             {
-                fprintf(file, "f %d %d %d\n", triangles[i].v[0]+1, triangles[i].v[1]+1, triangles[i].v[2]+1);
+                fprintf(file, "f %d %d %d\n", t.v[0]+1, t.v[1]+1, t.v[2]+1);
             }
-            //fprintf(file, "f %d// %d// %d//\n", triangles[i].v[0]+1, triangles[i].v[1]+1, triangles[i].v[2]+1); //more compact: remove trailing zeros
+            //fprintf(file, "f %d// %d// %d//\n", t.v[0]+1, t.v[1]+1, t.v[2]+1); //more compact: remove trailing zeros
         }
         fclose(file);
     }
