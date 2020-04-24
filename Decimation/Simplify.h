@@ -28,7 +28,6 @@
 #include <float.h> //FLT_EPSILON, DBL_EPSILON
 
 #define loopj(start_l,end_l) for ( size_t j=start_l;j<end_l;++j )
-#define loopk(start_l,end_l) for ( size_t k=start_l;k<end_l;++k )
 
 struct vector3
 {
@@ -528,7 +527,7 @@ namespace Simplify
         (void)i0; // unused
         (void)v1; // unused
 
-        loopk(0, static_cast<size_t>(v0.tcount))
+        for(size_t k = 0; k < static_cast<size_t>(v0.tcount); ++k)
         {
             Triangle &t=triangles[refs[v0.tstart+k].tid];
             if(t.deleted)continue;
@@ -560,7 +559,7 @@ namespace Simplify
     void update_uvs(int i0,const Vertex &v,const vec3f &p,std::vector<int> &deleted)
     {
         (void)i0; // unused
-        loopk(0, static_cast<size_t>(v.tcount))
+        for(size_t k = 0; k < static_cast<size_t>(v.tcount); ++k)
         {
             Ref &r=refs[v.tstart+k];
             Triangle &t=triangles[r.tid];
@@ -578,7 +577,7 @@ namespace Simplify
     void update_triangles(int i0,Vertex &v,std::vector<int> &deleted,int &deleted_triangles)
     {
         vec3f p;
-        loopk(0, static_cast<size_t>(v.tcount))
+        for(size_t k = 0; k < static_cast<size_t>(v.tcount); ++k)
         {
             Ref &r=refs[v.tstart+k];
             Triangle &t=triangles[r.tid];
@@ -700,7 +699,7 @@ namespace Simplify
                 {
                     int k=refs[v.tstart+j].tid;
                     Triangle &t=triangles[k];
-                    loopk(0,3)
+                    for(size_t k: {0, 1, 2})
                     {
                         size_t ofs=0;
                         int id=t.v[k];
