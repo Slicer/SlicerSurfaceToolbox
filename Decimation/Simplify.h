@@ -27,10 +27,9 @@
 #include <math.h>
 #include <float.h> //FLT_EPSILON, DBL_EPSILON
 
-#define loopi(start_l,end_l) for ( int i=start_l;i<end_l;++i )
-#define loopi(start_l,end_l) for ( int i=start_l;i<end_l;++i )
-#define loopj(start_l,end_l) for ( int j=start_l;j<end_l;++j )
-#define loopk(start_l,end_l) for ( int k=start_l;k<end_l;++k )
+#define loopi(start_l,end_l) for ( size_t i=start_l;i<end_l;++i )
+#define loopj(start_l,end_l) for ( size_t j=start_l;j<end_l;++j )
+#define loopk(start_l,end_l) for ( size_t k=start_l;k<end_l;++k )
 
 struct vector3
 {
@@ -316,7 +315,7 @@ namespace Simplify
         COLOR = 8
     };
     struct Triangle { int v[3];double err[4];int deleted,dirty,attr;vec3f n;vec3f uvs[3];int material; };
-    struct Vertex { vec3f p;int tstart,tcount;SymetricMatrix q;int border;};
+    struct Vertex { vec3f p;int tstart, tcount;SymetricMatrix q;int border;};
     struct Ref { int tid,tvertex; };
     std::vector<Triangle> triangles;
     std::vector<Vertex> vertices;
@@ -541,7 +540,7 @@ namespace Simplify
     bool flipped(vec3f p,int i0,int i1,Vertex &v0,Vertex &v1,std::vector<int> &deleted)
     {
 
-        loopk(0,v0.tcount)
+        loopk(0, static_cast<size_t>(v0.tcount))
         {
             Triangle &t=triangles[refs[v0.tstart+k].tid];
             if(t.deleted)continue;
@@ -572,7 +571,7 @@ namespace Simplify
 
     void update_uvs(int i0,const Vertex &v,const vec3f &p,std::vector<int> &deleted)
     {
-        loopk(0,v.tcount)
+        loopk(0, static_cast<size_t>(v.tcount))
         {
             Ref &r=refs[v.tstart+k];
             Triangle &t=triangles[r.tid];
@@ -590,7 +589,7 @@ namespace Simplify
     void update_triangles(int i0,Vertex &v,std::vector<int> &deleted,int &deleted_triangles)
     {
         vec3f p;
-        loopk(0,v.tcount)
+        loopk(0, static_cast<size_t>(v.tcount))
         {
             Ref &r=refs[v.tstart+k];
             Triangle &t=triangles[r.tid];
@@ -704,13 +703,14 @@ namespace Simplify
                 Vertex &v=vertices[i];
                 vcount.clear();
                 vids.clear();
-                loopj(0,v.tcount)
+                loopj(0, static_cast<size_t>(v.tcount))
                 {
                     int k=refs[v.tstart+j].tid;
                     Triangle &t=triangles[k];
                     loopk(0,3)
                     {
-                        int ofs=0,id=t.v[k];
+                        size_t ofs=0;
+                        int id=t.v[k];
                         while(ofs<vcount.size())
                         {
                             if(vids[ofs]==id)break;
