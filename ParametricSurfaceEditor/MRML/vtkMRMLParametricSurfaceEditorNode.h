@@ -80,7 +80,7 @@ protected:
   vtkMRMLParametricSurfaceEditorNode(const vtkMRMLParametricSurfaceEditorNode&);
   void operator=(const vtkMRMLParametricSurfaceEditorNode&);
 
-  void ProcessMRMLEvents(vtkObject* caller, unsigned long eventID, void* callData);
+  void ProcessMRMLEvents(vtkObject* caller, unsigned long eventID, void* callData) override;
 
   char* RuleName{ nullptr };
   bool ContinuousUpdate{ false };
