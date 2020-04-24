@@ -176,16 +176,9 @@ struct vec3f
         return (double)sqrt(x*x + y*y + z*z);
     }
 
-    inline vec3f normalize( double desired_length = 1 )
+    inline vec3f normalize()
     {
         double square = sqrt(x*x + y*y + z*z);
-        /*
-        if (square <= 0.00001f )
-        {
-            x=1;y=0;z=0;
-            return *this;
-        }*/
-        //double len = desired_length / square;
         x/=square;y/=square;z/=square;
 
         return *this;
@@ -451,7 +444,6 @@ namespace Simplify
         // main iteration loop
         int deleted_triangles=0;
         std::vector<int> deleted0,deleted1;
-        int triangle_count=triangles.size();
         //int iteration = 0;
         //loop(iteration,0,100)
         for (int iteration = 0; iteration < 9999; iteration ++)
@@ -539,6 +531,8 @@ namespace Simplify
 
     bool flipped(vec3f p,int i0,int i1,Vertex &v0,Vertex &v1,std::vector<int> &deleted)
     {
+        (void)i0; // unused
+        (void)v1; // unused
 
         loopk(0, static_cast<size_t>(v0.tcount))
         {
@@ -571,6 +565,7 @@ namespace Simplify
 
     void update_uvs(int i0,const Vertex &v,const vec3f &p,std::vector<int> &deleted)
     {
+        (void)i0; // unused
         loopk(0, static_cast<size_t>(v.tcount))
         {
             Ref &r=refs[v.tstart+k];
