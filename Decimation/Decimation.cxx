@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
       }
     std::cout << "Input: " << Simplify::vertices.size() << " vertices,"
       << Simplify::triangles.size() << " triangles (target " << target_count << ")" << std::endl;
-    int startSize = Simplify::triangles.size();
+    size_t startSize = Simplify::triangles.size();
     if (lossless)
       {
       Simplify::simplify_mesh_lossless(verbose);
