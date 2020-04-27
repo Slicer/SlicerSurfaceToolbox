@@ -19,53 +19,53 @@
 
 ==============================================================================*/
 
-// .NAME vtkSlicerParametricSurfaceEditorLogic - slicer logic class for volumes manipulation
+// .NAME vtkSlicerDynamicModelerLogic - slicer logic class for volumes manipulation
 // .SECTION Description
 // This class manages the logic associated with reading, saving,
 // and changing propertied of the volumes
 
 
-#ifndef __vtkSlicerParametricSurfaceEditorLogic_h
-#define __vtkSlicerParametricSurfaceEditorLogic_h
+#ifndef __vtkSlicerDynamicModelerLogic_h
+#define __vtkSlicerDynamicModelerLogic_h
 
 // Slicer includes
 #include "vtkSlicerModuleLogic.h"
 
 // Logic includes
-#include <vtkSlicerParametricSurfaceEditorRule.h>
+#include <vtkSlicerDynamicModelerRule.h>
 
 // STD includes
 #include <cstdlib>
 
-#include "vtkSlicerParametricSurfaceEditorModuleLogicExport.h"
+#include "vtkSlicerDynamicModelerModuleLogicExport.h"
 
 // VTK includes
 #include <vtkSmartPointer.h>
 
-class vtkMRMLParametricSurfaceEditorNode;
+class vtkMRMLDynamicModelerNode;
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class VTK_SLICER_PARAMETRICSURFACEEDITOR_MODULE_LOGIC_EXPORT vtkSlicerParametricSurfaceEditorLogic :
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerLogic :
   public vtkSlicerModuleLogic
 {
 public:
 
-  static vtkSlicerParametricSurfaceEditorLogic *New();
-  vtkTypeMacro(vtkSlicerParametricSurfaceEditorLogic, vtkSlicerModuleLogic);
+  static vtkSlicerDynamicModelerLogic *New();
+  vtkTypeMacro(vtkSlicerDynamicModelerLogic, vtkSlicerModuleLogic);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /// Returns the current rule object that is being used with the surface editor node
-  vtkSlicerParametricSurfaceEditorRule* GetParametricSurfaceEditorRule(vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  vtkSlicerDynamicModelerRule* GetDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Run the editor rule specified by the surface editor node
-  void RunParametricSurfaceEditorRule(vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  void RunDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Detects circular references in the output nodes that are used as inputs
-  bool HasCircularReference(vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  bool HasCircularReference(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
 protected:
-  vtkSlicerParametricSurfaceEditorLogic();
-  virtual ~vtkSlicerParametricSurfaceEditorLogic();
+  vtkSlicerDynamicModelerLogic();
+  virtual ~vtkSlicerDynamicModelerLogic();
   void ProcessMRMLNodesEvents(vtkObject* caller, unsigned long event, void* callData) override;
   void SetMRMLSceneInternal(vtkMRMLScene* newScene) override;
 
@@ -76,16 +76,16 @@ protected:
   void OnMRMLSceneNodeRemoved(vtkMRMLNode* node) override;
   void OnMRMLSceneEndImport() override;
 
-  /// Ensures that the vtkSlicerParametricSurfaceEditorRule for each rule exists, and is up-to-date.
-  void UpdateParametricSurfaceEditorRule(vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  /// Ensures that the vtkSlicerDynamicModelerRule for each rule exists, and is up-to-date.
+  void UpdateDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
-  typedef std::map<std::string, vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> > ParametricSurfaceEditorRuleList;
-  ParametricSurfaceEditorRuleList Rules;
+  typedef std::map<std::string, vtkSmartPointer<vtkSlicerDynamicModelerRule> > DynamicModelerRuleList;
+  DynamicModelerRuleList Rules;
 
 private:
 
-  vtkSlicerParametricSurfaceEditorLogic(const vtkSlicerParametricSurfaceEditorLogic&); // Not implemented
-  void operator=(const vtkSlicerParametricSurfaceEditorLogic&); // Not implemented
+  vtkSlicerDynamicModelerLogic(const vtkSlicerDynamicModelerLogic&); // Not implemented
+  void operator=(const vtkSlicerDynamicModelerLogic&); // Not implemented
 };
 
 #endif

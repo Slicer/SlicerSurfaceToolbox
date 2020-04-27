@@ -22,7 +22,7 @@ add_subdirectory(Smoothing)
 add_subdirectory(SurfaceToolbox)
 add_subdirectory(scaleMesh)
 add_subdirectory(translateMesh)
-add_subdirectory(ParametricSurfaceEditor)
+add_subdirectory(DynamicModeler)
 
 
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>qSlicerParametricSurfaceEditorModuleWidget</class>
- <widget class="qSlicerWidget" name="qSlicerParametricSurfaceEditorModuleWidget">
+ <class>qSlicerDynamicModelerModuleWidget</class>
+ <widget class="qSlicerWidget" name="qSlicerDynamicModelerModuleWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -27,7 +27,7 @@
       <widget class="qMRMLNodeComboBox" name="ParameterNodeComboBox">
        <property name="nodeTypes">
         <stringlist>
-         <string>vtkMRMLParametricSurfaceEditorNode</string>
+         <string>vtkMRMLDynamicModelerNode</string>
         </stringlist>
        </property>
        <property name="renameEnabled">
@@ -137,7 +137,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>qSlicerParametricSurfaceEditorModuleWidget</sender>
+   <sender>qSlicerDynamicModelerModuleWidget</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>ParameterNodeComboBox</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>

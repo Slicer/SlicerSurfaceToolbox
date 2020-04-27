@@ -20,8 +20,8 @@
 
 ==============================================================================*/
 
-// ParametricSurfaceEditor MRML includes
-#include "vtkMRMLParametricSurfaceEditorNode.h"
+// DynamicModeler MRML includes
+#include "vtkMRMLDynamicModelerNode.h"
 
 // MRML includes
 #include <vtkMRMLScene.h>
@@ -33,18 +33,18 @@
 #include <vtkSmartPointer.h>
 
 //----------------------------------------------------------------------------
-vtkMRMLNodeNewMacro(vtkMRMLParametricSurfaceEditorNode);
+vtkMRMLNodeNewMacro(vtkMRMLDynamicModelerNode);
 
 //----------------------------------------------------------------------------
-vtkMRMLParametricSurfaceEditorNode::vtkMRMLParametricSurfaceEditorNode()
+vtkMRMLDynamicModelerNode::vtkMRMLDynamicModelerNode()
 = default;
 
 //----------------------------------------------------------------------------
-vtkMRMLParametricSurfaceEditorNode::~vtkMRMLParametricSurfaceEditorNode()
+vtkMRMLDynamicModelerNode::~vtkMRMLDynamicModelerNode()
 = default;
 
 //----------------------------------------------------------------------------
-void vtkMRMLParametricSurfaceEditorNode::WriteXML(ostream& of, int nIndent)
+void vtkMRMLDynamicModelerNode::WriteXML(ostream& of, int nIndent)
 {
   Superclass::WriteXML(of, nIndent);
   vtkMRMLWriteXMLBeginMacro(of);
@@ -54,7 +54,7 @@ void vtkMRMLParametricSurfaceEditorNode::WriteXML(ostream& of, int nIndent)
 }
 
 //----------------------------------------------------------------------------
-void vtkMRMLParametricSurfaceEditorNode::ReadXMLAttributes(const char** atts)
+void vtkMRMLDynamicModelerNode::ReadXMLAttributes(const char** atts)
 {
   MRMLNodeModifyBlocker blocker(this);
   Superclass::ReadXMLAttributes(atts);
@@ -67,7 +67,7 @@ void vtkMRMLParametricSurfaceEditorNode::ReadXMLAttributes(const char** atts)
 //----------------------------------------------------------------------------
 // Copy the node's attributes to this object.
 // Does NOT copy: ID, FilePrefix, Name, VolumeID
-void vtkMRMLParametricSurfaceEditorNode::Copy(vtkMRMLNode *anode)
+void vtkMRMLDynamicModelerNode::Copy(vtkMRMLNode *anode)
 {
   MRMLNodeModifyBlocker blocker(this);
   Superclass::Copy(anode);
@@ -78,7 +78,7 @@ void vtkMRMLParametricSurfaceEditorNode::Copy(vtkMRMLNode *anode)
 }
 
 //----------------------------------------------------------------------------
-void vtkMRMLParametricSurfaceEditorNode::PrintSelf(ostream& os, vtkIndent indent)
+void vtkMRMLDynamicModelerNode::PrintSelf(ostream& os, vtkIndent indent)
 {
   Superclass::PrintSelf(os,indent);
   vtkMRMLPrintBeginMacro(os, indent);
@@ -88,7 +88,7 @@ void vtkMRMLParametricSurfaceEditorNode::PrintSelf(ostream& os, vtkIndent indent
 }
 
 //----------------------------------------------------------------------------
-void vtkMRMLParametricSurfaceEditorNode::ProcessMRMLEvents(vtkObject* caller, unsigned long eventID, void* callData)
+void vtkMRMLDynamicModelerNode::ProcessMRMLEvents(vtkObject* caller, unsigned long eventID, void* callData)
 {
   Superclass::ProcessMRMLEvents(caller, eventID, callData);
   if (!this->Scene)

@@ -19,19 +19,19 @@
 
 ==============================================================================*/
 
-#ifndef __qSlicerParametricSurfaceEditorModule_h
-#define __qSlicerParametricSurfaceEditorModule_h
+#ifndef __qSlicerDynamicModelerModule_h
+#define __qSlicerDynamicModelerModule_h
 
 // SlicerQt includes
 #include "qSlicerLoadableModule.h"
 
-#include "qSlicerParametricSurfaceEditorModuleExport.h"
+#include "qSlicerDynamicModelerModuleExport.h"
 
-class qSlicerParametricSurfaceEditorModulePrivate;
+class qSlicerDynamicModelerModulePrivate;
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class Q_SLICER_QTMODULES_PARAMETRICSURFACEEDITOR_EXPORT
-qSlicerParametricSurfaceEditorModule
+class Q_SLICER_QTMODULES_DYNAMICMODELER_EXPORT
+qSlicerDynamicModelerModule
   : public qSlicerLoadableModule
 {
   Q_OBJECT
@@ -41,8 +41,8 @@ qSlicerParametricSurfaceEditorModule
 public:
 
   typedef qSlicerLoadableModule Superclass;
-  explicit qSlicerParametricSurfaceEditorModule(QObject *parent=0);
-  ~qSlicerParametricSurfaceEditorModule() override;
+  explicit qSlicerDynamicModelerModule(QObject *parent=0);
+  ~qSlicerDynamicModelerModule() override;
 
   qSlicerGetTitleMacro(QTMODULE_TITLE);
 
@@ -67,11 +67,11 @@ protected:
   virtual vtkMRMLAbstractLogic* createLogic();
 
 protected:
-  QScopedPointer<qSlicerParametricSurfaceEditorModulePrivate> d_ptr;
+  QScopedPointer<qSlicerDynamicModelerModulePrivate> d_ptr;
 
 private:
-  Q_DECLARE_PRIVATE(qSlicerParametricSurfaceEditorModule);
-  Q_DISABLE_COPY(qSlicerParametricSurfaceEditorModule);
+  Q_DECLARE_PRIVATE(qSlicerDynamicModelerModule);
+  Q_DISABLE_COPY(qSlicerDynamicModelerModule);
 
 };
 

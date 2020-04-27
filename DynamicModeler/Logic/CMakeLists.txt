@@ -12,8 +12,8 @@ set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}Logic.h
   vtkSlicer${MODULE_NAME}Rule.cxx
   vtkSlicer${MODULE_NAME}Rule.h
-  vtkSlicerParametricSurfacePlaneCutRule.cxx
-  vtkSlicerParametricSurfacePlaneCutRule.h
+  vtkSlicer${MODULE_NAME}PlaneCutRule.cxx
+  vtkSlicer${MODULE_NAME}PlaneCutRule.h
   vtkSlicer${MODULE_NAME}RuleFactory.cxx
   vtkSlicer${MODULE_NAME}RuleFactory.h
   )

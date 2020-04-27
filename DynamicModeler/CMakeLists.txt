@@ -1,7 +1,7 @@
 
 #-----------------------------------------------------------------------------
-set(MODULE_NAME ParametricSurfaceEditor)
-set(MODULE_TITLE "Parametric Surface Editor")
+set(MODULE_NAME DynamicModeler)
+set(MODULE_TITLE "Dynamic Modeler")
 
 string(TOUPPER ${MODULE_NAME} MODULE_NAME_UPPER)
 

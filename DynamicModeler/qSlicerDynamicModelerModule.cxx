@@ -19,57 +19,57 @@
 
 ==============================================================================*/
 
-// ParametricSurfaceEditor Logic includes
-#include <vtkSlicerParametricSurfaceEditorLogic.h>
+// DynamicModeler Logic includes
+#include <vtkSlicerDynamicModelerLogic.h>
 
-// ParametricSurfaceEditor includes
-#include "qSlicerParametricSurfaceEditorModule.h"
-#include "qSlicerParametricSurfaceEditorModuleWidget.h"
+// DynamicModeler includes
+#include "qSlicerDynamicModelerModule.h"
+#include "qSlicerDynamicModelerModuleWidget.h"
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class qSlicerParametricSurfaceEditorModulePrivate
+class qSlicerDynamicModelerModulePrivate
 {
 public:
-  qSlicerParametricSurfaceEditorModulePrivate();
+  qSlicerDynamicModelerModulePrivate();
 };
 
 //-----------------------------------------------------------------------------
-// qSlicerParametricSurfaceEditorModulePrivate methods
+// qSlicerDynamicModelerModulePrivate methods
 
 //-----------------------------------------------------------------------------
-qSlicerParametricSurfaceEditorModulePrivate::qSlicerParametricSurfaceEditorModulePrivate()
+qSlicerDynamicModelerModulePrivate::qSlicerDynamicModelerModulePrivate()
 = default;
 
 //-----------------------------------------------------------------------------
-// qSlicerParametricSurfaceEditorModule methods
+// qSlicerDynamicModelerModule methods
 
 //-----------------------------------------------------------------------------
-qSlicerParametricSurfaceEditorModule::qSlicerParametricSurfaceEditorModule(QObject* _parent)
+qSlicerDynamicModelerModule::qSlicerDynamicModelerModule(QObject* _parent)
   : Superclass(_parent)
-  , d_ptr(new qSlicerParametricSurfaceEditorModulePrivate)
+  , d_ptr(new qSlicerDynamicModelerModulePrivate)
 {
 }
 
 //-----------------------------------------------------------------------------
-qSlicerParametricSurfaceEditorModule::~qSlicerParametricSurfaceEditorModule()
+qSlicerDynamicModelerModule::~qSlicerDynamicModelerModule()
 = default;
 
 //-----------------------------------------------------------------------------
-QString qSlicerParametricSurfaceEditorModule::helpText() const
+QString qSlicerDynamicModelerModule::helpText() const
 {
-  return "This module allows surface mesh editing using parametric rules and operations";
+  return "This module allows surface mesh editing using dynamic modelling rules and operations";
 }
 
 //-----------------------------------------------------------------------------
-QString qSlicerParametricSurfaceEditorModule::acknowledgementText() const
+QString qSlicerDynamicModelerModule::acknowledgementText() const
 {
   return "This work was partially funded by CANARIE's Research Software Program,"
     "OpenAnatomy, and Brigham and Women's Hospital through NIH grant R01MH112748.";
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerParametricSurfaceEditorModule::contributors() const
+QStringList qSlicerDynamicModelerModule::contributors() const
 {
   QStringList moduleContributors;
   moduleContributors << QString("Kyle Sunderland (PerkLab, Queen's)");
@@ -77,38 +77,38 @@ QStringList qSlicerParametricSurfaceEditorModule::contributors() const
 }
 
 //-----------------------------------------------------------------------------
-QIcon qSlicerParametricSurfaceEditorModule::icon() const
+QIcon qSlicerDynamicModelerModule::icon() const
 {
-  return QIcon(":/Icons/ParametricSurfaceEditor.png");
+  return QIcon(":/Icons/DynamicModeler.png");
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerParametricSurfaceEditorModule::categories() const
+QStringList qSlicerDynamicModelerModule::categories() const
 {
   return QStringList() << "Surface Models";
 }
 
 //-----------------------------------------------------------------------------
-QStringList qSlicerParametricSurfaceEditorModule::dependencies() const
+QStringList qSlicerDynamicModelerModule::dependencies() const
 {
   return QStringList();
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerParametricSurfaceEditorModule::setup()
+void qSlicerDynamicModelerModule::setup()
 {
   this->Superclass::setup();
 }
 
 //-----------------------------------------------------------------------------
-qSlicerAbstractModuleRepresentation* qSlicerParametricSurfaceEditorModule
+qSlicerAbstractModuleRepresentation* qSlicerDynamicModelerModule
 ::createWidgetRepresentation()
 {
-  return new qSlicerParametricSurfaceEditorModuleWidget;
+  return new qSlicerDynamicModelerModuleWidget;
 }
 
 //-----------------------------------------------------------------------------
-vtkMRMLAbstractLogic* qSlicerParametricSurfaceEditorModule::createLogic()
+vtkMRMLAbstractLogic* qSlicerDynamicModelerModule::createLogic()
 {
-  return vtkSlicerParametricSurfaceEditorLogic::New();
+  return vtkSlicerDynamicModelerLogic::New();
 }

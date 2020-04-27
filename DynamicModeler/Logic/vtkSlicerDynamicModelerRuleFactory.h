@@ -18,8 +18,8 @@
 
 ==============================================================================*/
 
-#ifndef __vtkSlicerParametricSurfaceEditorRuleFactory_h
-#define __vtkSlicerParametricSurfaceEditorRuleFactory_h
+#ifndef __vtkSlicerDynamicModelerRuleFactory_h
+#define __vtkSlicerDynamicModelerRuleFactory_h
 
 // VTK includes
 #include <vtkObject.h>
@@ -28,91 +28,91 @@
 // STD includes
 #include <vector>
 
-#include "vtkSlicerParametricSurfaceEditorModuleLogicExport.h"
+#include "vtkSlicerDynamicModelerModuleLogicExport.h"
 
-#include "vtkSlicerParametricSurfaceEditorRule.h"
+#include "vtkSlicerDynamicModelerRule.h"
 
 class vtkDataObject;
 
-/// \ingroup ParametricSurfaceEditor
-/// \brief Class that can create vtkSlicerParametricSurfaceEditorRule instances.
+/// \ingroup DynamicModeler
+/// \brief Class that can create vtkSlicerDynamicModelerRule instances.
 ///
-/// This singleton class is a repository of all parametric surface editing rules.
-class VTK_SLICER_PARAMETRICSURFACEEDITOR_MODULE_LOGIC_EXPORT vtkSlicerParametricSurfaceEditorRuleFactory : public vtkObject
+/// This singleton class is a repository of all dynamic modelling rules.
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerRuleFactory : public vtkObject
 {
 public:
 
-  vtkTypeMacro(vtkSlicerParametricSurfaceEditorRuleFactory, vtkObject);
+  vtkTypeMacro(vtkSlicerDynamicModelerRuleFactory, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /// Registers a new mesh modify rule
   /// Returns true if the rule is successfully registered
-  bool RegisterParametricSurfaceEditorRule(vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> rule);
+  bool RegisterDynamicModelerRule(vtkSmartPointer<vtkSlicerDynamicModelerRule> rule);
 
   /// Removes a mesh modify rule from the factory
   /// This does not affect rules that have already been instantiated
   /// Returns true if the rule is successfully unregistered
-  bool UnregisterParametricSurfaceEditorRuleByClassName(const std::string& ruleClassName);
+  bool UnregisterDynamicModelerRuleByClassName(const std::string& ruleClassName);
 
   /// Get pointer to a new rule, or nullptr if the rule is not registered
   /// Returns nullptr if no matching rule can be found
-  vtkSlicerParametricSurfaceEditorRule* CreateRuleByClassName(const std::string& ruleClassName);
+  vtkSlicerDynamicModelerRule* CreateRuleByClassName(const std::string& ruleClassName);
 
   /// Get pointer to a new rule, or nullptr if the rule is not registered
   /// Returns nullptr if no matching rule can be found
-  vtkSlicerParametricSurfaceEditorRule* CreateRuleByName(const std::string name);
+  vtkSlicerDynamicModelerRule* CreateRuleByName(const std::string name);
 
   /// Returns a list of all registered rules
-  const std::vector<std::string> GetParametricSurfaceEditorRuleClassNames();
+  const std::vector<std::string> GetDynamicModelerRuleClassNames();
 
   /// Returns a list of all registered rules
-  const std::vector<std::string> GetParametricSurfaceEditorRuleNames();
+  const std::vector<std::string> GetDynamicModelerRuleNames();
 
 public:
   /// Return the singleton instance with no reference counting.
-  static vtkSlicerParametricSurfaceEditorRuleFactory* GetInstance();
+  static vtkSlicerDynamicModelerRuleFactory* GetInstance();
 
   /// This is a singleton pattern New.  There will only be ONE
-  /// reference to a vtkSlicerParametricSurfaceEditorRuleFactory object per process.  Clients that
+  /// reference to a vtkSlicerDynamicModelerRuleFactory object per process.  Clients that
   /// call this must call Delete on the object so that the reference
   /// counting will work. The single instance will be unreferenced when
   /// the program exits.
-  static vtkSlicerParametricSurfaceEditorRuleFactory* New();
+  static vtkSlicerDynamicModelerRuleFactory* New();
 
 protected:
-  vtkSlicerParametricSurfaceEditorRuleFactory();
-  ~vtkSlicerParametricSurfaceEditorRuleFactory() override;
-  vtkSlicerParametricSurfaceEditorRuleFactory(const vtkSlicerParametricSurfaceEditorRuleFactory&);
-  void operator=(const vtkSlicerParametricSurfaceEditorRuleFactory&);
+  vtkSlicerDynamicModelerRuleFactory();
+  ~vtkSlicerDynamicModelerRuleFactory() override;
+  vtkSlicerDynamicModelerRuleFactory(const vtkSlicerDynamicModelerRuleFactory&);
+  void operator=(const vtkSlicerDynamicModelerRuleFactory&);
 
-  friend class vtkSlicerParametricSurfaceEditorRuleFactoryInitialize;
-  typedef vtkSlicerParametricSurfaceEditorRuleFactory Self;
+  friend class vtkSlicerDynamicModelerRuleFactoryInitialize;
+  typedef vtkSlicerDynamicModelerRuleFactory Self;
 
   // Singleton management functions.
   static void classInitialize();
   static void classFinalize();
 
   /// Registered rule classes
-  std::vector< vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> > RegisteredRules;
+  std::vector< vtkSmartPointer<vtkSlicerDynamicModelerRule> > RegisteredRules;
 };
 
 
 /// Utility class to make sure qSlicerModuleManager is initialized before it is used.
-class VTK_SLICER_PARAMETRICSURFACEEDITOR_MODULE_LOGIC_EXPORT vtkSlicerParametricSurfaceEditorRuleFactoryInitialize
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerRuleFactoryInitialize
 {
 public:
-  typedef vtkSlicerParametricSurfaceEditorRuleFactoryInitialize Self;
+  typedef vtkSlicerDynamicModelerRuleFactoryInitialize Self;
 
-  vtkSlicerParametricSurfaceEditorRuleFactoryInitialize();
-  ~vtkSlicerParametricSurfaceEditorRuleFactoryInitialize();
+  vtkSlicerDynamicModelerRuleFactoryInitialize();
+  ~vtkSlicerDynamicModelerRuleFactoryInitialize();
 
 private:
   static unsigned int Count;
 };
 
 /// This instance will show up in any translation unit that uses
-/// vtkSlicerParametricSurfaceEditorRuleFactory.  It will make sure vtkSlicerParametricSurfaceEditorRuleFactory is initialized
+/// vtkSlicerDynamicModelerRuleFactory.  It will make sure vtkSlicerDynamicModelerRuleFactory is initialized
 /// before it is used.
-static vtkSlicerParametricSurfaceEditorRuleFactoryInitialize vtkSlicerParametricSurfaceEditorRuleFactoryInitializer;
+static vtkSlicerDynamicModelerRuleFactoryInitialize vtkSlicerDynamicModelerRuleFactoryInitializer;
 
 #endif

@@ -20,31 +20,31 @@
 
 ==============================================================================*/
 
-#ifndef __vtkMRMLParametricSurfaceEditorNode_h
-#define __vtkMRMLParametricSurfaceEditorNode_h
+#ifndef __vtkMRMLDynamicModelerNode_h
+#define __vtkMRMLDynamicModelerNode_h
 
 // MRML includes
 #include <vtkMRMLNode.h>
 
-// ParametricSurfaceEditor includes
-#include "vtkSlicerParametricSurfaceEditorModuleMRMLExport.h"
+// DynamicModeler includes
+#include "vtkSlicerDynamicModelerModuleMRMLExport.h"
 
-/// \ingroup ParametricSurfaceEditor
-/// \brief Parameter node for ParametricSurfaceEditor
+/// \ingroup DynamicModeler
+/// \brief Parameter node for DynamicModeler
 ///
-/// Stores the rule name, update status and input/output node references required for running parametric surface modification.
-/// The rule name is used by the logic to determine what input/output nodes are required to process the parametric rule,
+/// Stores the rule name, update status and input/output node references required for running dynamic modelling.
+/// The rule name is used by the logic to determine what input/output nodes are required to process the dynamic modelling rule,
 /// and runs the rule on the input if requested.
 /// If ContinuousUpdate and Updating are both true, then the output nodes will automatically be updated when the input nodes
 /// are changed.
-class VTK_SLICER_PARAMETRICSURFACEEDITOR_MODULE_MRML_EXPORT vtkMRMLParametricSurfaceEditorNode : public vtkMRMLNode
+class VTK_SLICER_DYNAMICMODELER_MODULE_MRML_EXPORT vtkMRMLDynamicModelerNode : public vtkMRMLNode
 {
 public:
-  static vtkMRMLParametricSurfaceEditorNode *New();
-  vtkTypeMacro(vtkMRMLParametricSurfaceEditorNode, vtkMRMLNode);
+  static vtkMRMLDynamicModelerNode *New();
+  vtkTypeMacro(vtkMRMLDynamicModelerNode, vtkMRMLNode);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
-  /// Create instance of a ParametricSurfaceEditor node.
+  /// Create instance of a DynamicModeler node.
   vtkMRMLNode* CreateNodeInstance() override;
 
   /// Set node attributes from name/value pairs
@@ -57,7 +57,7 @@ public:
   void Copy(vtkMRMLNode *node) override;
 
   /// Get unique node XML tag name (like Volume, Model)
-  const char* GetNodeTagName() override { return "ParametricSurfaceEditor"; }
+  const char* GetNodeTagName() override { return "DynamicModeler"; }
 
 public:
   enum
@@ -65,7 +65,7 @@ public:
     InputNodeModifiedEvent = 18000, // Event that is invoked when one of the input nodes have been modified
   };
 
-  /// The name of the vtkSlicerParametricEditorRule that should be used for this node
+  /// The name of the vtkSlicerDynamicModelerRule that should be used for this node
   vtkGetStringMacro(RuleName);
   vtkSetStringMacro(RuleName);
 
@@ -75,10 +75,10 @@ public:
   vtkBooleanMacro(ContinuousUpdate, bool);
 
 protected:
-  vtkMRMLParametricSurfaceEditorNode();
-  ~vtkMRMLParametricSurfaceEditorNode() override;
-  vtkMRMLParametricSurfaceEditorNode(const vtkMRMLParametricSurfaceEditorNode&);
-  void operator=(const vtkMRMLParametricSurfaceEditorNode&);
+  vtkMRMLDynamicModelerNode();
+  ~vtkMRMLDynamicModelerNode() override;
+  vtkMRMLDynamicModelerNode(const vtkMRMLDynamicModelerNode&);
+  void operator=(const vtkMRMLDynamicModelerNode&);
 
   void ProcessMRMLEvents(vtkObject* caller, unsigned long eventID, void* callData) override;
 
@@ -86,4 +86,4 @@ protected:
   bool ContinuousUpdate{ false };
 };
 
-#endif // __vtkMRMLParametricSurfaceEditorNode_h
+#endif // __vtkMRMLDynamicModelerNode_h

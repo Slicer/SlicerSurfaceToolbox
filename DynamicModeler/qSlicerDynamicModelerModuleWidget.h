@@ -19,19 +19,19 @@
 
 ==============================================================================*/
 
-#ifndef __qSlicerParametricSurfaceEditorModuleWidget_h
-#define __qSlicerParametricSurfaceEditorModuleWidget_h
+#ifndef __qSlicerDynamicModelerModuleWidget_h
+#define __qSlicerDynamicModelerModuleWidget_h
 
 // SlicerQt includes
 #include "qSlicerAbstractModuleWidget.h"
 
-#include "qSlicerParametricSurfaceEditorModuleExport.h"
+#include "qSlicerDynamicModelerModuleExport.h"
 
-class qSlicerParametricSurfaceEditorModuleWidgetPrivate;
+class qSlicerDynamicModelerModuleWidgetPrivate;
 class vtkMRMLNode;
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
-class Q_SLICER_QTMODULES_PARAMETRICSURFACEEDITOR_EXPORT qSlicerParametricSurfaceEditorModuleWidget :
+class Q_SLICER_QTMODULES_DYNAMICMODELER_EXPORT qSlicerDynamicModelerModuleWidget :
   public qSlicerAbstractModuleWidget
 {
   Q_OBJECT
@@ -39,11 +39,11 @@ class Q_SLICER_QTMODULES_PARAMETRICSURFACEEDITOR_EXPORT qSlicerParametricSurface
 public:
 
   typedef qSlicerAbstractModuleWidget Superclass;
-  qSlicerParametricSurfaceEditorModuleWidget(QWidget *parent=0);
-  ~qSlicerParametricSurfaceEditorModuleWidget() override;
+  qSlicerDynamicModelerModuleWidget(QWidget *parent=0);
+  ~qSlicerDynamicModelerModuleWidget() override;
 
 protected:
-  QScopedPointer<qSlicerParametricSurfaceEditorModuleWidgetPrivate> d_ptr;
+  QScopedPointer<qSlicerDynamicModelerModuleWidgetPrivate> d_ptr;
 
   void setup() override;
 
@@ -62,8 +62,8 @@ protected slots:
   void onApplyButtonClicked();
 
 private:
-  Q_DECLARE_PRIVATE(qSlicerParametricSurfaceEditorModuleWidget);
-  Q_DISABLE_COPY(qSlicerParametricSurfaceEditorModuleWidget);
+  Q_DECLARE_PRIVATE(qSlicerDynamicModelerModuleWidget);
+  Q_DISABLE_COPY(qSlicerDynamicModelerModuleWidget);
 };
 
 #endif

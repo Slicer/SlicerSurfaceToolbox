@@ -18,10 +18,10 @@ limitations under the License.
 
 ==============================================================================*/
 
-// ParametricSurfaceEditor includes
-#include "vtkSlicerParametricSurfaceEditorRuleFactory.h"
-#include "vtkSlicerParametricSurfaceEditorRule.h"
-#include "vtkSlicerParametricSurfacePlaneCutRule.h"
+// DynamicModeler includes
+#include "vtkSlicerDynamicModelerRuleFactory.h"
+#include "vtkSlicerDynamicModelerRule.h"
+#include "vtkSlicerDynamicModelerPlaneCutRule.h"
 
 // VTK includes
 #include <vtkObjectFactory.h>
@@ -34,30 +34,30 @@ limitations under the License.
 // The compression rule manager singleton.
 // This MUST be default initialized to zero by the compiler and is
 // therefore not initialized here.  The ClassInitialize and ClassFinalize methods handle this instance.
-static vtkSlicerParametricSurfaceEditorRuleFactory* vtkSlicerParametricSurfaceEditorRuleFactoryInstance;
+static vtkSlicerDynamicModelerRuleFactory* vtkSlicerDynamicModelerRuleFactoryInstance;
 
 
 //----------------------------------------------------------------------------
 // Must NOT be initialized.  Default initialization to zero is necessary.
-unsigned int vtkSlicerParametricSurfaceEditorRuleFactoryInitialize::Count;
+unsigned int vtkSlicerDynamicModelerRuleFactoryInitialize::Count;
 
 //----------------------------------------------------------------------------
-// Implementation of vtkSlicerParametricSurfaceEditorRuleFactoryInitialize class.
+// Implementation of vtkSlicerDynamicModelerRuleFactoryInitialize class.
 //----------------------------------------------------------------------------
-vtkSlicerParametricSurfaceEditorRuleFactoryInitialize::vtkSlicerParametricSurfaceEditorRuleFactoryInitialize()
+vtkSlicerDynamicModelerRuleFactoryInitialize::vtkSlicerDynamicModelerRuleFactoryInitialize()
 {
   if (++Self::Count == 1)
     {
-    vtkSlicerParametricSurfaceEditorRuleFactory::classInitialize();
+    vtkSlicerDynamicModelerRuleFactory::classInitialize();
     }
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerParametricSurfaceEditorRuleFactoryInitialize::~vtkSlicerParametricSurfaceEditorRuleFactoryInitialize()
+vtkSlicerDynamicModelerRuleFactoryInitialize::~vtkSlicerDynamicModelerRuleFactoryInitialize()
 {
   if (--Self::Count == 0)
     {
-    vtkSlicerParametricSurfaceEditorRuleFactory::classFinalize();
+    vtkSlicerDynamicModelerRuleFactory::classFinalize();
     }
 }
 
@@ -66,66 +66,66 @@ vtkSlicerParametricSurfaceEditorRuleFactoryInitialize::~vtkSlicerParametricSurfa
 
 //----------------------------------------------------------------------------
 // Up the reference count so it behaves like New
-vtkSlicerParametricSurfaceEditorRuleFactory* vtkSlicerParametricSurfaceEditorRuleFactory::New()
+vtkSlicerDynamicModelerRuleFactory* vtkSlicerDynamicModelerRuleFactory::New()
 {
-  vtkSlicerParametricSurfaceEditorRuleFactory* ret = vtkSlicerParametricSurfaceEditorRuleFactory::GetInstance();
+  vtkSlicerDynamicModelerRuleFactory* ret = vtkSlicerDynamicModelerRuleFactory::GetInstance();
   ret->Register(nullptr);
   return ret;
 }
 
 //----------------------------------------------------------------------------
-// Return the single instance of the vtkSlicerParametricSurfaceEditorRuleFactory
-vtkSlicerParametricSurfaceEditorRuleFactory* vtkSlicerParametricSurfaceEditorRuleFactory::GetInstance()
+// Return the single instance of the vtkSlicerDynamicModelerRuleFactory
+vtkSlicerDynamicModelerRuleFactory* vtkSlicerDynamicModelerRuleFactory::GetInstance()
 {
-  if (!vtkSlicerParametricSurfaceEditorRuleFactoryInstance)
+  if (!vtkSlicerDynamicModelerRuleFactoryInstance)
     {
     // Try the factory first
-    vtkSlicerParametricSurfaceEditorRuleFactoryInstance = (vtkSlicerParametricSurfaceEditorRuleFactory*)vtkObjectFactory::CreateInstance("vtkSlicerParametricSurfaceEditorRuleFactory");
+    vtkSlicerDynamicModelerRuleFactoryInstance = (vtkSlicerDynamicModelerRuleFactory*)vtkObjectFactory::CreateInstance("vtkSlicerDynamicModelerRuleFactory");
     // if the factory did not provide one, then create it here
-    if (!vtkSlicerParametricSurfaceEditorRuleFactoryInstance)
+    if (!vtkSlicerDynamicModelerRuleFactoryInstance)
       {
-      vtkSlicerParametricSurfaceEditorRuleFactoryInstance = new vtkSlicerParametricSurfaceEditorRuleFactory;
+      vtkSlicerDynamicModelerRuleFactoryInstance = new vtkSlicerDynamicModelerRuleFactory;
 #ifdef VTK_HAS_INITIALIZE_OBJECT_BASE
-      vtkSlicerParametricSurfaceEditorRuleFactoryInstance->InitializeObjectBase();
+      vtkSlicerDynamicModelerRuleFactoryInstance->InitializeObjectBase();
 #endif
       }
     }
   // return the instance
-  return vtkSlicerParametricSurfaceEditorRuleFactoryInstance;
+  return vtkSlicerDynamicModelerRuleFactoryInstance;
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerParametricSurfaceEditorRuleFactory::vtkSlicerParametricSurfaceEditorRuleFactory()
+vtkSlicerDynamicModelerRuleFactory::vtkSlicerDynamicModelerRuleFactory()
 = default;
 
 //----------------------------------------------------------------------------
-vtkSlicerParametricSurfaceEditorRuleFactory::~vtkSlicerParametricSurfaceEditorRuleFactory()
+vtkSlicerDynamicModelerRuleFactory::~vtkSlicerDynamicModelerRuleFactory()
 = default;
 
 //----------------------------------------------------------------------------
-void vtkSlicerParametricSurfaceEditorRuleFactory::PrintSelf(ostream & os, vtkIndent indent)
+void vtkSlicerDynamicModelerRuleFactory::PrintSelf(ostream & os, vtkIndent indent)
 {
   this->vtkObject::PrintSelf(os, indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerParametricSurfaceEditorRuleFactory::classInitialize()
+void vtkSlicerDynamicModelerRuleFactory::classInitialize()
 {
   // Allocate the singleton
-  vtkSlicerParametricSurfaceEditorRuleFactoryInstance = vtkSlicerParametricSurfaceEditorRuleFactory::GetInstance();
+  vtkSlicerDynamicModelerRuleFactoryInstance = vtkSlicerDynamicModelerRuleFactory::GetInstance();
 
-  vtkSlicerParametricSurfaceEditorRuleFactoryInstance->RegisterParametricSurfaceEditorRule(vtkSmartPointer<vtkSlicerParametricSurfacePlaneCutRule>::New());
+  vtkSlicerDynamicModelerRuleFactoryInstance->RegisterDynamicModelerRule(vtkSmartPointer<vtkSlicerDynamicModelerPlaneCutRule>::New());
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerParametricSurfaceEditorRuleFactory::classFinalize()
+void vtkSlicerDynamicModelerRuleFactory::classFinalize()
 {
-  vtkSlicerParametricSurfaceEditorRuleFactoryInstance->Delete();
-  vtkSlicerParametricSurfaceEditorRuleFactoryInstance = nullptr;
+  vtkSlicerDynamicModelerRuleFactoryInstance->Delete();
+  vtkSlicerDynamicModelerRuleFactoryInstance = nullptr;
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerParametricSurfaceEditorRuleFactory::RegisterParametricSurfaceEditorRule(vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> rule)
+bool vtkSlicerDynamicModelerRuleFactory::RegisterDynamicModelerRule(vtkSmartPointer<vtkSlicerDynamicModelerRule> rule)
 {
   for (unsigned int i = 0; i < this->RegisteredRules.size(); ++i)
     {
@@ -140,12 +140,12 @@ bool vtkSlicerParametricSurfaceEditorRuleFactory::RegisterParametricSurfaceEdito
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerParametricSurfaceEditorRuleFactory::UnregisterParametricSurfaceEditorRuleByClassName(const std::string & className)
+bool vtkSlicerDynamicModelerRuleFactory::UnregisterDynamicModelerRuleByClassName(const std::string & className)
 {
-  std::vector<vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> >::iterator ruleIt;
+  std::vector<vtkSmartPointer<vtkSlicerDynamicModelerRule> >::iterator ruleIt;
   for (ruleIt = this->RegisteredRules.begin(); ruleIt != this->RegisteredRules.end(); ++ruleIt)
     {
-    vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> rule = *ruleIt;
+    vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = *ruleIt;
     if (strcmp(rule->GetClassName(), className.c_str()) == 0)
       {
       this->RegisteredRules.erase(ruleIt);
@@ -157,12 +157,12 @@ bool vtkSlicerParametricSurfaceEditorRuleFactory::UnregisterParametricSurfaceEdi
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerParametricSurfaceEditorRule* vtkSlicerParametricSurfaceEditorRuleFactory::CreateRuleByClassName(const std::string & className)
+vtkSlicerDynamicModelerRule* vtkSlicerDynamicModelerRuleFactory::CreateRuleByClassName(const std::string & className)
 {
-  std::vector<vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> >::iterator ruleIt;
+  std::vector<vtkSmartPointer<vtkSlicerDynamicModelerRule> >::iterator ruleIt;
   for (ruleIt = this->RegisteredRules.begin(); ruleIt != this->RegisteredRules.end(); ++ruleIt)
     {
-    vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> rule = *ruleIt;
+    vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = *ruleIt;
     if (strcmp(rule->GetClassName(), className.c_str()) == 0)
       {
       return rule->CreateRuleInstance();
@@ -172,12 +172,12 @@ vtkSlicerParametricSurfaceEditorRule* vtkSlicerParametricSurfaceEditorRuleFactor
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerParametricSurfaceEditorRule* vtkSlicerParametricSurfaceEditorRuleFactory::CreateRuleByName(const std::string name)
+vtkSlicerDynamicModelerRule* vtkSlicerDynamicModelerRuleFactory::CreateRuleByName(const std::string name)
 {
-  std::vector<vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> >::iterator ruleIt;
+  std::vector<vtkSmartPointer<vtkSlicerDynamicModelerRule> >::iterator ruleIt;
   for (ruleIt = this->RegisteredRules.begin(); ruleIt != this->RegisteredRules.end(); ++ruleIt)
     {
-    vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> rule = *ruleIt;
+    vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = *ruleIt;
     if (rule->GetName() == name)
       {
       return rule->CreateRuleInstance();
@@ -187,26 +187,26 @@ vtkSlicerParametricSurfaceEditorRule* vtkSlicerParametricSurfaceEditorRuleFactor
 }
 
 //----------------------------------------------------------------------------
-const std::vector<std::string> vtkSlicerParametricSurfaceEditorRuleFactory::GetParametricSurfaceEditorRuleClassNames()
+const std::vector<std::string> vtkSlicerDynamicModelerRuleFactory::GetDynamicModelerRuleClassNames()
 {
   std::vector<std::string> ruleClassNames;
-  std::vector<vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> >::iterator ruleIt;
+  std::vector<vtkSmartPointer<vtkSlicerDynamicModelerRule> >::iterator ruleIt;
   for (ruleIt = this->RegisteredRules.begin(); ruleIt != this->RegisteredRules.end(); ++ruleIt)
     {
-    vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> rule = *ruleIt;
+    vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = *ruleIt;
     ruleClassNames.emplace_back(rule->GetClassName());
     }
   return ruleClassNames;
 }
 
 //----------------------------------------------------------------------------
-const std::vector<std::string> vtkSlicerParametricSurfaceEditorRuleFactory::GetParametricSurfaceEditorRuleNames()
+const std::vector<std::string> vtkSlicerDynamicModelerRuleFactory::GetDynamicModelerRuleNames()
 {
   std::vector<std::string> names;
-  std::vector<vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> >::iterator ruleIt;
+  std::vector<vtkSmartPointer<vtkSlicerDynamicModelerRule> >::iterator ruleIt;
   for (ruleIt = this->RegisteredRules.begin(); ruleIt != this->RegisteredRules.end(); ++ruleIt)
     {
-    vtkSmartPointer<vtkSlicerParametricSurfaceEditorRule> rule = *ruleIt;
+    vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = *ruleIt;
     names.push_back(rule->GetName());
     }
   return names;

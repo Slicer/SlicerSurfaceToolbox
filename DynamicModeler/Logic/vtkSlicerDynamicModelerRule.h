@@ -18,10 +18,10 @@
 
 ==============================================================================*/
 
-#ifndef __vtkSlicerParametricSurfaceEditorRule_h
-#define __vtkSlicerParametricSurfaceEditorRule_h
+#ifndef __vtkSlicerDynamicModelerRule_h
+#define __vtkSlicerDynamicModelerRule_h
 
-#include "vtkSlicerParametricSurfaceEditorModuleLogicExport.h"
+#include "vtkSlicerDynamicModelerModuleLogicExport.h"
 
 // VTK includes
 #include <vtkIntArray.h>
@@ -34,35 +34,35 @@
 #include <vector>
 
 class vtkCollection;
-class vtkMRMLParametricSurfaceEditorNode;
+class vtkMRMLDynamicModelerNode;
 class vtkMRMLNode;
 
 /// Helper macro for supporting cloning of rules
 #ifndef vtkRuleNewMacro
 #define vtkRuleNewMacro(newClass) \
 vtkStandardNewMacro(newClass); \
-vtkSlicerParametricSurfaceEditorRule* newClass::CreateRuleInstance() \
+vtkSlicerDynamicModelerRule* newClass::CreateRuleInstance() \
 { \
 return newClass::New(); \
 }
 #endif
 
-/// \brief Parametric surface rule
+/// \brief Dynamic modeler rule
 ///
 /// Abstract class for parmetric surface modification rules.
 /// Each rule can have multiple input and output nodes (stored in the InputNodeInfo and OutputNodeInfo lists).
-class VTK_SLICER_PARAMETRICSURFACEEDITOR_MODULE_LOGIC_EXPORT vtkSlicerParametricSurfaceEditorRule : public vtkObject
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerRule : public vtkObject
 {
 public:
-  vtkTypeMacro(vtkSlicerParametricSurfaceEditorRule, vtkObject);
+  vtkTypeMacro(vtkSlicerDynamicModelerRule, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /// Create instance of the default node. Similar to New but virtual method.
   /// Subclasses should implement this method by
-  virtual vtkSlicerParametricSurfaceEditorRule* CreateRuleInstance() = 0;
+  virtual vtkSlicerDynamicModelerRule* CreateRuleInstance() = 0;
 
   /// Create a new instance of this rule and copy its contents.
-  virtual vtkSlicerParametricSurfaceEditorRule* Clone();
+  virtual vtkSlicerDynamicModelerRule* Clone();
 
   /// Human-readable name of the mesh modification rule.
   virtual const char* GetName() = 0;
@@ -97,7 +97,7 @@ public:
   vtkIntArray* GetNthInputNodeEvents(int n);
 
   /// Returns the Nth input node specified by the surface editor node.
-  vtkMRMLNode* GetNthInputNode(int n, vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  vtkMRMLNode* GetNthInputNode(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Returns the name of the Nth output node.
   std::string GetNthOutputNodeName(int n);
@@ -115,7 +115,7 @@ public:
   bool GetNthOutputNodeRequired(int n);
 
   /// Returns the events that must be observed to enable continuous updates for the current output.
-  vtkMRMLNode* GetNthOutputNode(int n, vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  vtkMRMLNode* GetNthOutputNode(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Returns the name of the Nth input parameter.
   std::string GetNthInputParameterName(int n);
@@ -130,14 +130,14 @@ public:
   int GetNthInputParameterType(int n);
 
   /// Returns the value of the Nth input parameter from the parameter node.
-  vtkVariant GetNthInputParameterValue(int n, vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  vtkVariant GetNthInputParameterValue(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Returns true if all of the required inputs have been specified for the surface editor node.
-  virtual bool HasRequiredInputs(vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  virtual bool HasRequiredInputs(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Run the surface editor rule.
   /// Checks to ensure that all of the required inputs have been set.
-  bool Run(vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode);
+  bool Run(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   enum ParameterType
   {
@@ -148,14 +148,14 @@ public:
   };
 
 protected:
-  vtkSlicerParametricSurfaceEditorRule();
-  ~vtkSlicerParametricSurfaceEditorRule() override;
-  void operator=(const vtkSlicerParametricSurfaceEditorRule&);
+  vtkSlicerDynamicModelerRule();
+  ~vtkSlicerDynamicModelerRule() override;
+  void operator=(const vtkSlicerDynamicModelerRule&);
 
 protected:
 
   /// Run the rule on the input nodes and apply the results to the output nodes
-  virtual bool RunInternal(vtkMRMLParametricSurfaceEditorNode* surfaceEditorNode) = 0;
+  virtual bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) = 0;
 
   /// Struct containing all of the relevant info for input and output nodes.
   struct StructNodeInfo
@@ -202,4 +202,4 @@ protected:
 
 };
 
-#endif // __vtkSlicerParametricSurfaceEditorRule_h
+#endif // __vtkSlicerDynamicModelerRule_h
