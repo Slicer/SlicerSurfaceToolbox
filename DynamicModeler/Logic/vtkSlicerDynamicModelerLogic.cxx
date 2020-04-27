@@ -77,8 +77,7 @@ void vtkSlicerDynamicModelerLogic::RegisterNodes()
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerLogic
-::OnMRMLSceneNodeAdded(vtkMRMLNode* node)
+void vtkSlicerDynamicModelerLogic::OnMRMLSceneNodeAdded(vtkMRMLNode* node)
 {
   vtkMRMLDynamicModelerNode* surfaceEditorNode = vtkMRMLDynamicModelerNode::SafeDownCast(node);
   if (!surfaceEditorNode)
@@ -100,8 +99,7 @@ void vtkSlicerDynamicModelerLogic
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerLogic
-::OnMRMLSceneNodeRemoved(vtkMRMLNode* node)
+void vtkSlicerDynamicModelerLogic::OnMRMLSceneNodeRemoved(vtkMRMLNode* node)
 {
   vtkMRMLDynamicModelerNode* surfaceEditorNode = vtkMRMLDynamicModelerNode::SafeDownCast(node);
   if (!surfaceEditorNode)
