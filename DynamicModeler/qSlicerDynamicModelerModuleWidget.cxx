@@ -22,6 +22,8 @@
 // Qt includes
 #include <QCheckBox>
 #include <QDebug>
+#include <QFormLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
 
@@ -29,6 +31,9 @@
 #include <ctkDoubleSpinBox.h>
 
 // SlicerQt includes
+#include <qMRMLNodeComboBox.h>
+
+// DynamicModeler Module includes
 #include "qSlicerDynamicModelerModuleWidget.h"
 #include "ui_qSlicerDynamicModelerModuleWidget.h"
 
@@ -42,9 +47,13 @@
 // DynamicModeler Logic includes
 #include <vtkSlicerDynamicModelerLogic.h>
 #include <vtkSlicerDynamicModelerRuleFactory.h>
+#include <vtkSlicerDynamicModelerPlaneCutRule.h>
 
 // DynamicModeler MRML includes
 #include <vtkMRMLDynamicModelerNode.h>
+
+// Subject hierarchy includes
+#include <qMRMLSubjectHierarchyModel.h>
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate
@@ -85,22 +94,17 @@ void qSlicerDynamicModelerModuleWidget::setup()
   d->setupUi(this);
   this->Superclass::setup();
 
-  connect(d->ParameterNodeComboBox, SIGNAL(currentNodeChanged(vtkMRMLNode*)),
-    this, SLOT(onParameterNodeChanged(vtkMRMLNode*)));
+  d->SubjectHierarchyTreeView->setMultiSelection(false);
+  d->SubjectHierarchyTreeView->setColumnHidden(d->SubjectHierarchyTreeView->model()->idColumn(), true);
+  d->SubjectHierarchyTreeView->setColumnHidden(d->SubjectHierarchyTreeView->model()->colorColumn(), true);
+  d->SubjectHierarchyTreeView->setColumnHidden(d->SubjectHierarchyTreeView->model()->transformColumn(), true);
+  d->SubjectHierarchyTreeView->setColumnHidden(d->SubjectHierarchyTreeView->model()->descriptionColumn(), true);
 
-  d->RuleComboBox->clear();
-  vtkSlicerDynamicModelerRuleFactory* ruleFactory = vtkSlicerDynamicModelerRuleFactory::GetInstance();
-  if (ruleFactory)
-    {
-    std::vector<std::string> ruleNames = ruleFactory->GetDynamicModelerRuleNames();
-    for (std::string ruleName : ruleNames)
-      {
-      d->RuleComboBox->addItem(ruleName.c_str(), ruleName.c_str());
-      }
-    }
+  vtkNew<vtkSlicerDynamicModelerPlaneCutRule> planeCutRule;
+  this->addRuleButton(QIcon(":/Icons/DynamicModeler.png"), planeCutRule);
 
-  connect(d->RuleComboBox, SIGNAL(currentIndexChanged(int)),
-    this, SLOT(updateMRMLFromWidget()));
+  connect(d->SubjectHierarchyTreeView, SIGNAL(currentItemChanged(vtkIdType)),
+    this, SLOT(onParameterNodeChanged()));
   connect(d->ApplyButton, SIGNAL(checkStateChanged(Qt::CheckState)),
     this, SLOT(onApplyButtonClicked()));
   connect(d->ApplyButton, SIGNAL(clicked()),
@@ -108,7 +112,47 @@ void qSlicerDynamicModelerModuleWidget::setup()
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerDynamicModelerModuleWidget::onParameterNodeChanged(vtkMRMLNode* node)
+void qSlicerDynamicModelerModuleWidget::addRuleButton(QIcon icon, vtkSlicerDynamicModelerRule* rule)
+{
+  Q_D(qSlicerDynamicModelerModuleWidget);
+  if (!rule)
+    {
+    qCritical() << "Invalid rule object!";
+    }
+
+  QPushButton* button = new QPushButton();
+  button->setIcon(icon);
+  if (rule->GetName())
+    {
+    button->setToolTip(rule->GetName());
+    button->setProperty("RuleName", rule->GetName());
+    }
+  d->ButtonLayout->addWidget(button);
+
+  connect(button, SIGNAL(clicked()), this, SLOT(onAddRuleClicked()));
+}
+
+//-----------------------------------------------------------------------------
+void qSlicerDynamicModelerModuleWidget::onAddRuleClicked()
+{
+  Q_D(qSlicerDynamicModelerModuleWidget);
+  
+  if (!QObject::sender() || !this->mrmlScene())
+    {
+    return;
+    }
+
+  QString ruleName = QObject::sender()->property("RuleName").toString();
+  std::string nodeName = this->mrmlScene()->GenerateUniqueName(ruleName.toStdString());
+
+  vtkNew<vtkMRMLDynamicModelerNode> dynamicModelerNode;
+  dynamicModelerNode->SetName(nodeName.c_str());
+  dynamicModelerNode->SetRuleName(ruleName.toUtf8());
+  this->mrmlScene()->AddNode(dynamicModelerNode);
+}
+
+//-----------------------------------------------------------------------------
+void qSlicerDynamicModelerModuleWidget::onParameterNodeChanged()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   if (!this->mrmlScene() || this->mrmlScene()->IsBatchProcessing())
@@ -116,7 +160,7 @@ void qSlicerDynamicModelerModuleWidget::onParameterNodeChanged(vtkMRMLNode* node
     return;
     }
 
-  vtkMRMLDynamicModelerNode* meshModifyNode = vtkMRMLDynamicModelerNode::SafeDownCast(node);
+  vtkMRMLDynamicModelerNode* meshModifyNode = vtkMRMLDynamicModelerNode::SafeDownCast(d->SubjectHierarchyTreeView->currentNode());
   qvtkReconnect(d->DynamicModelerNode, meshModifyNode, vtkCommand::ModifiedEvent, this, SLOT(updateWidgetFromMRML()));
 
   d->DynamicModelerNode = meshModifyNode;
@@ -485,22 +529,7 @@ void qSlicerDynamicModelerModuleWidget::updateWidgetFromMRML()
   this->updateParameterWidgets();
   this->updateOutputWidgets();
 
-  int ruleIndex = 0;
-  if (!d->DynamicModelerNode)
-    {
-    d->RuleComboBox->setEnabled(false);
-    }
-  else
-    {
-    ruleIndex = d->RuleComboBox->findData(ruleName.c_str());
-    d->RuleComboBox->setEnabled(true);
-    }
-
-  bool wasBlocking = d->RuleComboBox->blockSignals(true);
-  d->RuleComboBox->setCurrentIndex(ruleIndex);
-  d->RuleComboBox->blockSignals(wasBlocking);
-
-  wasBlocking = d->ApplyButton->blockSignals(true);
+  bool wasBlocking = d->ApplyButton->blockSignals(true);
   if (d->DynamicModelerNode && d->DynamicModelerNode->GetContinuousUpdate())
     {
     d->ApplyButton->setCheckState(Qt::Checked);
@@ -523,10 +552,10 @@ void qSlicerDynamicModelerModuleWidget::updateMRMLFromWidget()
 
   MRMLNodeModifyBlocker blocker(d->DynamicModelerNode);
 
-  QString ruleName = d->RuleComboBox->currentData().toString();
-  d->DynamicModelerNode->SetRuleName(ruleName.toUtf8());
+  // Continuous update
   d->DynamicModelerNode->SetContinuousUpdate(d->ApplyButton->checkState() == Qt::Checked);
 
+  // If no rule is specified, there is nothing else to update
   vtkSlicerDynamicModelerLogic* dynamicModelerLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
   vtkSlicerDynamicModelerRule* rule = nullptr;
   if (dynamicModelerLogic && d->DynamicModelerNode)

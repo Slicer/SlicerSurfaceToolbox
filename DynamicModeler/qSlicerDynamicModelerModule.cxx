@@ -26,6 +26,12 @@
 #include "qSlicerDynamicModelerModule.h"
 #include "qSlicerDynamicModelerModuleWidget.h"
 
+// DynamicModeler subject hierarchy includes
+#include "qSlicerSubjectHierarchyDynamicModelerPlugin.h"
+
+// Subject hierarchy includes
+#include <qSlicerSubjectHierarchyPluginHandler.h>
+
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate
 class qSlicerDynamicModelerModulePrivate
@@ -98,6 +104,13 @@ QStringList qSlicerDynamicModelerModule::dependencies() const
 void qSlicerDynamicModelerModule::setup()
 {
   this->Superclass::setup();
+
+  vtkSlicerDynamicModelerLogic* dynamicModelerLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
+
+  // Register Subject Hierarchy core plugins
+  qSlicerSubjectHierarchyDynamicModelerPlugin* dynamicModelerPlugin = new qSlicerSubjectHierarchyDynamicModelerPlugin();
+  dynamicModelerPlugin->setDynamicModelerLogic(dynamicModelerLogic);
+  qSlicerSubjectHierarchyPluginHandler::instance()->registerPlugin(dynamicModelerPlugin);
 }
 
 //-----------------------------------------------------------------------------
@@ -111,4 +124,11 @@ qSlicerAbstractModuleRepresentation* qSlicerDynamicModelerModule
 vtkMRMLAbstractLogic* qSlicerDynamicModelerModule::createLogic()
 {
   return vtkSlicerDynamicModelerLogic::New();
+}
+
+//-----------------------------------------------------------------------------
+QStringList qSlicerDynamicModelerModule::associatedNodeTypes() const
+{
+  return QStringList()
+    << "vtkMRMLAnnotationFiducialNode";
 }
