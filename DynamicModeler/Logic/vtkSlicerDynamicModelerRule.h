@@ -93,6 +93,9 @@ public:
   /// Returns true if the input is required for the rule to be run.
   bool GetNthInputNodeRequired(int n);
 
+  /// Returns true if the input is repeatable
+  bool GetNthInputNodeRepeatable(int n);
+
   /// Returns the events that must be observed to enable continuous updates for the current input.
   vtkIntArray* GetNthInputNodeEvents(int n);
 
@@ -132,6 +135,10 @@ public:
   /// Returns the value of the Nth input parameter from the parameter node.
   vtkVariant GetNthInputParameterValue(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
+  /// Returns the possible values of the Nth input parameter.
+  /// Only used for string enum types
+  vtkStringArray* GetNthInputParameterPossibleValues(int n);
+
   /// Returns true if all of the required inputs have been specified for the surface editor node.
   virtual bool HasRequiredInputs(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
@@ -142,6 +149,7 @@ public:
   enum ParameterType
   {
     PARAMETER_STRING,
+    PARAMETER_STRING_ENUM,
     PARAMETER_BOOL,
     PARAMETER_INT,
     PARAMETER_DOUBLE,
@@ -160,12 +168,13 @@ protected:
   /// Struct containing all of the relevant info for input and output nodes.
   struct StructNodeInfo
   {
-    StructNodeInfo(std::string name, std::string description, vtkStringArray* classNames, std::string referenceRole, bool required, vtkIntArray* events = nullptr)
+    StructNodeInfo(std::string name, std::string description, vtkStringArray* classNames, std::string referenceRole, bool required, bool repeatable, vtkIntArray* events = nullptr)
       : Name(name)
       , Description(description)
       , ClassNames(classNames)
       , ReferenceRole(referenceRole)
       , Required(required)
+      , Repeatable(repeatable)
       , Events(events)
     {
     }
@@ -174,6 +183,7 @@ protected:
     vtkSmartPointer<vtkStringArray> ClassNames;
     std::string                     ReferenceRole;
     bool                            Required;
+    bool                            Repeatable;
     vtkSmartPointer<vtkIntArray>    Events;
   };
   using NodeInfo = struct StructNodeInfo;
@@ -196,6 +206,7 @@ protected:
     std::string AttributeName;
     int Type{ PARAMETER_STRING };
     vtkVariant DefaultValue;
+    vtkSmartPointer<vtkStringArray> PossibleValues;
   };
   using ParameterInfo = struct StructParameterInfo;
   std::vector<ParameterInfo> InputParameterInfo;

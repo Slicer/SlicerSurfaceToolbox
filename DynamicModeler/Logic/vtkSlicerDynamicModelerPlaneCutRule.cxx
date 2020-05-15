@@ -30,18 +30,22 @@
 
 // VTK includes
 #include <vtkAppendPolyData.h>
+#include <vtkCleanPolyData.h>
 #include <vtkClipClosedSurface.h>
 #include <vtkClipPolyData.h>
 #include <vtkCollection.h>
 #include <vtkCommand.h>
+#include <vtkContourTriangulator.h>
+#include <vtkCutter.h>
 #include <vtkDataSetAttributes.h>
 #include <vtkFeatureEdges.h>
 #include <vtkGeneralTransform.h>
-#include <vtkGeometryFilter.h>
+#include <vtkImplicitBoolean.h>
 #include <vtkIntArray.h>
 #include <vtkObjectFactory.h>
 #include <vtkPlane.h>
 #include <vtkPlaneCollection.h>
+#include <vtkReverseSense.h>
 #include <vtkSmartPointer.h>
 #include <vtkStringArray.h>
 #include <vtkStripper.h>
@@ -70,6 +74,7 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     inputPlaneClassNames,
     "PlaneCut.InputPlane",
     true,
+    true,
     inputPlaneEvents
     );
   this->InputNodeInfo.push_back(inputPlane);
@@ -86,6 +91,7 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     inputModelClassNames,
     "PlaneCut.InputModel",
     true,
+    false,
     inputModelEvents
     );
   this->InputNodeInfo.push_back(inputModel);
@@ -97,6 +103,7 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     "Portion of the cut model that is on the same side of the plane as the normal.",
     inputModelClassNames,
     "PlaneCut.OutputPositiveModel",
+    false,
     false
     );
   this->OutputNodeInfo.push_back(outputPositiveModel);
@@ -106,9 +113,13 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     "Portion of the cut model that is on the opposite side of the plane as the normal.",
     inputModelClassNames,
     "PlaneCut.OutputNegativeModel",
+    false,
     false
     );
   this->OutputNodeInfo.push_back(outputNegativeModel);
+
+  /////////
+  // Parameters
 
   /////////
   // Parameters
@@ -120,28 +131,27 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     true);
   this->InputParameterInfo.push_back(parameterCapSurface);
 
+  ParameterInfo parameterOperationType(
+    "Operation type",
+    "Method used for combining the planes",
+    "OperationType",
+    PARAMETER_STRING_ENUM,
+    "Union");
+
+  vtkNew<vtkStringArray> possibleValues;
+  parameterOperationType.PossibleValues = possibleValues;
+  parameterOperationType.PossibleValues->InsertNextValue("Union");
+  parameterOperationType.PossibleValues->InsertNextValue("Intersection");
+  parameterOperationType.PossibleValues->InsertNextValue("Difference");
+  this->InputParameterInfo.push_back(parameterOperationType);
+
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
 
-  this->PlaneClipper = vtkSmartPointer<vtkClipClosedSurface>::New();
+  this->PlaneClipper = vtkSmartPointer<vtkClipPolyData>::New();
   this->PlaneClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-  this->PlaneClipper->SetClippingPlanes(vtkNew <vtkPlaneCollection>());
-  this->PlaneClipper->SetScalarModeToLabels();
-  this->PlaneClipper->TriangulationErrorDisplayOff();
-  
-  this->Plane = vtkSmartPointer<vtkPlane>::New();
-  this->PlaneClipper->GetClippingPlanes()->AddItem(this->Plane);
-
-  this->ThresholdFilter = vtkSmartPointer<vtkThreshold>::New();
-  this->ThresholdFilter->SetInputConnection(this->PlaneClipper->GetOutputPort());
-  this->ThresholdFilter->ThresholdByLower(0);
-  this->ThresholdFilter->SetInputArrayToProcess(0, 0, 0,
-    vtkDataObject::FIELD_ASSOCIATION_CELLS,
-    vtkDataSetAttributes::SCALARS);
-
-  this->GeometryFilter = vtkSmartPointer<vtkGeometryFilter>::New();
-  this->GeometryFilter->SetInputConnection(this->ThresholdFilter->GetOutputPort());
+  this->PlaneClipper->SetValue(0.0);
 
   this->OutputPositiveModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputPositiveWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -151,7 +161,7 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
   this->OutputNegativeModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputNegativeWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->OutputNegativeModelToWorldTransformFilter->SetTransform(this->OutputNegativeWorldToModelTransform);
-  this->OutputNegativeModelToWorldTransformFilter->SetInputConnection(this->PlaneClipper->GetOutputPort());
+  this->OutputNegativeModelToWorldTransformFilter->SetInputConnection(this->PlaneClipper->GetClippedOutputPort());
 }
 
 //----------------------------------------------------------------------------
@@ -165,29 +175,64 @@ const char* vtkSlicerDynamicModelerPlaneCutRule::GetName()
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData)
+void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitFunction* cutFunction)
 {
-  // Now extract feature edges
-  vtkNew<vtkFeatureEdges> boundaryEdges;
-  boundaryEdges->SetInputData(polyData);
-  boundaryEdges->BoundaryEdgesOn();
-  boundaryEdges->FeatureEdgesOff();
-  boundaryEdges->NonManifoldEdgesOff();
-  boundaryEdges->ManifoldEdgesOff();
-  
-  vtkNew<vtkStripper> boundaryStrips;
-  boundaryStrips->SetInputConnection(boundaryEdges->GetOutputPort());
-  boundaryStrips->Update();
-  
-  vtkNew<vtkPolyData> boundaryPolyData;
-  boundaryPolyData->SetPoints(boundaryStrips->GetOutput()->GetPoints());
-  boundaryPolyData->SetPolys(boundaryStrips->GetOutput()->GetLines());
+  vtkNew<vtkAppendPolyData> appendFilter;
+  for (int i = 0; i < planes->GetNumberOfItems(); ++i)
+    {
+    vtkPlane* plane = planes->GetItem(i);
+    vtkNew<vtkCutter> cutter;
+    cutter->SetCutFunction(plane);
+    cutter->SetInputData(originalPolyData);
 
-  vtkNew<vtkAppendPolyData> append;
-  append->AddInputData(polyData);
-  append->AddInputData(boundaryPolyData);
-  append->Update();
-  polyData->DeepCopy(append->GetOutput());
+    vtkNew<vtkContourTriangulator> contourTriangulator;
+    contourTriangulator->SetInputConnection(cutter->GetOutputPort());
+    contourTriangulator->Update();
+
+    // Create a seam along the intersection of each plane with the triangulated contour
+    // This allows the contour to be split correctly later.
+    vtkNew<vtkPolyData> endCapPolyData;
+    endCapPolyData->ShallowCopy(contourTriangulator->GetOutput());
+    for (int j = 0; j < planes->GetNumberOfItems(); ++j)
+      {
+      if (i == j)
+        {
+        continue;
+        }
+      vtkPlane* plane2 = planes->GetItem(j);
+      vtkNew<vtkClipPolyData> clipper;
+      clipper->SetInputData(endCapPolyData);
+      clipper->SetClipFunction(plane2);
+      clipper->SetValue(0.0);
+      clipper->GenerateClippedOutputOn();
+      vtkNew<vtkAppendPolyData> appendCut;
+      appendCut->AddInputConnection(clipper->GetOutputPort());
+      appendCut->AddInputConnection(clipper->GetClippedOutputPort());
+      appendCut->Update();
+      endCapPolyData->ShallowCopy(appendCut->GetOutput());
+      }
+
+    // Remove all triangles that do not lie at 0.0
+    double epsilon = 1e-4;
+    vtkNew<vtkClipPolyData> clipper;
+    clipper->SetInputData(endCapPolyData);
+    clipper->SetClipFunction(cutFunction);
+    clipper->InsideOutOff();
+    clipper->SetValue(-epsilon);
+    vtkNew<vtkClipPolyData> clipper2;
+    clipper2->SetInputConnection(clipper->GetOutputPort());
+    clipper2->SetClipFunction(cutFunction);
+    clipper2->InsideOutOn();
+    clipper2->SetValue(epsilon);
+    clipper2->Update();
+    appendFilter->AddInputData(clipper2->GetOutput());
+    }
+  appendFilter->AddInputData(polyData);
+
+  vtkNew<vtkCleanPolyData> cleanFilter;
+  cleanFilter->SetInputConnection(appendFilter->GetOutputPort());
+  cleanFilter->Update();
+  polyData->ShallowCopy(cleanFilter->GetOutput());
 }
 
 //----------------------------------------------------------------------------
@@ -207,18 +252,71 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
     return true;
     }
 
-  vtkMRMLMarkupsPlaneNode* inputPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(this->GetNthInputNode(0, surfaceEditorNode));
-  vtkMRMLSliceNode* inputSliceNode = vtkMRMLSliceNode::SafeDownCast(this->GetNthInputNode(0, surfaceEditorNode));
-  vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(this->GetNthInputNode(1, surfaceEditorNode));
-  if ((!inputSliceNode && !inputPlaneNode) || !inputModelNode)
+  vtkNew<vtkImplicitBoolean> planes;
+  std::string operationType = this->GetNthInputParameterValue(1, surfaceEditorNode).ToString();
+  if (operationType == "Intersection")
     {
-    vtkErrorMacro("Invalid input nodes!");
+    planes->SetOperationTypeToIntersection();
+    }
+  else if (operationType == "Difference")
+    {
+    planes->SetOperationTypeToDifference();
+    }
+  else
+    {
+    planes->SetOperationTypeToUnion();
+    }
+
+  std::string planeReferenceRole = this->GetNthInputNodeReferenceRole(0);
+  std::vector<vtkMRMLNode*> planeNodes;
+  surfaceEditorNode->GetNodeReferences(planeReferenceRole.c_str(), planeNodes);
+  vtkNew<vtkPlaneCollection> planeCollection;
+  int planeIndex = 0;
+  for (vtkMRMLNode* planeNode : planeNodes)
+    {
+    vtkMRMLNode* inputNode = surfaceEditorNode->GetNthNodeReference(planeReferenceRole.c_str(), planeIndex);
+    vtkMRMLMarkupsPlaneNode* inputPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(inputNode);
+    vtkMRMLSliceNode* inputSliceNode = vtkMRMLSliceNode::SafeDownCast(inputNode);
+    if (!inputPlaneNode && !inputSliceNode)
+      {
+      vtkErrorMacro("Invalid input plane nodes!");
+      return false;
+      }
+
+    double origin_World[3] = { 0.0, 0.0, 0.0 };
+    double normal_World[3] = { 0.0, 0.0, 1.0 };
+    if (inputPlaneNode)
+      {
+      inputPlaneNode->GetOriginWorld(origin_World);
+      inputPlaneNode->GetNormalWorld(normal_World);
+      }
+    if (inputSliceNode)
+      {
+      vtkMatrix4x4* sliceToRAS = inputSliceNode->GetSliceToRAS();
+      vtkNew<vtkTransform> sliceToRASTransform;
+      sliceToRASTransform->SetMatrix(sliceToRAS);
+      sliceToRASTransform->TransformPoint(origin_World, origin_World);
+      sliceToRASTransform->TransformVector(normal_World, normal_World);
+      }
+
+    vtkNew<vtkPlane> currentPlane;
+    currentPlane->SetNormal(normal_World);
+    currentPlane->SetOrigin(origin_World);
+    planeCollection->AddItem(currentPlane);
+    planes->AddFunction(currentPlane);
+    ++planeIndex;
+    }
+  this->PlaneClipper->SetClipFunction(planes);
+
+  vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(this->GetNthInputNode(1, surfaceEditorNode));
+  if (!inputModelNode)
+    {
+    vtkErrorMacro("Invalid input model node!");
     return false;
     }
 
-  if (!inputModelNode->GetMesh() || inputModelNode->GetMesh()->GetNumberOfPoints() == 0 || (inputPlaneNode && inputPlaneNode->GetNumberOfControlPoints() < 3))
+  if (!inputModelNode->GetMesh() || inputModelNode->GetMesh()->GetNumberOfPoints() == 0)
     {
-    inputModelNode->GetMesh()->Initialize();
     return true;
     }
 
@@ -241,42 +339,16 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
 
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
 
-  double origin_World[3] = { 0.0, 0.0, 0.0 };
-  double normal_World[3] = { 0.0, 0.0, 1.0 };
-
-  if (inputPlaneNode)
-    {
-    inputPlaneNode->GetOriginWorld(origin_World);
-    inputPlaneNode->GetNormalWorld(normal_World);
-    }
-  if (inputSliceNode)
-    {
-    vtkMatrix4x4* sliceToRAS = inputSliceNode->GetSliceToRAS();
-    vtkNew<vtkTransform> sliceToRASTransform;
-    sliceToRASTransform->SetMatrix(sliceToRAS);
-    sliceToRASTransform->TransformPoint(origin_World, origin_World);
-    sliceToRASTransform->TransformVector(normal_World, normal_World);
-    }
-  this->Plane->SetNormal(normal_World);
-  this->Plane->SetOrigin(origin_World);
-
   bool capSurface = this->GetNthInputParameterValue(0, surfaceEditorNode).ToInt() != 0;
-  if (capSurface)
-    {
-    this->OutputPositiveModelToWorldTransformFilter->SetInputConnection(this->PlaneClipper->GetOutputPort());
-    this->OutputNegativeModelToWorldTransformFilter->SetInputConnection(this->PlaneClipper->GetOutputPort());
-    }
-  else
-    {
-    this->OutputPositiveModelToWorldTransformFilter->SetInputConnection(this->GeometryFilter->GetOutputPort());
-    this->OutputNegativeModelToWorldTransformFilter->SetInputConnection(this->GeometryFilter->GetOutputPort());
-    }
-
   if (outputPositiveModelNode)
     {
     this->OutputPositiveModelToWorldTransformFilter->Update();
     vtkNew<vtkPolyData> outputMesh;
     outputMesh->DeepCopy(this->OutputPositiveModelToWorldTransformFilter->GetOutput());
+    if (capSurface)
+      {
+      this->CreateEndCap(outputMesh, planeCollection, inputModelNode->GetPolyData(), planes);
+      }
 
     MRMLNodeModifyBlocker blocker(outputPositiveModelNode);
     outputPositiveModelNode->SetAndObserveMesh(outputMesh);
@@ -285,13 +357,14 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
 
   if (outputNegativeModelNode)
     {
-    vtkMath::MultiplyScalar(normal_World, -1.0);
-    this->Plane->SetNormal(normal_World);
-    this->Plane->SetOrigin(origin_World);
-
+    this->PlaneClipper->GenerateClippedOutputOn();
     this->OutputNegativeModelToWorldTransformFilter->Update();
     vtkNew<vtkPolyData> outputMesh;
     outputMesh->DeepCopy(this->OutputNegativeModelToWorldTransformFilter->GetOutput());
+    if (capSurface)
+      {
+      this->CreateEndCap(outputMesh, planeCollection, inputModelNode->GetPolyData(), planes);
+      }
 
     MRMLNodeModifyBlocker blocker(outputNegativeModelNode);
     outputNegativeModelNode->SetAndObserveMesh(outputMesh);
