@@ -136,7 +136,7 @@ void qSlicerDynamicModelerModuleWidget::addRuleButton(QIcon icon, vtkSlicerDynam
 void qSlicerDynamicModelerModuleWidget::onAddRuleClicked()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
-  
+
   if (!QObject::sender() || !this->mrmlScene())
     {
     return;
@@ -195,40 +195,57 @@ void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
   QFormLayout* inputNodesLayout = new QFormLayout();
   inputNodesWidget->setLayout(inputNodesLayout);
   d->InputNodesCollapsibleButton->layout()->addWidget(inputNodesWidget);
-  for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+  for (int inputIndex = 0; inputIndex < rule->GetNumberOfInputNodes(); ++inputIndex)
     {
-    std::string name = rule->GetNthInputNodeName(i);
-    std::string description = rule->GetNthInputNodeDescription(i);
-    std::string referenceRole = rule->GetNthInputNodeReferenceRole(i);
-    vtkStringArray* classNameArray = rule->GetNthInputNodeClassNames(i);
+    std::string name = rule->GetNthInputNodeName(inputIndex);
+    std::string description = rule->GetNthInputNodeDescription(inputIndex);
+    std::string referenceRole = rule->GetNthInputNodeReferenceRole(inputIndex);
+    vtkStringArray* classNameArray = rule->GetNthInputNodeClassNames(inputIndex);
     QStringList classNames;
-    for (int i = 0; i < classNameArray->GetNumberOfValues(); ++i)
+    for (int classNameIndex = 0; classNameIndex < classNameArray->GetNumberOfValues(); ++classNameIndex)
       {
-      vtkStdString className = classNameArray->GetValue(i);
+      vtkStdString className = classNameArray->GetValue(classNameIndex);
       classNames << className.c_str();
       }
 
-    QLabel* nodeLabel = new QLabel();
-    std::stringstream labelTextSS;
-    labelTextSS << name << ":";
-    std::string labelText = labelTextSS.str();
-    nodeLabel->setText(labelText.c_str());
-    nodeLabel->setToolTip(description.c_str());
+    int numberOfInputs = 1;
+    if (rule->GetNthInputNodeRepeatable(inputIndex))
+      {
+      numberOfInputs = d->DynamicModelerNode->GetNumberOfNodeReferences(referenceRole.c_str()) + 1;
+      }
 
-    qMRMLNodeComboBox* nodeSelector = new qMRMLNodeComboBox();
-    nodeSelector->setNodeTypes(classNames);
-    nodeSelector->setToolTip(description.c_str());
-    nodeSelector->setNoneEnabled(true);
-    nodeSelector->setMRMLScene(this->mrmlScene());
-    nodeSelector->setProperty("ReferenceRole", referenceRole.c_str());
-    nodeSelector->setAddEnabled(false);
-    nodeSelector->setRemoveEnabled(false);
-    nodeSelector->setRenameEnabled(false);
+    for (int inputSelectorIndex = 0; inputSelectorIndex < numberOfInputs; ++inputSelectorIndex)
+      {
+      QLabel* nodeLabel = new QLabel();
+      std::stringstream labelTextSS;
+      labelTextSS << name;
+      if (rule->GetNthInputNodeRepeatable(inputIndex))
+        {
+        labelTextSS << " [" << inputSelectorIndex << "]";
+        }
+      labelTextSS << ":";
 
-    inputNodesLayout->addRow(nodeLabel, nodeSelector);
+      std::string labelText = labelTextSS.str();
+      nodeLabel->setText(labelText.c_str());
+      nodeLabel->setToolTip(description.c_str());
 
-    connect(nodeSelector, SIGNAL(currentNodeChanged(vtkMRMLNode*)),
-      this, SLOT(updateMRMLFromWidget()));
+      qMRMLNodeComboBox* nodeSelector = new qMRMLNodeComboBox();
+      nodeSelector->setNodeTypes(classNames);
+      nodeSelector->setToolTip(description.c_str());
+      nodeSelector->setNoneEnabled(true);
+      nodeSelector->setMRMLScene(this->mrmlScene());
+      nodeSelector->setProperty("ReferenceRole", referenceRole.c_str());
+      nodeSelector->setProperty("InputIndex", inputIndex);
+      nodeSelector->setProperty("InputSelectorIndex", inputSelectorIndex);
+      nodeSelector->setAddEnabled(false);
+      nodeSelector->setRemoveEnabled(false);
+      nodeSelector->setRenameEnabled(false);
+
+      inputNodesLayout->addRow(nodeLabel, nodeSelector);
+
+      connect(nodeSelector, SIGNAL(currentNodeChanged(vtkMRMLNode*)),
+        this, SLOT(updateMRMLFromWidget()));
+      }
     }
 }
 
@@ -297,6 +314,18 @@ void qSlicerDynamicModelerModuleWidget::resetParameterWidgets()
       connect(doubleSpinBox, SIGNAL(valueChanged(double)),
         this, SLOT(updateMRMLFromWidget()));
       parameterSelector = doubleSpinBox;
+      }
+    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_STRING_ENUM)
+      {
+      QComboBox* enumComboBox = new QComboBox();
+      vtkStringArray* possibleValues = rule->GetNthInputParameterPossibleValues(i);
+      for (int valueIndex = 0; valueIndex < possibleValues->GetNumberOfValues(); ++valueIndex)
+        {
+        enumComboBox->addItem(QString::fromStdString(possibleValues->GetValue(valueIndex)));
+        }
+      connect(enumComboBox, SIGNAL(currentIndexChanged(int)),
+        this, SLOT(updateMRMLFromWidget()));
+      parameterSelector = enumComboBox;
       }
     else
       {
@@ -391,13 +420,13 @@ void qSlicerDynamicModelerModuleWidget::updateInputWidgets()
   for (qMRMLNodeComboBox* inputNodeSelector : inputNodeSelectors)
     {
     QString referenceRole = inputNodeSelector->property("ReferenceRole").toString();
-    vtkMRMLNode* referenceNode = d->DynamicModelerNode->GetNodeReference(referenceRole.toUtf8());
+    int inputSelectorIndex = inputNodeSelector->property("InputSelectorIndex").toInt();
+    vtkMRMLNode* referenceNode = d->DynamicModelerNode->GetNthNodeReference(referenceRole.toUtf8(), inputSelectorIndex);
     bool wasBlocking = inputNodeSelector->blockSignals(true);
     inputNodeSelector->setCurrentNode(referenceNode);
     inputNodeSelector->blockSignals(wasBlocking);
     }
 }
-
 
 //-----------------------------------------------------------------------------
 void qSlicerDynamicModelerModuleWidget::updateParameterWidgets()
@@ -457,10 +486,22 @@ void qSlicerDynamicModelerModuleWidget::updateParameterWidgets()
         qCritical() << "Could not find widget for parameter " << name.c_str();
         continue;
         }
-
       bool wasBlocking = doubleSpinBox->blockSignals(true);
       doubleSpinBox->setValue(value.ToDouble());
       doubleSpinBox->blockSignals(wasBlocking);
+      }
+    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_STRING_ENUM)
+      {
+      QComboBox* comboBox = qobject_cast<QComboBox*>(parameterSelector);
+      if (!comboBox)
+        {
+        qCritical() << "Could not find widget for parameter " << name.c_str();
+        continue;
+        }
+      bool wasBlocking = comboBox->blockSignals(true);
+      int index = comboBox->findText(QString::fromStdString(value.ToString()));
+      comboBox->setCurrentIndex(index);
+      comboBox->blockSignals(wasBlocking);
       }
     else
       {
@@ -517,12 +558,53 @@ void qSlicerDynamicModelerModuleWidget::updateWidgetFromMRML()
     ruleName = d->DynamicModelerNode->GetRuleName();
     }
 
+  bool rebuildInputsRequired = false;
+  if (rule)
+    {
+    std::map<int, int> emptyRepeatableInputCounts;
+    for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+      {
+      if (rule->GetNthInputNodeRepeatable(i))
+        {
+        emptyRepeatableInputCounts[i] = 0;
+        }
+      }
+
+    QList<qMRMLNodeComboBox*> inputNodeSelectors = d->InputNodesCollapsibleButton->findChildren<qMRMLNodeComboBox*>();
+    for (qMRMLNodeComboBox* inputNodeSelector : inputNodeSelectors)
+      {
+      int inputIndex = inputNodeSelector->property("InputIndex").toInt();
+      if (emptyRepeatableInputCounts.find(inputIndex) == emptyRepeatableInputCounts.end())
+        {
+        continue;
+        }
+
+      if (inputNodeSelector->currentNode() == nullptr)
+        {
+        ++emptyRepeatableInputCounts[inputIndex];
+        }
+      }
+
+    for (std::pair<int, int> emptyRepeatableInputCount : emptyRepeatableInputCounts)
+      {
+      if (emptyRepeatableInputCount.second != 1)
+        {
+        rebuildInputsRequired = true;
+        break;
+        }
+      }
+    }
+
   if (ruleName != d->CurrentRuleName)
     {
     this->resetInputWidgets();
     this->resetParameterWidgets();
     this->resetOutputWidgets();
     d->CurrentRuleName = ruleName;
+    }
+  else if (rebuildInputsRequired)
+    {
+    this->resetInputWidgets();
     }
 
   this->updateInputWidgets();
@@ -567,14 +649,21 @@ void qSlicerDynamicModelerModuleWidget::updateMRMLFromWidget()
     return;
     }
 
+  for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+    {
+    std::string referenceRole = rule->GetNthInputNodeReferenceRole(i);
+    d->DynamicModelerNode->RemoveNodeReferenceIDs(referenceRole.c_str());
+    }
+
+  // Update all input reference roles from the parameter node
   QList<qMRMLNodeComboBox*> inputNodeSelectors = d->InputNodesCollapsibleButton->findChildren<qMRMLNodeComboBox*>();
-  int i = 0;
   for (qMRMLNodeComboBox* inputNodeSelector : inputNodeSelectors)
     {
     QString referenceRole = inputNodeSelector->property("ReferenceRole").toString();
+    int inputIndex = inputNodeSelector->property("InputIndex").toInt();
+    int inputSelectorIndex = inputNodeSelector->property("InputSelectorIndex").toInt();
     QString currentNodeID = inputNodeSelector->currentNodeID();
-    d->DynamicModelerNode->SetAndObserveNodeReferenceID(referenceRole.toUtf8(), currentNodeID.toUtf8(), rule->GetNthInputNodeEvents(i));
-    ++i;
+    d->DynamicModelerNode->AddNodeReferenceID(referenceRole.toUtf8(), currentNodeID.toUtf8());
     }
 
   QList<qMRMLNodeComboBox*> outputNodeSelectors = d->OutputNodesCollapsibleButton->findChildren<qMRMLNodeComboBox*>();
@@ -592,13 +681,12 @@ void qSlicerDynamicModelerModuleWidget::updateMRMLFromWidget()
     {
     d->DynamicModelerNode->SetContinuousUpdate(false);
     d->ApplyButton->setToolTip("Output node detected in input. Continuous update is not availiable.");
-    d->ApplyButton->setCheckBoxUserCheckable(false);    
+    d->ApplyButton->setCheckBoxUserCheckable(false);
     }
 
   QList<QWidget*> parameterSelectors = d->ParametersCollapsibleButton->findChildren<QWidget*>();
   for (QWidget* parameterSelector : parameterSelectors)
     {
-    
     vtkVariant value;
     QCheckBox* checkBox = qobject_cast<QCheckBox*>(parameterSelector);
     if (checkBox)
@@ -622,6 +710,13 @@ void qSlicerDynamicModelerModuleWidget::updateMRMLFromWidget()
     if (lineEdit)
       {
       std::string text = lineEdit->text().toStdString();
+      value = text.c_str();
+      }
+
+    QComboBox* comboBox = qobject_cast<QComboBox*>(parameterSelector);
+    if (comboBox)
+      {
+      std::string text = comboBox->currentText().toStdString();
       value = text.c_str();
       }
 

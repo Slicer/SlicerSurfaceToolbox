@@ -43,7 +43,8 @@ public:
   ~qSlicerDynamicModelerModuleWidget() override;
 
 public:
-  // TODO
+  /// Add a rule button to the top of the widget.
+  /// The button will create a new node using the rule when clicked.
   void addRuleButton(QIcon icon, vtkSlicerDynamicModelerRule* rule);
 
 protected:

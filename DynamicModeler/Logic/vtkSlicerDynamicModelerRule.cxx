@@ -115,6 +115,16 @@ bool vtkSlicerDynamicModelerRule::GetNthInputNodeRequired(int n)
   return this->InputNodeInfo[n].Required;
 }
 
+//----------------------------------------------------------------------------
+bool vtkSlicerDynamicModelerRule::GetNthInputNodeRepeatable(int n)
+{
+  if (n >= this->InputNodeInfo.size())
+    {
+    vtkErrorMacro("Input node " << n << " is out of range!");
+    return false;
+    }
+  return this->InputNodeInfo[n].Repeatable;
+}
 
 //----------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerRule::GetNthOutputNodeName(int n)
@@ -282,6 +292,17 @@ vtkVariant vtkSlicerDynamicModelerRule::GetNthInputParameterValue(int n, vtkMRML
     return this->InputParameterInfo[n].DefaultValue;
     }
   return vtkVariant(parameterValue);
+}
+
+//---------------------------------------------------------------------------
+vtkStringArray* vtkSlicerDynamicModelerRule::GetNthInputParameterPossibleValues(int n)
+{
+  if (n >= this->InputParameterInfo.size())
+    {
+    vtkErrorMacro("Parameter " << n << " is out of range!");
+    return nullptr;
+    }
+  return this->InputParameterInfo[n].PossibleValues;
 }
 
 //---------------------------------------------------------------------------

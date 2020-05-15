@@ -240,10 +240,16 @@ void vtkSlicerDynamicModelerLogic::UpdateDynamicModelerRule(vtkMRMLDynamicModele
       for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
         {
         std::string referenceRole = rule->GetNthInputNodeReferenceRole(i);
-        const char* referenceId = surfaceEditorNode->GetNodeReferenceID(referenceRole.c_str());
-        // Current behavior is to add back references without observers
-        // This preserves the selected nodes for each rule
-        surfaceEditorNode->SetNodeReferenceID(referenceRole.c_str(), referenceId);
+        std::vector<const char*> referenceNodeIds;
+        surfaceEditorNode->GetNodeReferenceIDs(referenceRole.c_str(), referenceNodeIds);
+        int referenceIndex = 0;
+        for (const char* referenceId : referenceNodeIds)
+          {
+          // Current behavior is to add back references without observers
+          // This preserves the selected nodes for each rule
+          surfaceEditorNode->SetNthNodeReferenceID(referenceRole.c_str(), referenceIndex, referenceId);
+          ++referenceIndex;
+          }
         }
       }
 
@@ -262,14 +268,17 @@ void vtkSlicerDynamicModelerLogic::UpdateDynamicModelerRule(vtkMRMLDynamicModele
     for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
       {
       std::string referenceRole = rule->GetNthInputNodeReferenceRole(i);
-      vtkMRMLNode* node = surfaceEditorNode->GetNodeReference(referenceRole.c_str());
-      if (!node)
-        {
-        continue;
-        }
-
+      std::vector<const char*> referenceNodeIds;
+      surfaceEditorNode->GetNodeReferenceIDs(referenceRole.c_str(), referenceNodeIds);
       vtkIntArray* events = rule->GetNthInputNodeEvents(i);
-      surfaceEditorNode->SetAndObserveNodeReferenceID(referenceRole.c_str(), node->GetID(), events);
+      int referenceIndex = 0;
+      for (const char* referenceId : referenceNodeIds)
+        {
+        // Current behavior is to add back references without observers
+        // This preserves the selected nodes for each rule
+        surfaceEditorNode->SetAndObserveNthNodeReferenceID(referenceRole.c_str(), referenceIndex, referenceId, events);
+        ++referenceIndex;
+        }
       }
     }
 }
