@@ -286,6 +286,11 @@ void vtkSlicerDynamicModelerLogic::UpdateDynamicModelerRule(vtkMRMLDynamicModele
 //---------------------------------------------------------------------------
 vtkSlicerDynamicModelerRule* vtkSlicerDynamicModelerLogic::GetDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
+  if (!surfaceEditorNode || !surfaceEditorNode->GetID())
+    {
+    return nullptr;
+    }
+
   vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = nullptr;
   DynamicModelerRuleList::iterator ruleIt = this->Rules.find(surfaceEditorNode->GetID());
   if (ruleIt == this->Rules.end())

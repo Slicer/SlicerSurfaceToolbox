@@ -45,9 +45,13 @@
 #include <vtkStringArray.h>
 
 // DynamicModeler Logic includes
+#include <vtkSlicerDynamicModelerAppendRule.h>
+#include <vtkSlicerDynamicModelerBoundaryCutRule.h>
+#include <vtkSlicerDynamicModelerCurveCutRule.h>
 #include <vtkSlicerDynamicModelerLogic.h>
-#include <vtkSlicerDynamicModelerRuleFactory.h>
+#include <vtkSlicerDynamicModelerMirrorRule.h>
 #include <vtkSlicerDynamicModelerPlaneCutRule.h>
+#include <vtkSlicerDynamicModelerRuleFactory.h>
 
 // DynamicModeler MRML includes
 #include <vtkMRMLDynamicModelerNode.h>
@@ -103,6 +107,18 @@ void qSlicerDynamicModelerModuleWidget::setup()
   vtkNew<vtkSlicerDynamicModelerPlaneCutRule> planeCutRule;
   this->addRuleButton(QIcon(":/Icons/DynamicModeler.png"), planeCutRule);
 
+  vtkNew<vtkSlicerDynamicModelerMirrorRule> mirrorRule;
+  this->addRuleButton(QIcon(":/Icons/Mirror.png"), mirrorRule);
+
+  vtkNew<vtkSlicerDynamicModelerCurveCutRule> curveCutRule;
+  this->addRuleButton(QIcon(":/Icons/CurveCut.png"), curveCutRule);
+
+  vtkNew<vtkSlicerDynamicModelerBoundaryCutRule> boundaryCutRule;
+  this->addRuleButton(QIcon(":/Icons/BoundaryCut.png"), boundaryCutRule);
+
+  vtkNew<vtkSlicerDynamicModelerAppendRule> appendRule;
+  this->addRuleButton(QIcon(":/Icons/Append.png"), appendRule);
+
   connect(d->SubjectHierarchyTreeView, SIGNAL(currentItemChanged(vtkIdType)),
     this, SLOT(onParameterNodeChanged()));
   connect(d->ApplyButton, SIGNAL(checkStateChanged(Qt::CheckState)),
@@ -149,6 +165,7 @@ void qSlicerDynamicModelerModuleWidget::onAddRuleClicked()
   dynamicModelerNode->SetName(nodeName.c_str());
   dynamicModelerNode->SetRuleName(ruleName.toUtf8());
   this->mrmlScene()->AddNode(dynamicModelerNode);
+  d->SubjectHierarchyTreeView->setCurrentNode(dynamicModelerNode);
 }
 
 //-----------------------------------------------------------------------------
@@ -550,7 +567,8 @@ void qSlicerDynamicModelerModuleWidget::updateWidgetFromMRML()
     {
     rule = meshModifyLogic->GetDynamicModelerRule(d->DynamicModelerNode);
     }
-  d->ApplyButton->setEnabled(rule != nullptr);
+  d->ApplyButton->setEnabled(rule != nullptr && rule->HasRequiredInputs(d->DynamicModelerNode) &&
+    rule->HasOutput(d->DynamicModelerNode));
 
   std::string ruleName = "";
   if (d->DynamicModelerNode && d->DynamicModelerNode->GetRuleName())

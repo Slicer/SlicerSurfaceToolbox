@@ -29,7 +29,11 @@
 #include "qSlicerSubjectHierarchyDefaultPlugin.h"
 
 // DynamicModeler logic includes
+#include "vtkSlicerDynamicModelerAppendRule.h"
+#include "vtkSlicerDynamicModelerBoundaryCutRule.h"
+#include "vtkSlicerDynamicModelerCurveCutRule.h"
 #include "vtkSlicerDynamicModelerLogic.h"
+#include "vtkSlicerDynamicModelerMirrorRule.h"
 #include "vtkSlicerDynamicModelerPlaneCutRule.h"
 
 // DynamicModeler MRML includes
@@ -206,6 +210,30 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
   if (strcmp(associatedNode->GetRuleName(), planeCutRule->GetName()) == 0)
     {
     return QIcon(":Icons/PlaneCut.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerMirrorRule> mirrorRule;
+  if (strcmp(associatedNode->GetRuleName(), mirrorRule->GetName()) == 0)
+    {
+    return QIcon(":Icons/Mirror.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerCurveCutRule> curveCutRule;
+  if (strcmp(associatedNode->GetRuleName(), curveCutRule->GetName()) == 0)
+    {
+    return QIcon(":Icons/CurveCut.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerBoundaryCutRule> boundaryCutRule;
+  if (strcmp(associatedNode->GetRuleName(), boundaryCutRule->GetName()) == 0)
+    {
+    return QIcon(":Icons/BoundaryCut.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerAppendRule> appendRule;
+  if (strcmp(associatedNode->GetRuleName(), appendRule->GetName()) == 0)
+    {
+      return QIcon(":Icons/Append.png");
     }
 
   return QIcon();

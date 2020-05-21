@@ -24,8 +24,12 @@
 #include <vtkObjectFactory.h>
 #include <vtkSmartPointer.h>
 
-///
+/// DynamicModeler MRML includes
 #include "vtkMRMLDynamicModelerNode.h"
+
+/// MRML includes
+#include <vtkMRMLDisplayableNode.h>
+#include <vtkMRMLDisplayNode.h>
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerRule::vtkSlicerDynamicModelerRule()
@@ -325,6 +329,105 @@ bool vtkSlicerDynamicModelerRule::HasRequiredInputs(vtkMRMLDynamicModelerNode* s
 }
 
 //---------------------------------------------------------------------------
+bool vtkSlicerDynamicModelerRule::HasOutput(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+{
+  for (int i = 0; i < this->GetNumberOfOutputNodes(); ++i)
+    {
+    std::string referenceRole = this->GetNthOutputNodeReferenceRole(i);
+    if (surfaceEditorNode->GetNodeReference(referenceRole.c_str()) != nullptr)
+      {
+      return true;
+      }
+    }
+  return false;
+}
+
+//---------------------------------------------------------------------------
+void vtkSlicerDynamicModelerRule::GetInputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& inputNodes)
+{
+  for (int inputIndex = 0; inputIndex < this->GetNumberOfInputNodes(); ++inputIndex)
+    {
+    std::string referenceRole = this->GetNthInputNodeReferenceRole(inputIndex);
+    int numberOfNodeReferences = surfaceEditorNode->GetNumberOfNodeReferences(referenceRole.c_str());
+    for (int referenceIndex = 0; referenceIndex < numberOfNodeReferences; ++referenceIndex)
+      {
+      vtkMRMLNode* inputNode = surfaceEditorNode->GetNthNodeReference(referenceRole.c_str(), referenceIndex);
+      if (inputNode)
+        {
+        inputNodes.push_back(inputNode);
+        }
+      }
+    }
+}
+
+//---------------------------------------------------------------------------
+void vtkSlicerDynamicModelerRule::GetOutputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& outputNodes)
+{
+  for (int outputIndex = 0; outputIndex < this->GetNumberOfOutputNodes(); ++outputIndex)
+    {
+    std::string referenceRole = this->GetNthOutputNodeReferenceRole(outputIndex);
+    int numberOfNodeReferences = surfaceEditorNode->GetNumberOfNodeReferences(referenceRole.c_str());
+    for (int referenceIndex = 0; referenceIndex < numberOfNodeReferences; ++referenceIndex)
+      {
+      vtkMRMLNode* outputNode = surfaceEditorNode->GetNthNodeReference(referenceRole.c_str(), referenceIndex);
+      if (outputNode)
+        {
+        outputNodes.push_back(outputNode);
+        }
+      }
+    }
+}
+
+//---------------------------------------------------------------------------
+void vtkSlicerDynamicModelerRule::CreateOutputDisplayNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+{
+  if (!surfaceEditorNode)
+    {
+    vtkErrorMacro("Invalid surfaceEditorNode!");
+    return;
+    }
+
+  std::vector<vtkMRMLNode*> inputNodes;
+  this->GetInputNodes(surfaceEditorNode, inputNodes);
+
+  std::vector<vtkMRMLNode*> outputNodes;
+  this->GetOutputNodes(surfaceEditorNode, outputNodes);
+
+  for (vtkMRMLNode* outputNode : outputNodes)
+    {
+    vtkMRMLDisplayableNode* outputDisplayableNode = vtkMRMLDisplayableNode::SafeDownCast(outputNode);
+    if (outputDisplayableNode == nullptr || outputDisplayableNode->GetDisplayNode())
+      {
+      continue;
+      }
+
+    outputDisplayableNode->CreateDefaultDisplayNodes();
+    vtkMRMLDisplayNode* outputDisplayNode = outputDisplayableNode->GetDisplayNode();
+    if (outputDisplayNode == nullptr)
+      {
+      continue;
+      }
+
+    for (vtkMRMLNode* inputNode : inputNodes)
+      {
+      vtkMRMLDisplayableNode* inputDisplayableNode = vtkMRMLDisplayableNode::SafeDownCast(inputNode);
+      if (inputDisplayableNode == nullptr || !inputDisplayableNode->IsA(outputNode->GetClassName()))
+        {
+        continue;
+        }
+
+      vtkMRMLDisplayNode* inputDisplayNode = inputDisplayableNode->GetDisplayNode();
+      if (!inputDisplayNode)
+        {
+        continue;
+        }
+      outputDisplayNode->CopyContent(inputDisplayNode);
+      break;
+      }
+    }
+}
+
+//---------------------------------------------------------------------------
 bool vtkSlicerDynamicModelerRule::Run(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
@@ -332,5 +435,12 @@ bool vtkSlicerDynamicModelerRule::Run(vtkMRMLDynamicModelerNode* surfaceEditorNo
     vtkErrorMacro("Input node missing!");
     return false;
     }
+  if (!this->HasOutput(surfaceEditorNode))
+    {
+    vtkErrorMacro("Output node missing!");
+    return false;
+    }
+
+  this->CreateOutputDisplayNodes(surfaceEditorNode);
   return this->RunInternal(surfaceEditorNode);
 }
