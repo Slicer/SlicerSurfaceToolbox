@@ -1,5 +1,9 @@
 <!DOCTYPE RCC><RCC version="1.0">
   <qresource>
+    <file>Icons/Append.png</file>
+    <file>Icons/BoundaryCut.png</file>
+    <file>Icons/CurveCut.png</file>
     <file>Icons/PlaneCut.png</file>
+    <file>Icons/Mirror.png</file>
   </qresource>
 </RCC>

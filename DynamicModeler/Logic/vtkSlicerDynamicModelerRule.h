@@ -34,6 +34,8 @@
 #include <vector>
 
 class vtkCollection;
+class vtkMRMLDisplayableNode;
+class vtkMRMLDisplayNode;
 class vtkMRMLDynamicModelerNode;
 class vtkMRMLNode;
 
@@ -141,6 +143,20 @@ public:
 
   /// Returns true if all of the required inputs have been specified for the surface editor node.
   virtual bool HasRequiredInputs(vtkMRMLDynamicModelerNode* surfaceEditorNode);
+
+  /// Returns true if all of the required inputs have been specified for the surface editor node.
+  virtual bool HasOutput(vtkMRMLDynamicModelerNode* surfaceEditorNode);
+
+  /// Get a list of all input nodes from the rule node
+  virtual void GetInputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& inputNodes);
+
+  /// Get a list of all output nodes from the rule node
+  virtual void GetOutputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& outputNodes);
+
+  /// Creates display nodes for outputs if they do not exist
+  /// If a display node is created, the display parameters are copied from the first node of the same type
+  /// in the input.
+  virtual void CreateOutputDisplayNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Run the surface editor rule.
   /// Checks to ensure that all of the required inputs have been set.
