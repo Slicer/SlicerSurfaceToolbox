@@ -150,7 +150,7 @@ bool vtkSlicerDynamicModelerMirrorRule::RunInternal(vtkMRMLDynamicModelerNode* s
     return false;
     }
 
-  vtkMRMLNode* inputNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(MIRROR_INPUT_PLANE_REFERENCE_ROLE));
+  vtkMRMLNode* inputNode = surfaceEditorNode->GetNodeReference(MIRROR_INPUT_PLANE_REFERENCE_ROLE);
   vtkMRMLMarkupsPlaneNode* inputPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(inputNode);
   vtkMRMLSliceNode* inputSliceNode = vtkMRMLSliceNode::SafeDownCast(inputNode);
   if (!inputPlaneNode && !inputSliceNode)
