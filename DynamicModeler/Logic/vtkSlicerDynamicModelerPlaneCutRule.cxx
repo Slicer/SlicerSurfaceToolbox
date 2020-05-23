@@ -56,11 +56,33 @@
 //----------------------------------------------------------------------------
 vtkRuleNewMacro(vtkSlicerDynamicModelerPlaneCutRule);
 
+const char* PLANE_CUT_INPUT_MODEL_REFERENCE_ROLE = "PlaneCut.InputModel";
+const char* PLANE_CUT_INPUT_PLANE_REFERENCE_ROLE = "PlaneCut.InputPlane";
+const char* PLANE_CUT_OUTPUT_POSITIVE_MODEL_REFERENCE_ROLE = "PlaneCut.OutputPositiveModel";
+const char* PLANE_CUT_OUTPUT_NEGATIVE_MODEL_REFERENCE_ROLE = "PlaneCut.OutputNegativeModel";
+
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
 {
   /////////
   // Inputs
+  vtkNew<vtkIntArray> inputModelEvents;
+  inputModelEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
+  inputModelEvents->InsertNextTuple1(vtkMRMLModelNode::MeshModifiedEvent);
+  inputModelEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
+  vtkNew<vtkStringArray> inputModelClassNames;
+  inputModelClassNames->InsertNextValue("vtkMRMLModelNode");
+  NodeInfo inputModel(
+    "Model node",
+    "Model node to be cut.",
+    inputModelClassNames,
+    PLANE_CUT_INPUT_MODEL_REFERENCE_ROLE,
+    true,
+    false,
+    inputModelEvents
+  );
+  this->InputNodeInfo.push_back(inputModel);
+
   vtkNew<vtkIntArray> inputPlaneEvents;
   inputPlaneEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
   inputPlaneEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
@@ -72,29 +94,12 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     "Plane node",
     "Plane node to cut the model node.",
     inputPlaneClassNames,
-    "PlaneCut.InputPlane",
+    PLANE_CUT_INPUT_PLANE_REFERENCE_ROLE,
     true,
     true,
     inputPlaneEvents
     );
   this->InputNodeInfo.push_back(inputPlane);
-
-  vtkNew<vtkIntArray> inputModelEvents;
-  inputModelEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
-  inputModelEvents->InsertNextTuple1(vtkMRMLModelNode::MeshModifiedEvent);
-  inputModelEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
-  vtkNew<vtkStringArray> inputModelClassNames;
-  inputModelClassNames->InsertNextValue("vtkMRMLModelNode");
-  NodeInfo inputModel(
-    "Model node",
-    "Model node to be cut.",
-    inputModelClassNames,
-    "PlaneCut.InputModel",
-    true,
-    false,
-    inputModelEvents
-    );
-  this->InputNodeInfo.push_back(inputModel);
 
   /////////
   // Outputs
@@ -102,7 +107,7 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     "Clipped output model (positive side)",
     "Portion of the cut model that is on the same side of the plane as the normal.",
     inputModelClassNames,
-    "PlaneCut.OutputPositiveModel",
+    PLANE_CUT_OUTPUT_POSITIVE_MODEL_REFERENCE_ROLE,
     false,
     false
     );
@@ -112,7 +117,7 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
     "Clipped output model (negative side)",
     "Portion of the cut model that is on the opposite side of the plane as the normal.",
     inputModelClassNames,
-    "PlaneCut.OutputNegativeModel",
+    PLANE_CUT_OUTPUT_NEGATIVE_MODEL_REFERENCE_ROLE,
     false,
     false
     );
@@ -242,8 +247,8 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
     return false;
     }
 
-  vtkMRMLModelNode* outputPositiveModelNode = vtkMRMLModelNode::SafeDownCast(this->GetNthOutputNode(0, surfaceEditorNode));
-  vtkMRMLModelNode* outputNegativeModelNode = vtkMRMLModelNode::SafeDownCast(this->GetNthOutputNode(1, surfaceEditorNode));
+  vtkMRMLModelNode* outputPositiveModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(PLANE_CUT_OUTPUT_POSITIVE_MODEL_REFERENCE_ROLE));
+  vtkMRMLModelNode* outputNegativeModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(PLANE_CUT_OUTPUT_NEGATIVE_MODEL_REFERENCE_ROLE));
   if (!outputPositiveModelNode && !outputNegativeModelNode)
     {
     // Nothing to output
@@ -265,16 +270,14 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
     planes->SetOperationTypeToUnion();
     }
 
-  std::string planeReferenceRole = this->GetNthInputNodeReferenceRole(0);
   std::vector<vtkMRMLNode*> planeNodes;
-  surfaceEditorNode->GetNodeReferences(planeReferenceRole.c_str(), planeNodes);
+  surfaceEditorNode->GetNodeReferences(PLANE_CUT_INPUT_PLANE_REFERENCE_ROLE, planeNodes);
   vtkNew<vtkPlaneCollection> planeCollection;
   int planeIndex = 0;
   for (vtkMRMLNode* planeNode : planeNodes)
     {
-    vtkMRMLNode* inputNode = surfaceEditorNode->GetNthNodeReference(planeReferenceRole.c_str(), planeIndex);
-    vtkMRMLMarkupsPlaneNode* inputPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(inputNode);
-    vtkMRMLSliceNode* inputSliceNode = vtkMRMLSliceNode::SafeDownCast(inputNode);
+    vtkMRMLMarkupsPlaneNode* inputPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(planeNode);
+    vtkMRMLSliceNode* inputSliceNode = vtkMRMLSliceNode::SafeDownCast(planeNode);
     if (!inputPlaneNode && !inputSliceNode)
       {
       vtkErrorMacro("Invalid input plane nodes!");
@@ -306,7 +309,7 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
     }
   this->PlaneClipper->SetClipFunction(planes);
 
-  vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(this->GetNthInputNode(1, surfaceEditorNode));
+  vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(PLANE_CUT_INPUT_MODEL_REFERENCE_ROLE));
   if (!inputModelNode)
     {
     vtkErrorMacro("Invalid input model node!");
