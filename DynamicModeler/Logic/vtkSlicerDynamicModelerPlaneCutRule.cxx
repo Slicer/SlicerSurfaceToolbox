@@ -153,15 +153,13 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
   this->PlaneClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   this->PlaneClipper->SetValue(0.0);
 
-  this->OutputPositiveModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->OutputPositiveWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputPositiveWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputPositiveModelToWorldTransformFilter->SetTransform(this->OutputPositiveWorldToModelTransform);
-  this->OutputPositiveModelToWorldTransformFilter->SetInputConnection(this->PlaneClipper->GetOutputPort());
+  this->OutputPositiveWorldToModelTransformFilter->SetTransform(this->OutputPositiveWorldToModelTransform);
 
-  this->OutputNegativeModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->OutputNegativeWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputNegativeWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputNegativeModelToWorldTransformFilter->SetTransform(this->OutputNegativeWorldToModelTransform);
-  this->OutputNegativeModelToWorldTransformFilter->SetInputConnection(this->PlaneClipper->GetClippedOutputPort());
+  this->OutputNegativeWorldToModelTransformFilter->SetTransform(this->OutputNegativeWorldToModelTransform);
 }
 
 //----------------------------------------------------------------------------
@@ -339,16 +337,25 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
 
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
 
+  if (outputNegativeModelNode)
+    {
+    this->PlaneClipper->GenerateClippedOutputOn();
+    }
+  this->PlaneClipper->Update();
+
   bool capSurface = this->GetNthInputParameterValue(0, surfaceEditorNode).ToInt() != 0;
   if (outputPositiveModelNode)
     {
-    this->OutputPositiveModelToWorldTransformFilter->Update();
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->DeepCopy(this->OutputPositiveModelToWorldTransformFilter->GetOutput());
+    outputMesh->DeepCopy(this->PlaneClipper->GetOutput());
     if (capSurface)
       {
-      this->CreateEndCap(outputMesh, planeCollection, inputModelNode->GetPolyData(), planes);
+      this->CreateEndCap(outputMesh, planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes);
       }
+
+    this->OutputPositiveWorldToModelTransformFilter->SetInputData(outputMesh);
+    this->OutputPositiveWorldToModelTransformFilter->Update();
+    outputMesh->DeepCopy(this->OutputPositiveWorldToModelTransformFilter->GetOutput());
 
     MRMLNodeModifyBlocker blocker(outputPositiveModelNode);
     outputPositiveModelNode->SetAndObserveMesh(outputMesh);
@@ -357,14 +364,16 @@ bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode*
 
   if (outputNegativeModelNode)
     {
-    this->PlaneClipper->GenerateClippedOutputOn();
-    this->OutputNegativeModelToWorldTransformFilter->Update();
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->DeepCopy(this->OutputNegativeModelToWorldTransformFilter->GetOutput());
+    outputMesh->DeepCopy(this->PlaneClipper->GetClippedOutput());
     if (capSurface)
       {
-      this->CreateEndCap(outputMesh, planeCollection, inputModelNode->GetPolyData(), planes);
+      this->CreateEndCap(outputMesh, planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes);
       }
+
+    this->OutputNegativeWorldToModelTransformFilter->SetInputData(outputMesh);
+    this->OutputNegativeWorldToModelTransformFilter->Update();
+    outputMesh->DeepCopy(this->OutputNegativeWorldToModelTransformFilter->GetOutput());
 
     MRMLNodeModifyBlocker blocker(outputNegativeModelNode);
     outputNegativeModelNode->SetAndObserveMesh(outputMesh);
