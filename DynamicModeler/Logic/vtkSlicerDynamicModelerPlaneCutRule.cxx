@@ -30,7 +30,6 @@
 
 // VTK includes
 #include <vtkAppendPolyData.h>
-#include <vtkCleanPolyData.h>
 #include <vtkClipClosedSurface.h>
 #include <vtkClipPolyData.h>
 #include <vtkCollection.h>
@@ -42,6 +41,7 @@
 #include <vtkGeneralTransform.h>
 #include <vtkImplicitBoolean.h>
 #include <vtkIntArray.h>
+#include <vtkPolyDataNormals.h>
 #include <vtkObjectFactory.h>
 #include <vtkPlane.h>
 #include <vtkPlaneCollection.h>
@@ -178,8 +178,9 @@ const char* vtkSlicerDynamicModelerPlaneCutRule::GetName()
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitFunction* cutFunction)
+void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction)
 {
+  int operationType = cutFunction->GetOperationType();
   vtkNew<vtkAppendPolyData> appendFilter;
   for (int i = 0; i < planes->GetNumberOfItems(); ++i)
     {
@@ -227,15 +228,20 @@ void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData, vt
     clipper2->SetClipFunction(cutFunction);
     clipper2->InsideOutOn();
     clipper2->SetValue(epsilon);
-    clipper2->Update();
-    appendFilter->AddInputData(clipper2->GetOutput());
+    vtkNew<vtkPolyDataNormals> normalFilter;
+    normalFilter->SetInputConnection(clipper2->GetOutputPort());
+    normalFilter->ComputeCellNormalsOn();
+    normalFilter->ComputePointNormalsOn();
+    if (operationType != vtkImplicitBoolean::VTK_DIFFERENCE || i == 0)
+      {
+      normalFilter->FlipNormalsOn();
+      }
+    normalFilter->Update();
+    appendFilter->AddInputData(normalFilter->GetOutput());
     }
   appendFilter->AddInputData(polyData);
-
-  vtkNew<vtkCleanPolyData> cleanFilter;
-  cleanFilter->SetInputConnection(appendFilter->GetOutputPort());
-  cleanFilter->Update();
-  polyData->ShallowCopy(cleanFilter->GetOutput());
+  appendFilter->Update();
+  polyData->ShallowCopy(appendFilter->GetOutput());
 }
 
 //----------------------------------------------------------------------------
