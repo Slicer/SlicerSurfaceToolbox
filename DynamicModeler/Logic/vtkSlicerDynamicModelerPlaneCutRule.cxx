@@ -38,10 +38,12 @@
 #include <vtkCutter.h>
 #include <vtkDataSetAttributes.h>
 #include <vtkFeatureEdges.h>
+#include <vtkFloatArray.h>
 #include <vtkGeneralTransform.h>
 #include <vtkImplicitBoolean.h>
 #include <vtkIntArray.h>
-#include <vtkPolyDataNormals.h>
+#include <vtkPointData.h>
+#include <vtkPolygon.h>
 #include <vtkObjectFactory.h>
 #include <vtkPlane.h>
 #include <vtkPlaneCollection.h>
@@ -228,16 +230,45 @@ void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData, vt
     clipper2->SetClipFunction(cutFunction);
     clipper2->InsideOutOn();
     clipper2->SetValue(epsilon);
-    vtkNew<vtkPolyDataNormals> normalFilter;
-    normalFilter->SetInputConnection(clipper2->GetOutputPort());
-    normalFilter->ComputeCellNormalsOn();
-    normalFilter->ComputePointNormalsOn();
+    clipper2->Update();
+    endCapPolyData->ShallowCopy(clipper2->GetOutput());
+
+    double planeNormal[3] = { 0.0 };
+    plane->GetNormal(planeNormal);
     if (operationType != vtkImplicitBoolean::VTK_DIFFERENCE || i == 0)
       {
-      normalFilter->FlipNormalsOn();
+      vtkMath::MultiplyScalar(planeNormal, -1.0);
       }
-    normalFilter->Update();
-    appendFilter->AddInputData(normalFilter->GetOutput());
+
+    vtkCellArray* endCapPolys = endCapPolyData->GetPolys();
+    if (endCapPolys && endCapPolyData->GetNumberOfPolys() > 0)
+      {
+      vtkNew<vtkIdList> polyPointIds;
+      endCapPolys->GetCell(0, polyPointIds);
+      double polyNormal[3] = { 0.0 };
+
+      // If the order of the points in the cell creates a normal that faces the wrong direction, then we need to flip it.
+      vtkPolygon::ComputeNormal(endCapPolyData->GetPoints(), polyPointIds->GetNumberOfIds(), polyPointIds->GetPointer(0), polyNormal);
+      if (vtkMath::Dot(polyNormal, planeNormal) < 0.0)
+        {
+        vtkNew<vtkReverseSense> reverseSense;
+        reverseSense->SetInputData(endCapPolyData);
+        reverseSense->ReverseCellsOn();
+        reverseSense->Update();
+        endCapPolyData->ShallowCopy(reverseSense->GetOutput());
+        }
+      }
+
+    vtkNew<vtkFloatArray> normals;
+    normals->SetName("Normals");
+    normals->SetNumberOfComponents(3);
+    normals->SetNumberOfTuples(endCapPolyData->GetNumberOfPoints());
+    for (int i = 0; i < endCapPolyData->GetNumberOfPoints(); ++i)
+      {
+      normals->SetTuple3(i, planeNormal[0], planeNormal[1], planeNormal[2]);
+      }
+    endCapPolyData->GetPointData()->SetNormals(normals);
+    appendFilter->AddInputData(endCapPolyData);
     }
   appendFilter->AddInputData(polyData);
   appendFilter->Update();
