@@ -18,8 +18,8 @@
 
 ==============================================================================*/
 
-#ifndef __vtkSlicerDynamicModelerCurveCutRule_h
-#define __vtkSlicerDynamicModelerCurveCutRule_h
+#ifndef __vtkSlicerDynamicModelerAppendTool_h
+#define __vtkSlicerDynamicModelerAppendTool_h
 
 #include "vtkSlicerDynamicModelerModuleLogicExport.h"
 
@@ -32,48 +32,45 @@
 #include <string>
 #include <vector>
 
+class vtkAppendPolyData;
 class vtkCleanPolyData;
-class vtkClipPolyData;
-class vtkConnectivityFilter;
 class vtkGeneralTransform;
-class vtkMRMLDynamicModelerNode;
+class vtkPolyData;
 class vtkTransformPolyDataFilter;
-class vtkSelectPolyData;
 
-#include "vtkSlicerDynamicModelerRule.h"
+#include "vtkSlicerDynamicModelerTool.h"
 
-/// \brief Dynamic modelling rule for cutting a single surface mesh with planes
+/// \brief Dynamic modelling tool for cutting a single surface mesh with planes
 ///
 /// Has two node inputs (Plane and Surface), and two outputs (Positive/Negative direction surface segments)
-class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerCurveCutRule : public vtkSlicerDynamicModelerRule
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerAppendTool : public vtkSlicerDynamicModelerTool
 {
 public:
-  static vtkSlicerDynamicModelerCurveCutRule* New();
-  vtkSlicerDynamicModelerRule* CreateRuleInstance() override;
-  vtkTypeMacro(vtkSlicerDynamicModelerCurveCutRule, vtkSlicerDynamicModelerRule);
+  static vtkSlicerDynamicModelerAppendTool* New();
+  vtkSlicerDynamicModelerTool* CreateToolInstance() override;
+  vtkTypeMacro(vtkSlicerDynamicModelerAppendTool, vtkSlicerDynamicModelerTool);
 
-  /// Human-readable name of the mesh modification rule
+  /// Human-readable name of the mesh modification tool
   const char* GetName() override;
 
   /// Run the plane cut on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
 
 protected:
-  vtkSlicerDynamicModelerCurveCutRule();
-  ~vtkSlicerDynamicModelerCurveCutRule() override;
-  void operator=(const vtkSlicerDynamicModelerCurveCutRule&);
+  vtkSlicerDynamicModelerAppendTool();
+  ~vtkSlicerDynamicModelerAppendTool() override;
+  void operator=(const vtkSlicerDynamicModelerAppendTool&);
+
+  /// Mehod duplicated from vtkRemoveDuplicatePolys
+  /// TODO: Remove when vtk is updated
+  bool RemoveDuplicateCells(vtkPolyData* polyData);
 
 protected:
-  vtkSmartPointer<vtkGeneralTransform>        InputModelToWorldTransform;
-  vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
-
-  vtkSmartPointer<vtkSelectPolyData>          SelectionFilter;
-  vtkSmartPointer<vtkClipPolyData>            ClipFilter;
-  vtkSmartPointer<vtkConnectivityFilter>      ConnectivityFilter;
+  vtkSmartPointer<vtkAppendPolyData>          AppendFilter;
   vtkSmartPointer<vtkCleanPolyData>           CleanFilter;
 
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputWorldToModelTransformFilter;
 };
 
-#endif // __vtkSlicerDynamicModelerCurveCutRule_h
+#endif // __vtkSlicerDynamicModelerAppendTool_h

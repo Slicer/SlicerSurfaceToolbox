@@ -64,7 +64,7 @@ qSlicerDynamicModelerModule::~qSlicerDynamicModelerModule()
 //-----------------------------------------------------------------------------
 QString qSlicerDynamicModelerModule::helpText() const
 {
-  return "This module allows surface mesh editing using dynamic modelling rules and operations";
+  return "This module allows surface mesh editing using dynamic modelling tools and operations";
 }
 
 //-----------------------------------------------------------------------------

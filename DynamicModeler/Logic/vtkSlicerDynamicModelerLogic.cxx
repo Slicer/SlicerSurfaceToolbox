@@ -21,7 +21,7 @@
 
 // DynamicModeler Logic includes
 #include "vtkSlicerDynamicModelerLogic.h"
-#include "vtkSlicerDynamicModelerRuleFactory.h"
+#include "vtkSlicerDynamicModelerToolFactory.h"
 
 // MRML includes
 #include <vtkMRMLScene.h>
@@ -89,13 +89,13 @@ void vtkSlicerDynamicModelerLogic::OnMRMLSceneNodeAdded(vtkMRMLNode* node)
     return;
     }
 
-  this->Rules[surfaceEditorNode->GetID()] = nullptr;
+  this->Tools[surfaceEditorNode->GetID()] = nullptr;
   vtkNew<vtkIntArray> events;
   events->InsertNextValue(vtkCommand::ModifiedEvent);
   events->InsertNextValue(vtkMRMLDynamicModelerNode::InputNodeModifiedEvent);
   vtkObserveMRMLNodeEventsMacro(surfaceEditorNode, events);
-  this->UpdateDynamicModelerRule(surfaceEditorNode);
-  this->RunDynamicModelerRule(surfaceEditorNode);
+  this->UpdateDynamicModelerTool(surfaceEditorNode);
+  this->RunDynamicModelerTool(surfaceEditorNode);
 }
 
 //---------------------------------------------------------------------------
@@ -107,12 +107,12 @@ void vtkSlicerDynamicModelerLogic::OnMRMLSceneNodeRemoved(vtkMRMLNode* node)
     return;
     }
 
-  DynamicModelerRuleList::iterator rule = this->Rules.find(surfaceEditorNode->GetID());
-  if (rule == this->Rules.end())
+  DynamicModelerToolList::iterator tool = this->Tools.find(surfaceEditorNode->GetID());
+  if (tool == this->Tools.end())
     {
     return;
     }
-  this->Rules.erase(rule);
+  this->Tools.erase(tool);
 }
 
 //---------------------------------------------------------------------------
@@ -134,12 +134,12 @@ void vtkSlicerDynamicModelerLogic::OnMRMLSceneEndImport()
       continue;
       }
 
-    this->Rules[dynamicModelerNode->GetID()] = nullptr;
+    this->Tools[dynamicModelerNode->GetID()] = nullptr;
     vtkNew<vtkIntArray> events;
     events->InsertNextValue(vtkCommand::ModifiedEvent);
     events->InsertNextValue(vtkMRMLDynamicModelerNode::InputNodeModifiedEvent);
     vtkObserveMRMLNodeEventsMacro(dynamicModelerNode, events);
-    this->UpdateDynamicModelerRule(dynamicModelerNode);
+    this->UpdateDynamicModelerTool(dynamicModelerNode);
     }
 }
 
@@ -160,7 +160,7 @@ void vtkSlicerDynamicModelerLogic::ProcessMRMLNodesEvents(vtkObject* caller, uns
 
   if (surfaceEditorNode && event == vtkCommand::ModifiedEvent)
     {
-    this->UpdateDynamicModelerRule(surfaceEditorNode);
+    this->UpdateDynamicModelerTool(surfaceEditorNode);
     if (surfaceEditorNode->GetContinuousUpdate() && this->HasCircularReference(surfaceEditorNode))
       {
       vtkWarningMacro("Circular reference detected. Disabling continuous update for: " << surfaceEditorNode->GetName());
@@ -171,10 +171,10 @@ void vtkSlicerDynamicModelerLogic::ProcessMRMLNodesEvents(vtkObject* caller, uns
 
   if (surfaceEditorNode && surfaceEditorNode->GetContinuousUpdate())
     {
-    vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = this->GetDynamicModelerRule(surfaceEditorNode);
-    if (rule)
+    vtkSmartPointer<vtkSlicerDynamicModelerTool> tool = this->GetDynamicModelerTool(surfaceEditorNode);
+    if (tool)
       {
-      this->RunDynamicModelerRule(surfaceEditorNode);
+      this->RunDynamicModelerTool(surfaceEditorNode);
       }
     }
 }
@@ -187,25 +187,25 @@ bool vtkSlicerDynamicModelerLogic::HasCircularReference(vtkMRMLDynamicModelerNod
     vtkErrorMacro("Invalid input node!");
     return false;
     }
-  vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = this->GetDynamicModelerRule(surfaceEditorNode);
-  if (!rule)
+  vtkSmartPointer<vtkSlicerDynamicModelerTool> tool = this->GetDynamicModelerTool(surfaceEditorNode);
+  if (!tool)
     {
     return false;
     }
 
   std::vector<vtkMRMLNode*> inputNodes;
-  for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+  for (int i = 0; i < tool->GetNumberOfInputNodes(); ++i)
     {
-    vtkMRMLNode* inputNode = rule->GetNthInputNode(i, surfaceEditorNode);
+    vtkMRMLNode* inputNode = tool->GetNthInputNode(i, surfaceEditorNode);
     if (inputNode)
       {
       inputNodes.push_back(inputNode);
       }
     }
 
-  for (int i = 0; i < rule->GetNumberOfOutputNodes(); ++i)
+  for (int i = 0; i < tool->GetNumberOfOutputNodes(); ++i)
     {
-    vtkMRMLNode* outputNode = rule->GetNthOutputNode(i, surfaceEditorNode);
+    vtkMRMLNode* outputNode = tool->GetNthOutputNode(i, surfaceEditorNode);
     if (!outputNode)
       {
       continue;
@@ -221,7 +221,7 @@ bool vtkSlicerDynamicModelerLogic::HasCircularReference(vtkMRMLDynamicModelerNod
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerLogic::UpdateDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+void vtkSlicerDynamicModelerLogic::UpdateDynamicModelerTool(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!surfaceEditorNode)
     {
@@ -231,51 +231,51 @@ void vtkSlicerDynamicModelerLogic::UpdateDynamicModelerRule(vtkMRMLDynamicModele
 
   MRMLNodeModifyBlocker blocker(surfaceEditorNode);
 
-  vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = this->GetDynamicModelerRule(surfaceEditorNode);
-  if (!rule || strcmp(rule->GetName(), surfaceEditorNode->GetRuleName()) != 0)
+  vtkSmartPointer<vtkSlicerDynamicModelerTool> tool = this->GetDynamicModelerTool(surfaceEditorNode);
+  if (!tool || strcmp(tool->GetName(), surfaceEditorNode->GetToolName()) != 0)
     {
-    // We are changing rule types, and should remove observers to the previous rule
-    if (rule)
+    // We are changing tool types, and should remove observers to the previous tool
+    if (tool)
       {
-      for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+      for (int i = 0; i < tool->GetNumberOfInputNodes(); ++i)
         {
-        std::string referenceRole = rule->GetNthInputNodeReferenceRole(i);
+        std::string referenceRole = tool->GetNthInputNodeReferenceRole(i);
         std::vector<const char*> referenceNodeIds;
         surfaceEditorNode->GetNodeReferenceIDs(referenceRole.c_str(), referenceNodeIds);
         int referenceIndex = 0;
         for (const char* referenceId : referenceNodeIds)
           {
           // Current behavior is to add back references without observers
-          // This preserves the selected nodes for each rule
+          // This preserves the selected nodes for each tool
           surfaceEditorNode->SetNthNodeReferenceID(referenceRole.c_str(), referenceIndex, referenceId);
           ++referenceIndex;
           }
         }
       }
 
-    rule = nullptr;
-    if (surfaceEditorNode->GetRuleName())
+    tool = nullptr;
+    if (surfaceEditorNode->GetToolName())
       {
-      rule = vtkSmartPointer<vtkSlicerDynamicModelerRule>::Take(
-        vtkSlicerDynamicModelerRuleFactory::GetInstance()->CreateRuleByName(surfaceEditorNode->GetRuleName()));
+      tool = vtkSmartPointer<vtkSlicerDynamicModelerTool>::Take(
+        vtkSlicerDynamicModelerToolFactory::GetInstance()->CreateToolByName(surfaceEditorNode->GetToolName()));
       }
-    this->Rules[surfaceEditorNode->GetID()] = rule;
+    this->Tools[surfaceEditorNode->GetID()] = tool;
     }
 
-  if (rule)
+  if (tool)
     {
     // Update node observers to ensure that all input nodes are observed
-    for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+    for (int i = 0; i < tool->GetNumberOfInputNodes(); ++i)
       {
-      std::string referenceRole = rule->GetNthInputNodeReferenceRole(i);
+      std::string referenceRole = tool->GetNthInputNodeReferenceRole(i);
       std::vector<const char*> referenceNodeIds;
       surfaceEditorNode->GetNodeReferenceIDs(referenceRole.c_str(), referenceNodeIds);
-      vtkIntArray* events = rule->GetNthInputNodeEvents(i);
+      vtkIntArray* events = tool->GetNthInputNodeEvents(i);
       int referenceIndex = 0;
       for (const char* referenceId : referenceNodeIds)
         {
         // Current behavior is to add back references without observers
-        // This preserves the selected nodes for each rule
+        // This preserves the selected nodes for each tool
         surfaceEditorNode->SetAndObserveNthNodeReferenceID(referenceRole.c_str(), referenceIndex, referenceId, events);
         ++referenceIndex;
         }
@@ -284,45 +284,45 @@ void vtkSlicerDynamicModelerLogic::UpdateDynamicModelerRule(vtkMRMLDynamicModele
 }
 
 //---------------------------------------------------------------------------
-vtkSlicerDynamicModelerRule* vtkSlicerDynamicModelerLogic::GetDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+vtkSlicerDynamicModelerTool* vtkSlicerDynamicModelerLogic::GetDynamicModelerTool(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!surfaceEditorNode || !surfaceEditorNode->GetID())
     {
     return nullptr;
     }
 
-  vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = nullptr;
-  DynamicModelerRuleList::iterator ruleIt = this->Rules.find(surfaceEditorNode->GetID());
-  if (ruleIt == this->Rules.end())
+  vtkSmartPointer<vtkSlicerDynamicModelerTool> tool = nullptr;
+  DynamicModelerToolList::iterator toolIt = this->Tools.find(surfaceEditorNode->GetID());
+  if (toolIt == this->Tools.end())
     {
     return nullptr;
     }
-  return ruleIt->second;
+  return toolIt->second;
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerLogic::RunDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+void vtkSlicerDynamicModelerLogic::RunDynamicModelerTool(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!surfaceEditorNode)
     {
     vtkErrorMacro("Invalid parameter node!");
     return;
     }
-  if (!surfaceEditorNode->GetRuleName())
+  if (!surfaceEditorNode->GetToolName())
     {
     return;
     }
 
-  vtkSmartPointer<vtkSlicerDynamicModelerRule> rule = this->GetDynamicModelerRule(surfaceEditorNode);
-  if (!rule)
+  vtkSmartPointer<vtkSlicerDynamicModelerTool> tool = this->GetDynamicModelerTool(surfaceEditorNode);
+  if (!tool)
     {
-    vtkErrorMacro("Could not find rule with name: " << surfaceEditorNode->GetRuleName());
+    vtkErrorMacro("Could not find tool with name: " << surfaceEditorNode->GetToolName());
     return;
     }
-  if (!rule->HasRequiredInputs(surfaceEditorNode))
+  if (!tool->HasRequiredInputs(surfaceEditorNode))
     {
     return;
     }
 
-  rule->Run(surfaceEditorNode);
+  tool->Run(surfaceEditorNode);
 }

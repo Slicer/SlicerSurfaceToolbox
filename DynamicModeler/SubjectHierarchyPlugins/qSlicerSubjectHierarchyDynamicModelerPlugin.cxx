@@ -29,12 +29,12 @@
 #include "qSlicerSubjectHierarchyDefaultPlugin.h"
 
 // DynamicModeler logic includes
-#include "vtkSlicerDynamicModelerAppendRule.h"
-#include "vtkSlicerDynamicModelerBoundaryCutRule.h"
-#include "vtkSlicerDynamicModelerCurveCutRule.h"
+#include "vtkSlicerDynamicModelerAppendTool.h"
+#include "vtkSlicerDynamicModelerBoundaryCutTool.h"
+#include "vtkSlicerDynamicModelerCurveCutTool.h"
 #include "vtkSlicerDynamicModelerLogic.h"
-#include "vtkSlicerDynamicModelerMirrorRule.h"
-#include "vtkSlicerDynamicModelerPlaneCutRule.h"
+#include "vtkSlicerDynamicModelerMirrorTool.h"
+#include "vtkSlicerDynamicModelerPlaneCutTool.h"
 
 // DynamicModeler MRML includes
 #include <vtkMRMLDynamicModelerNode.h>
@@ -201,37 +201,37 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
     }
 
   vtkMRMLDynamicModelerNode* associatedNode = vtkMRMLDynamicModelerNode::SafeDownCast(shNode->GetItemDataNode(itemID));
-  if (!associatedNode || !associatedNode->GetRuleName())
+  if (!associatedNode || !associatedNode->GetToolName())
     {
     return QIcon();
     }
 
-  vtkNew<vtkSlicerDynamicModelerPlaneCutRule> planeCutRule;
-  if (strcmp(associatedNode->GetRuleName(), planeCutRule->GetName()) == 0)
+  vtkNew<vtkSlicerDynamicModelerPlaneCutTool> planeCutTool;
+  if (strcmp(associatedNode->GetToolName(), planeCutTool->GetName()) == 0)
     {
     return QIcon(":Icons/PlaneCut.png");
     }
 
-  vtkNew<vtkSlicerDynamicModelerMirrorRule> mirrorRule;
-  if (strcmp(associatedNode->GetRuleName(), mirrorRule->GetName()) == 0)
+  vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
+  if (strcmp(associatedNode->GetToolName(), mirrorTool->GetName()) == 0)
     {
     return QIcon(":Icons/Mirror.png");
     }
 
-  vtkNew<vtkSlicerDynamicModelerCurveCutRule> curveCutRule;
-  if (strcmp(associatedNode->GetRuleName(), curveCutRule->GetName()) == 0)
+  vtkNew<vtkSlicerDynamicModelerCurveCutTool> curveCutTool;
+  if (strcmp(associatedNode->GetToolName(), curveCutTool->GetName()) == 0)
     {
     return QIcon(":Icons/CurveCut.png");
     }
 
-  vtkNew<vtkSlicerDynamicModelerBoundaryCutRule> boundaryCutRule;
-  if (strcmp(associatedNode->GetRuleName(), boundaryCutRule->GetName()) == 0)
+  vtkNew<vtkSlicerDynamicModelerBoundaryCutTool> boundaryCutTool;
+  if (strcmp(associatedNode->GetToolName(), boundaryCutTool->GetName()) == 0)
     {
     return QIcon(":Icons/BoundaryCut.png");
     }
 
-  vtkNew<vtkSlicerDynamicModelerAppendRule> appendRule;
-  if (strcmp(associatedNode->GetRuleName(), appendRule->GetName()) == 0)
+  vtkNew<vtkSlicerDynamicModelerAppendTool> appendTool;
+  if (strcmp(associatedNode->GetToolName(), appendTool->GetName()) == 0)
     {
       return QIcon(":Icons/Append.png");
     }
@@ -336,7 +336,7 @@ void qSlicerSubjectHierarchyDynamicModelerPlugin::updateTriggered()
     return;
     }
 
-  d->DynamicModelerLogic->RunDynamicModelerRule(dynamicModelerNode);
+  d->DynamicModelerLogic->RunDynamicModelerTool(dynamicModelerNode);
 }
 
 //-----------------------------------------------------------------------------

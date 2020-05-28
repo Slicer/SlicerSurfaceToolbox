@@ -45,13 +45,13 @@
 #include <vtkStringArray.h>
 
 // DynamicModeler Logic includes
-#include <vtkSlicerDynamicModelerAppendRule.h>
-#include <vtkSlicerDynamicModelerBoundaryCutRule.h>
-#include <vtkSlicerDynamicModelerCurveCutRule.h>
+#include <vtkSlicerDynamicModelerAppendTool.h>
+#include <vtkSlicerDynamicModelerBoundaryCutTool.h>
+#include <vtkSlicerDynamicModelerCurveCutTool.h>
 #include <vtkSlicerDynamicModelerLogic.h>
-#include <vtkSlicerDynamicModelerMirrorRule.h>
-#include <vtkSlicerDynamicModelerPlaneCutRule.h>
-#include <vtkSlicerDynamicModelerRuleFactory.h>
+#include <vtkSlicerDynamicModelerMirrorTool.h>
+#include <vtkSlicerDynamicModelerPlaneCutTool.h>
+#include <vtkSlicerDynamicModelerToolFactory.h>
 
 // DynamicModeler MRML includes
 #include <vtkMRMLDynamicModelerNode.h>
@@ -67,7 +67,7 @@ public:
   qSlicerDynamicModelerModuleWidgetPrivate();
   vtkWeakPointer<vtkMRMLDynamicModelerNode> DynamicModelerNode{ nullptr };
 
-  std::string CurrentRuleName;
+  std::string CurrentToolName;
 };
 
 //-----------------------------------------------------------------------------
@@ -104,20 +104,20 @@ void qSlicerDynamicModelerModuleWidget::setup()
   d->SubjectHierarchyTreeView->setColumnHidden(d->SubjectHierarchyTreeView->model()->transformColumn(), true);
   d->SubjectHierarchyTreeView->setColumnHidden(d->SubjectHierarchyTreeView->model()->descriptionColumn(), true);
 
-  vtkNew<vtkSlicerDynamicModelerPlaneCutRule> planeCutRule;
-  this->addRuleButton(QIcon(":/Icons/DynamicModeler.png"), planeCutRule);
+  vtkNew<vtkSlicerDynamicModelerPlaneCutTool> planeCutTool;
+  this->addToolButton(QIcon(":/Icons/DynamicModeler.png"), planeCutTool);
 
-  vtkNew<vtkSlicerDynamicModelerMirrorRule> mirrorRule;
-  this->addRuleButton(QIcon(":/Icons/Mirror.png"), mirrorRule);
+  vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
+  this->addToolButton(QIcon(":/Icons/Mirror.png"), mirrorTool);
 
-  vtkNew<vtkSlicerDynamicModelerCurveCutRule> curveCutRule;
-  this->addRuleButton(QIcon(":/Icons/CurveCut.png"), curveCutRule);
+  vtkNew<vtkSlicerDynamicModelerCurveCutTool> curveCutTool;
+  this->addToolButton(QIcon(":/Icons/CurveCut.png"), curveCutTool);
 
-  vtkNew<vtkSlicerDynamicModelerBoundaryCutRule> boundaryCutRule;
-  this->addRuleButton(QIcon(":/Icons/BoundaryCut.png"), boundaryCutRule);
+  vtkNew<vtkSlicerDynamicModelerBoundaryCutTool> boundaryCutTool;
+  this->addToolButton(QIcon(":/Icons/BoundaryCut.png"), boundaryCutTool);
 
-  vtkNew<vtkSlicerDynamicModelerAppendRule> appendRule;
-  this->addRuleButton(QIcon(":/Icons/Append.png"), appendRule);
+  vtkNew<vtkSlicerDynamicModelerAppendTool> appendTool;
+  this->addToolButton(QIcon(":/Icons/Append.png"), appendTool);
 
   connect(d->SubjectHierarchyTreeView, SIGNAL(currentItemChanged(vtkIdType)),
     this, SLOT(onParameterNodeChanged()));
@@ -128,28 +128,28 @@ void qSlicerDynamicModelerModuleWidget::setup()
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerDynamicModelerModuleWidget::addRuleButton(QIcon icon, vtkSlicerDynamicModelerRule* rule)
+void qSlicerDynamicModelerModuleWidget::addToolButton(QIcon icon, vtkSlicerDynamicModelerTool* tool)
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
-  if (!rule)
+  if (!tool)
     {
-    qCritical() << "Invalid rule object!";
+    qCritical() << "Invalid tool object!";
     }
 
   QPushButton* button = new QPushButton();
   button->setIcon(icon);
-  if (rule->GetName())
+  if (tool->GetName())
     {
-    button->setToolTip(rule->GetName());
-    button->setProperty("RuleName", rule->GetName());
+    button->setToolTip(tool->GetName());
+    button->setProperty("ToolName", tool->GetName());
     }
   d->ButtonLayout->addWidget(button);
 
-  connect(button, SIGNAL(clicked()), this, SLOT(onAddRuleClicked()));
+  connect(button, SIGNAL(clicked()), this, SLOT(onAddToolClicked()));
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerDynamicModelerModuleWidget::onAddRuleClicked()
+void qSlicerDynamicModelerModuleWidget::onAddToolClicked()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
 
@@ -158,12 +158,12 @@ void qSlicerDynamicModelerModuleWidget::onAddRuleClicked()
     return;
     }
 
-  QString ruleName = QObject::sender()->property("RuleName").toString();
-  std::string nodeName = this->mrmlScene()->GenerateUniqueName(ruleName.toStdString());
+  QString toolName = QObject::sender()->property("ToolName").toString();
+  std::string nodeName = this->mrmlScene()->GenerateUniqueName(toolName.toStdString());
 
   vtkNew<vtkMRMLDynamicModelerNode> dynamicModelerNode;
   dynamicModelerNode->SetName(nodeName.c_str());
-  dynamicModelerNode->SetRuleName(ruleName.toUtf8());
+  dynamicModelerNode->SetToolName(toolName.toUtf8());
   this->mrmlScene()->AddNode(dynamicModelerNode);
   d->SubjectHierarchyTreeView->setCurrentNode(dynamicModelerNode);
 }
@@ -188,11 +188,11 @@ void qSlicerDynamicModelerModuleWidget::onParameterNodeChanged()
 void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
-  vtkSlicerDynamicModelerRule* rule = nullptr;
+  vtkSlicerDynamicModelerTool* tool = nullptr;
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
   if (meshModifyLogic && d->DynamicModelerNode)
     {
-    rule = meshModifyLogic->GetDynamicModelerRule(d->DynamicModelerNode);
+    tool = meshModifyLogic->GetDynamicModelerTool(d->DynamicModelerNode);
     }
 
   QList<QWidget*> widgets = d->InputNodesCollapsibleButton->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
@@ -201,7 +201,7 @@ void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
     widget->deleteLater();
     }
 
-  if (rule == nullptr || rule->GetNumberOfInputNodes() == 0)
+  if (tool == nullptr || tool->GetNumberOfInputNodes() == 0)
     {
     d->InputNodesCollapsibleButton->setEnabled(false);
     return;
@@ -212,12 +212,12 @@ void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
   QFormLayout* inputNodesLayout = new QFormLayout();
   inputNodesWidget->setLayout(inputNodesLayout);
   d->InputNodesCollapsibleButton->layout()->addWidget(inputNodesWidget);
-  for (int inputIndex = 0; inputIndex < rule->GetNumberOfInputNodes(); ++inputIndex)
+  for (int inputIndex = 0; inputIndex < tool->GetNumberOfInputNodes(); ++inputIndex)
     {
-    std::string name = rule->GetNthInputNodeName(inputIndex);
-    std::string description = rule->GetNthInputNodeDescription(inputIndex);
-    std::string referenceRole = rule->GetNthInputNodeReferenceRole(inputIndex);
-    vtkStringArray* classNameArray = rule->GetNthInputNodeClassNames(inputIndex);
+    std::string name = tool->GetNthInputNodeName(inputIndex);
+    std::string description = tool->GetNthInputNodeDescription(inputIndex);
+    std::string referenceRole = tool->GetNthInputNodeReferenceRole(inputIndex);
+    vtkStringArray* classNameArray = tool->GetNthInputNodeClassNames(inputIndex);
     QStringList classNames;
     for (int classNameIndex = 0; classNameIndex < classNameArray->GetNumberOfValues(); ++classNameIndex)
       {
@@ -226,7 +226,7 @@ void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
       }
 
     int numberOfInputs = 1;
-    if (rule->GetNthInputNodeRepeatable(inputIndex))
+    if (tool->GetNthInputNodeRepeatable(inputIndex))
       {
       numberOfInputs = d->DynamicModelerNode->GetNumberOfNodeReferences(referenceRole.c_str()) + 1;
       }
@@ -236,7 +236,7 @@ void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
       QLabel* nodeLabel = new QLabel();
       std::stringstream labelTextSS;
       labelTextSS << name;
-      if (rule->GetNthInputNodeRepeatable(inputIndex))
+      if (tool->GetNthInputNodeRepeatable(inputIndex))
         {
         labelTextSS << " [" << inputSelectorIndex << "]";
         }
@@ -271,10 +271,10 @@ void qSlicerDynamicModelerModuleWidget::resetParameterWidgets()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
-  vtkSlicerDynamicModelerRule* rule = nullptr;
+  vtkSlicerDynamicModelerTool* tool = nullptr;
   if (meshModifyLogic && d->DynamicModelerNode)
     {
-    rule = meshModifyLogic->GetDynamicModelerRule(d->DynamicModelerNode);
+    tool = meshModifyLogic->GetDynamicModelerTool(d->DynamicModelerNode);
     }
 
   QList<QWidget*> widgets = d->ParametersCollapsibleButton->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
@@ -283,7 +283,7 @@ void qSlicerDynamicModelerModuleWidget::resetParameterWidgets()
     widget->deleteLater();
     }
 
-  if (rule == nullptr || rule->GetNumberOfInputParameters() == 0)
+  if (tool == nullptr || tool->GetNumberOfInputParameters() == 0)
     {
     d->ParametersCollapsibleButton->setEnabled(false);
     d->ParametersCollapsibleButton->setVisible(false);
@@ -296,12 +296,12 @@ void qSlicerDynamicModelerModuleWidget::resetParameterWidgets()
   QFormLayout* inputParametersLayout = new QFormLayout();
   inputParametersWidget->setLayout(inputParametersLayout);
   d->ParametersCollapsibleButton->layout()->addWidget(inputParametersWidget);
-  for (int i = 0; i < rule->GetNumberOfInputParameters(); ++i)
+  for (int i = 0; i < tool->GetNumberOfInputParameters(); ++i)
     {
-    std::string name = rule->GetNthInputParameterName(i);
-    std::string description = rule->GetNthInputParameterDescription(i);
-    std::string attributeName = rule->GetNthInputParameterAttributeName(i);
-    int type = rule->GetNthInputParameterType(i);
+    std::string name = tool->GetNthInputParameterName(i);
+    std::string description = tool->GetNthInputParameterDescription(i);
+    std::string attributeName = tool->GetNthInputParameterAttributeName(i);
+    int type = tool->GetNthInputParameterType(i);
 
     QLabel* parameterLabel = new QLabel();
     std::stringstream labelTextSS;
@@ -311,31 +311,31 @@ void qSlicerDynamicModelerModuleWidget::resetParameterWidgets()
     parameterLabel->setToolTip(description.c_str());
 
     QWidget* parameterSelector = nullptr;
-    if (type == vtkSlicerDynamicModelerRule::PARAMETER_BOOL)
+    if (type == vtkSlicerDynamicModelerTool::PARAMETER_BOOL)
       {
       QCheckBox* checkBox = new QCheckBox();
       parameterSelector = checkBox;
       connect(checkBox, SIGNAL(stateChanged(int)),
         this, SLOT(updateMRMLFromWidget()));
       }
-    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_INT)
+    else if (type == vtkSlicerDynamicModelerTool::PARAMETER_INT)
       {
       QSpinBox* spinBox = new QSpinBox();
       connect(spinBox, SIGNAL(valueChanged(int)),
         this, SLOT(updateMRMLFromWidget()));
       parameterSelector = spinBox;
       }
-    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_DOUBLE)
+    else if (type == vtkSlicerDynamicModelerTool::PARAMETER_DOUBLE)
       {
       ctkDoubleSpinBox* doubleSpinBox = new ctkDoubleSpinBox();
       connect(doubleSpinBox, SIGNAL(valueChanged(double)),
         this, SLOT(updateMRMLFromWidget()));
       parameterSelector = doubleSpinBox;
       }
-    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_STRING_ENUM)
+    else if (type == vtkSlicerDynamicModelerTool::PARAMETER_STRING_ENUM)
       {
       QComboBox* enumComboBox = new QComboBox();
-      vtkStringArray* possibleValues = rule->GetNthInputParameterPossibleValues(i);
+      vtkStringArray* possibleValues = tool->GetNthInputParameterPossibleValues(i);
       for (int valueIndex = 0; valueIndex < possibleValues->GetNumberOfValues(); ++valueIndex)
         {
         enumComboBox->addItem(QString::fromStdString(possibleValues->GetValue(valueIndex)));
@@ -364,10 +364,10 @@ void qSlicerDynamicModelerModuleWidget::resetOutputWidgets()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
-  vtkSlicerDynamicModelerRule* rule = nullptr;
+  vtkSlicerDynamicModelerTool* tool = nullptr;
   if (meshModifyLogic && d->DynamicModelerNode)
     {
-    rule = meshModifyLogic->GetDynamicModelerRule(d->DynamicModelerNode);
+    tool = meshModifyLogic->GetDynamicModelerTool(d->DynamicModelerNode);
     }
 
   QList<QWidget*> widgets = d->OutputNodesCollapsibleButton->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
@@ -376,7 +376,7 @@ void qSlicerDynamicModelerModuleWidget::resetOutputWidgets()
     widget->deleteLater();
     }
 
-  if (rule == nullptr || rule->GetNumberOfOutputNodes() == 0)
+  if (tool == nullptr || tool->GetNumberOfOutputNodes() == 0)
     {
     d->OutputNodesCollapsibleButton->setEnabled(false);
     return;
@@ -387,12 +387,12 @@ void qSlicerDynamicModelerModuleWidget::resetOutputWidgets()
   QFormLayout* outputNodesLayout = new QFormLayout();
   outputNodesWidget->setLayout(outputNodesLayout);
   d->OutputNodesCollapsibleButton->layout()->addWidget(outputNodesWidget);
-  for (int i = 0; i < rule->GetNumberOfOutputNodes(); ++i)
+  for (int i = 0; i < tool->GetNumberOfOutputNodes(); ++i)
     {
-    std::string name = rule->GetNthOutputNodeName(i);
-    std::string description = rule->GetNthOutputNodeDescription(i);
-    std::string referenceRole = rule->GetNthOutputNodeReferenceRole(i);
-    vtkStringArray* classNameArray = rule->GetNthOutputNodeClassNames(i);
+    std::string name = tool->GetNthOutputNodeName(i);
+    std::string description = tool->GetNthOutputNodeDescription(i);
+    std::string referenceRole = tool->GetNthOutputNodeReferenceRole(i);
+    vtkStringArray* classNameArray = tool->GetNthOutputNodeClassNames(i);
     QStringList classNames;
     for (int i = 0; i < classNameArray->GetNumberOfValues(); ++i)
       {
@@ -450,26 +450,26 @@ void qSlicerDynamicModelerModuleWidget::updateParameterWidgets()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
-  vtkSlicerDynamicModelerRule* rule = nullptr;
+  vtkSlicerDynamicModelerTool* tool = nullptr;
   if (meshModifyLogic && d->DynamicModelerNode)
     {
-    rule = meshModifyLogic->GetDynamicModelerRule(d->DynamicModelerNode);
+    tool = meshModifyLogic->GetDynamicModelerTool(d->DynamicModelerNode);
     }
-  if (!d->DynamicModelerNode || rule == nullptr || rule->GetNumberOfInputParameters() == 0)
+  if (!d->DynamicModelerNode || tool == nullptr || tool->GetNumberOfInputParameters() == 0)
     {
     return;
     }
 
-  for (int i = 0; i < rule->GetNumberOfInputParameters(); ++i)
+  for (int i = 0; i < tool->GetNumberOfInputParameters(); ++i)
     {
-    std::string name = rule->GetNthInputParameterName(i);
-    std::string description = rule->GetNthInputParameterDescription(i);
-    std::string attributeName = rule->GetNthInputParameterAttributeName(i);
-    vtkVariant value = rule->GetNthInputParameterValue(i, d->DynamicModelerNode);
-    int type = rule->GetNthInputParameterType(i);
+    std::string name = tool->GetNthInputParameterName(i);
+    std::string description = tool->GetNthInputParameterDescription(i);
+    std::string attributeName = tool->GetNthInputParameterAttributeName(i);
+    vtkVariant value = tool->GetNthInputParameterValue(i, d->DynamicModelerNode);
+    int type = tool->GetNthInputParameterType(i);
 
     QWidget* parameterSelector = d->ParametersCollapsibleButton->findChild<QWidget*>(attributeName.c_str());
-    if (type == vtkSlicerDynamicModelerRule::PARAMETER_BOOL)
+    if (type == vtkSlicerDynamicModelerTool::PARAMETER_BOOL)
       {
       QCheckBox* checkBox = qobject_cast<QCheckBox*>(parameterSelector);
       if (!checkBox)
@@ -483,7 +483,7 @@ void qSlicerDynamicModelerModuleWidget::updateParameterWidgets()
       checkBox->setChecked(checked);
       checkBox->blockSignals(wasBlocking);
       }
-    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_INT)
+    else if (type == vtkSlicerDynamicModelerTool::PARAMETER_INT)
       {
       QSpinBox* spinBox = qobject_cast<QSpinBox*>(parameterSelector);
       if (!spinBox)
@@ -495,7 +495,7 @@ void qSlicerDynamicModelerModuleWidget::updateParameterWidgets()
       spinBox->setValue(value.ToInt());
       spinBox->blockSignals(wasBlocking);
       }
-    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_DOUBLE)
+    else if (type == vtkSlicerDynamicModelerTool::PARAMETER_DOUBLE)
       {
       ctkDoubleSpinBox* doubleSpinBox = qobject_cast<ctkDoubleSpinBox*>(parameterSelector);
       if (!doubleSpinBox)
@@ -507,7 +507,7 @@ void qSlicerDynamicModelerModuleWidget::updateParameterWidgets()
       doubleSpinBox->setValue(value.ToDouble());
       doubleSpinBox->blockSignals(wasBlocking);
       }
-    else if (type == vtkSlicerDynamicModelerRule::PARAMETER_STRING_ENUM)
+    else if (type == vtkSlicerDynamicModelerTool::PARAMETER_STRING_ENUM)
       {
       QComboBox* comboBox = qobject_cast<QComboBox*>(parameterSelector);
       if (!comboBox)
@@ -562,27 +562,27 @@ void qSlicerDynamicModelerModuleWidget::updateWidgetFromMRML()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
-  vtkSlicerDynamicModelerRule* rule = nullptr;
+  vtkSlicerDynamicModelerTool* tool = nullptr;
   if (meshModifyLogic && d->DynamicModelerNode)
     {
-    rule = meshModifyLogic->GetDynamicModelerRule(d->DynamicModelerNode);
+    tool = meshModifyLogic->GetDynamicModelerTool(d->DynamicModelerNode);
     }
-  d->ApplyButton->setEnabled(rule != nullptr && rule->HasRequiredInputs(d->DynamicModelerNode) &&
-    rule->HasOutput(d->DynamicModelerNode));
+  d->ApplyButton->setEnabled(tool != nullptr && tool->HasRequiredInputs(d->DynamicModelerNode) &&
+    tool->HasOutput(d->DynamicModelerNode));
 
-  std::string ruleName = "";
-  if (d->DynamicModelerNode && d->DynamicModelerNode->GetRuleName())
+  std::string toolName = "";
+  if (d->DynamicModelerNode && d->DynamicModelerNode->GetToolName())
     {
-    ruleName = d->DynamicModelerNode->GetRuleName();
+    toolName = d->DynamicModelerNode->GetToolName();
     }
 
   bool rebuildInputsRequired = false;
-  if (rule)
+  if (tool)
     {
     std::map<int, int> emptyRepeatableInputCounts;
-    for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+    for (int i = 0; i < tool->GetNumberOfInputNodes(); ++i)
       {
-      if (rule->GetNthInputNodeRepeatable(i))
+      if (tool->GetNthInputNodeRepeatable(i))
         {
         emptyRepeatableInputCounts[i] = 0;
         }
@@ -613,12 +613,12 @@ void qSlicerDynamicModelerModuleWidget::updateWidgetFromMRML()
       }
     }
 
-  if (ruleName != d->CurrentRuleName)
+  if (toolName != d->CurrentToolName)
     {
     this->resetInputWidgets();
     this->resetParameterWidgets();
     this->resetOutputWidgets();
-    d->CurrentRuleName = ruleName;
+    d->CurrentToolName = toolName;
     }
   else if (rebuildInputsRequired)
     {
@@ -655,21 +655,21 @@ void qSlicerDynamicModelerModuleWidget::updateMRMLFromWidget()
   // Continuous update
   d->DynamicModelerNode->SetContinuousUpdate(d->ApplyButton->checkState() == Qt::Checked);
 
-  // If no rule is specified, there is nothing else to update
+  // If no tool is specified, there is nothing else to update
   vtkSlicerDynamicModelerLogic* dynamicModelerLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
-  vtkSlicerDynamicModelerRule* rule = nullptr;
+  vtkSlicerDynamicModelerTool* tool = nullptr;
   if (dynamicModelerLogic && d->DynamicModelerNode)
     {
-    rule = dynamicModelerLogic->GetDynamicModelerRule(d->DynamicModelerNode);
+    tool = dynamicModelerLogic->GetDynamicModelerTool(d->DynamicModelerNode);
     }
-  if (!rule)
+  if (!tool)
     {
     return;
     }
 
-  for (int i = 0; i < rule->GetNumberOfInputNodes(); ++i)
+  for (int i = 0; i < tool->GetNumberOfInputNodes(); ++i)
     {
-    std::string referenceRole = rule->GetNthInputNodeReferenceRole(i);
+    std::string referenceRole = tool->GetNthInputNodeReferenceRole(i);
     d->DynamicModelerNode->RemoveNodeReferenceIDs(referenceRole.c_str());
     }
 
@@ -764,5 +764,5 @@ void qSlicerDynamicModelerModuleWidget::onApplyButtonClicked()
 
   /// Continuous update is off, trigger manual update.
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
-  meshModifyLogic->RunDynamicModelerRule(d->DynamicModelerNode);
+  meshModifyLogic->RunDynamicModelerTool(d->DynamicModelerNode);
 }

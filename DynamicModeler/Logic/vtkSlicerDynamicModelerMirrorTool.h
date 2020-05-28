@@ -18,8 +18,8 @@
 
 ==============================================================================*/
 
-#ifndef __vtkSlicerDynamicModelerBoundaryCutRule_h
-#define __vtkSlicerDynamicModelerBoundaryCutRule_h
+#ifndef __vtkSlicerDynamicModelerMirrorTool_h
+#define __vtkSlicerDynamicModelerMirrorTool_h
 
 #include "vtkSlicerDynamicModelerModuleLogicExport.h"
 
@@ -32,56 +32,45 @@
 #include <string>
 #include <vector>
 
-class vtkCleanPolyData;
-class vtkClipPolyData;
-class vtkConnectivityFilter;
-class vtkDataObject;
 class vtkGeneralTransform;
-class vtkGeometryFilter;
-class vtkImplicitBoolean;
 class vtkMRMLDynamicModelerNode;
-class vtkPlane;
-class vtkPolyData;
 class vtkReverseSense;
-class vtkThreshold;
 class vtkTransform;
 class vtkTransformPolyDataFilter;
-class vtkSelectPolyData;
 
-#include "vtkSlicerDynamicModelerRule.h"
+#include "vtkSlicerDynamicModelerTool.h"
 
-/// \brief Dynamic modelling rule for cutting a single surface mesh with planes
+/// \brief Dynamic modelling tool for cutting a single surface mesh with planes
 ///
 /// Has two node inputs (Plane and Surface), and two outputs (Positive/Negative direction surface segments)
-class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerBoundaryCutRule : public vtkSlicerDynamicModelerRule
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerMirrorTool : public vtkSlicerDynamicModelerTool
 {
 public:
-  static vtkSlicerDynamicModelerBoundaryCutRule* New();
-  vtkSlicerDynamicModelerRule* CreateRuleInstance() override;
-  vtkTypeMacro(vtkSlicerDynamicModelerBoundaryCutRule, vtkSlicerDynamicModelerRule);
+  static vtkSlicerDynamicModelerMirrorTool* New();
+  vtkSlicerDynamicModelerTool* CreateToolInstance() override;
+  vtkTypeMacro(vtkSlicerDynamicModelerMirrorTool, vtkSlicerDynamicModelerTool);
 
-  /// Human-readable name of the mesh modification rule
+  /// Human-readable name of the mesh modification tool
   const char* GetName() override;
 
   /// Run the plane cut on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
 
 protected:
-  vtkSlicerDynamicModelerBoundaryCutRule();
-  ~vtkSlicerDynamicModelerBoundaryCutRule() override;
-  void operator=(const vtkSlicerDynamicModelerBoundaryCutRule&);
-
-  void GetPositionForClosestPointRegion(vtkMRMLDynamicModelerNode* surfaceEditorNode, double closestPointRegion_World[3]);
+  vtkSlicerDynamicModelerMirrorTool();
+  ~vtkSlicerDynamicModelerMirrorTool() override;
+  void operator=(const vtkSlicerDynamicModelerMirrorTool&);
 
 protected:
-  vtkSmartPointer<vtkGeneralTransform>        InputModelToWorldTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform>        InputModelNodeToWorldTransform;
 
-  vtkSmartPointer<vtkClipPolyData>            ClipPolyData;
-  vtkSmartPointer<vtkConnectivityFilter>      Connectivity;
+  vtkSmartPointer<vtkTransformPolyDataFilter> MirrorFilter;
+  vtkSmartPointer<vtkTransform>               MirrorTransform;
+  vtkSmartPointer<vtkReverseSense>            ReverseNormalFilter;
 
+  vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
-  vtkSmartPointer<vtkTransformPolyDataFilter> OutputWorldToModelTransformFilter;
 };
 
-#endif // __vtkSlicerDynamicModelerBoundaryCutRule_h
+#endif // __vtkSlicerDynamicModelerMirrorTool_h

@@ -11,22 +11,22 @@ set(${KIT}_INCLUDE_DIRECTORIES
 set(${KIT}_SRCS
   vtkImplicitPolyDataPointDistance.cxx
   vtkImplicitPolyDataPointDistance.h
-  vtkSlicer${MODULE_NAME}AppendRule.cxx
-  vtkSlicer${MODULE_NAME}AppendRule.h
-  vtkSlicer${MODULE_NAME}BoundaryCutRule.cxx
-  vtkSlicer${MODULE_NAME}BoundaryCutRule.h
-  vtkSlicer${MODULE_NAME}CurveCutRule.cxx
-  vtkSlicer${MODULE_NAME}CurveCutRule.h
+  vtkSlicer${MODULE_NAME}AppendTool.cxx
+  vtkSlicer${MODULE_NAME}AppendTool.h
+  vtkSlicer${MODULE_NAME}BoundaryCutTool.cxx
+  vtkSlicer${MODULE_NAME}BoundaryCutTool.h
+  vtkSlicer${MODULE_NAME}CurveCutTool.cxx
+  vtkSlicer${MODULE_NAME}CurveCutTool.h
   vtkSlicer${MODULE_NAME}Logic.cxx
   vtkSlicer${MODULE_NAME}Logic.h
-  vtkSlicer${MODULE_NAME}MirrorRule.cxx
-  vtkSlicer${MODULE_NAME}MirrorRule.h
-  vtkSlicer${MODULE_NAME}PlaneCutRule.cxx
-  vtkSlicer${MODULE_NAME}PlaneCutRule.h
-  vtkSlicer${MODULE_NAME}Rule.cxx
-  vtkSlicer${MODULE_NAME}Rule.h
-  vtkSlicer${MODULE_NAME}RuleFactory.cxx
-  vtkSlicer${MODULE_NAME}RuleFactory.h
+  vtkSlicer${MODULE_NAME}MirrorTool.cxx
+  vtkSlicer${MODULE_NAME}MirrorTool.h
+  vtkSlicer${MODULE_NAME}PlaneCutTool.cxx
+  vtkSlicer${MODULE_NAME}PlaneCutTool.h
+  vtkSlicer${MODULE_NAME}Tool.cxx
+  vtkSlicer${MODULE_NAME}Tool.h
+  vtkSlicer${MODULE_NAME}ToolFactory.cxx
+  vtkSlicer${MODULE_NAME}ToolFactory.h
   )
 
 set(${KIT}_TARGET_LIBRARIES

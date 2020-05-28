@@ -84,9 +84,9 @@ public:
   void setDynamicModelerLogic(vtkSlicerDynamicModelerLogic* dynamicModelerLogic);
 
 protected slots:
-  /// Toggle continuous update of the rule
+  /// Toggle continuous update of the tool
   void continuousUpdateChanged();
-  /// Trigger a single update of the rule
+  /// Trigger a single update of the tool
   void updateTriggered();
 
 protected:

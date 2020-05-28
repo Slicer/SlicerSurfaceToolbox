@@ -48,7 +48,7 @@ void vtkMRMLDynamicModelerNode::WriteXML(ostream& of, int nIndent)
 {
   Superclass::WriteXML(of, nIndent);
   vtkMRMLWriteXMLBeginMacro(of);
-  vtkMRMLWriteXMLStringMacro(ruleName, RuleName);
+  vtkMRMLWriteXMLStringMacro(toolName, ToolName);
   vtkMRMLWriteXMLBooleanMacro(continuousUpdate, ContinuousUpdate);
   vtkMRMLWriteXMLEndMacro();
 }
@@ -59,7 +59,7 @@ void vtkMRMLDynamicModelerNode::ReadXMLAttributes(const char** atts)
   MRMLNodeModifyBlocker blocker(this);
   Superclass::ReadXMLAttributes(atts);
   vtkMRMLReadXMLBeginMacro(atts);
-  vtkMRMLReadXMLStringMacro(ruleName, RuleName);
+  vtkMRMLReadXMLStringMacro(toolName, ToolName);
   vtkMRMLReadXMLBooleanMacro(continuousUpdate, ContinuousUpdate);
   vtkMRMLReadXMLEndMacro();
 }
@@ -72,7 +72,7 @@ void vtkMRMLDynamicModelerNode::Copy(vtkMRMLNode *anode)
   MRMLNodeModifyBlocker blocker(this);
   Superclass::Copy(anode);
   vtkMRMLCopyBeginMacro(anode);
-  vtkMRMLCopyStringMacro(RuleName);
+  vtkMRMLCopyStringMacro(ToolName);
   vtkMRMLCopyBooleanMacro(ContinuousUpdate);
   vtkMRMLCopyEndMacro();
 }
@@ -82,7 +82,7 @@ void vtkMRMLDynamicModelerNode::PrintSelf(ostream& os, vtkIndent indent)
 {
   Superclass::PrintSelf(os,indent);
   vtkMRMLPrintBeginMacro(os, indent);
-  vtkMRMLPrintStringMacro(RuleName);
+  vtkMRMLPrintStringMacro(ToolName);
   vtkMRMLPrintBooleanMacro(ContinuousUpdate);
   vtkMRMLPrintEndMacro();
 }

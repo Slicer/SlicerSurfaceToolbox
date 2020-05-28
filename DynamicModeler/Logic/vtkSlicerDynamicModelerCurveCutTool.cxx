@@ -18,7 +18,7 @@
 
 ==============================================================================*/
 
-#include "vtkSlicerDynamicModelerCurveCutRule.h"
+#include "vtkSlicerDynamicModelerCurveCutTool.h"
 
 // DynamicModeler MRML includes
 #include "vtkMRMLDynamicModelerNode.h"
@@ -45,7 +45,7 @@
 #include <vtkAddonMathUtilities.h>
 
 //----------------------------------------------------------------------------
-vtkRuleNewMacro(vtkSlicerDynamicModelerCurveCutRule);
+vtkToolNewMacro(vtkSlicerDynamicModelerCurveCutTool);
 
 const char* CURVE_CUT_INPUT_MODEL_REFERENCE_ROLE = "CurveCut.InputModel";
 const char* CURVE_CUT_INPUT_CURVE_REFERENCE_ROLE = "CurveCut.InputCurve";
@@ -53,7 +53,7 @@ const char* CURVE_CUT_OUTPUT_INSIDE_MODEL_REFERENCE_ROLE = "CurveCut.OutputInsid
 const char* CURVE_CUT_OUTPUT_OUTSIDE_MODEL_REFERENCE_ROLE = "CurveCut.OutputOutside";
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerCurveCutRule::vtkSlicerDynamicModelerCurveCutRule()
+vtkSlicerDynamicModelerCurveCutTool::vtkSlicerDynamicModelerCurveCutTool()
 {
   /////////
   // Inputs
@@ -139,17 +139,17 @@ vtkSlicerDynamicModelerCurveCutRule::vtkSlicerDynamicModelerCurveCutRule()
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerCurveCutRule::~vtkSlicerDynamicModelerCurveCutRule()
+vtkSlicerDynamicModelerCurveCutTool::~vtkSlicerDynamicModelerCurveCutTool()
 = default;
 
 //----------------------------------------------------------------------------
-const char* vtkSlicerDynamicModelerCurveCutRule::GetName()
+const char* vtkSlicerDynamicModelerCurveCutTool::GetName()
 {
   return "Curve cut";
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerCurveCutRule::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
     {

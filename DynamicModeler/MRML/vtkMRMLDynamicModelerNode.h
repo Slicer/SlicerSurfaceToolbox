@@ -32,9 +32,9 @@
 /// \ingroup DynamicModeler
 /// \brief Parameter node for DynamicModeler
 ///
-/// Stores the rule name, update status and input/output node references required for running dynamic modelling.
-/// The rule name is used by the logic to determine what input/output nodes are required to process the dynamic modelling rule,
-/// and runs the rule on the input if requested.
+/// Stores the tool name, update status and input/output node references required for running dynamic modelling.
+/// The tool name is used by the logic to determine what input/output nodes are required to process the dynamic modelling tool,
+/// and runs the tool on the input if requested.
 /// If ContinuousUpdate and Updating are both true, then the output nodes will automatically be updated when the input nodes
 /// are changed.
 class VTK_SLICER_DYNAMICMODELER_MODULE_MRML_EXPORT vtkMRMLDynamicModelerNode : public vtkMRMLNode
@@ -65,11 +65,11 @@ public:
     InputNodeModifiedEvent = 18000, // Event that is invoked when one of the input nodes have been modified
   };
 
-  /// The name of the vtkSlicerDynamicModelerRule that should be used for this node
-  vtkGetStringMacro(RuleName);
-  vtkSetStringMacro(RuleName);
+  /// The name of the vtkSlicerDynamicModelerTool that should be used for this node
+  vtkGetStringMacro(ToolName);
+  vtkSetStringMacro(ToolName);
 
-  /// If continuous update is enabled, the specified rule will be run each time that any of the input nodes are modified.
+  /// If continuous update is enabled, the specified tool will be run each time that any of the input nodes are modified.
   vtkGetMacro(ContinuousUpdate, bool);
   vtkSetMacro(ContinuousUpdate, bool);
   vtkBooleanMacro(ContinuousUpdate, bool);
@@ -82,7 +82,7 @@ protected:
 
   void ProcessMRMLEvents(vtkObject* caller, unsigned long eventID, void* callData) override;
 
-  char* RuleName{ nullptr };
+  char* ToolName{ nullptr };
   bool ContinuousUpdate{ false };
 };
 

@@ -18,7 +18,7 @@
 
 ==============================================================================*/
 
-#include "vtkSlicerDynamicModelerPlaneCutRule.h"
+#include "vtkSlicerDynamicModelerPlaneCutTool.h"
 
 #include "vtkMRMLDynamicModelerNode.h"
 
@@ -56,7 +56,7 @@
 #include <vtkTransformPolyDataFilter.h>
 
 //----------------------------------------------------------------------------
-vtkRuleNewMacro(vtkSlicerDynamicModelerPlaneCutRule);
+vtkToolNewMacro(vtkSlicerDynamicModelerPlaneCutTool);
 
 const char* PLANE_CUT_INPUT_MODEL_REFERENCE_ROLE = "PlaneCut.InputModel";
 const char* PLANE_CUT_INPUT_PLANE_REFERENCE_ROLE = "PlaneCut.InputPlane";
@@ -64,7 +64,7 @@ const char* PLANE_CUT_OUTPUT_POSITIVE_MODEL_REFERENCE_ROLE = "PlaneCut.OutputPos
 const char* PLANE_CUT_OUTPUT_NEGATIVE_MODEL_REFERENCE_ROLE = "PlaneCut.OutputNegativeModel";
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
+vtkSlicerDynamicModelerPlaneCutTool::vtkSlicerDynamicModelerPlaneCutTool()
 {
   /////////
   // Inputs
@@ -127,9 +127,6 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
 
   /////////
   // Parameters
-
-  /////////
-  // Parameters
   ParameterInfo parameterCapSurface(
     "Cap surface",
     "Create a closed surface by triangulating the clipped region",
@@ -170,17 +167,17 @@ vtkSlicerDynamicModelerPlaneCutRule::vtkSlicerDynamicModelerPlaneCutRule()
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerPlaneCutRule::~vtkSlicerDynamicModelerPlaneCutRule()
+vtkSlicerDynamicModelerPlaneCutTool::~vtkSlicerDynamicModelerPlaneCutTool()
 = default;
 
 //----------------------------------------------------------------------------
-const char* vtkSlicerDynamicModelerPlaneCutRule::GetName()
+const char* vtkSlicerDynamicModelerPlaneCutTool::GetName()
 {
   return "Plane cut";
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction)
+void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction)
 {
   int operationType = cutFunction->GetOperationType();
   vtkNew<vtkAppendPolyData> appendFilter;
@@ -276,7 +273,7 @@ void vtkSlicerDynamicModelerPlaneCutRule::CreateEndCap(vtkPolyData* polyData, vt
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerPlaneCutRule::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
     {

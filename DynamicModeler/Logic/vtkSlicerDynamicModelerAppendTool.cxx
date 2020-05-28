@@ -18,7 +18,7 @@
 
 ==============================================================================*/
 
-#include "vtkSlicerDynamicModelerAppendRule.h"
+#include "vtkSlicerDynamicModelerAppendTool.h"
 
 #include "vtkMRMLDynamicModelerNode.h"
 
@@ -43,13 +43,13 @@
 #include <vtkTransformPolyDataFilter.h>
 
 //----------------------------------------------------------------------------
-vtkRuleNewMacro(vtkSlicerDynamicModelerAppendRule);
+vtkToolNewMacro(vtkSlicerDynamicModelerAppendTool);
 
 const char* APPEND_INPUT_MODEL_REFERENCE_ROLE = "Append.InputModel";
 const char* APPEND_OUTPUT_MODEL_REFERENCE_ROLE = "Append.OutputModel";
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerAppendRule::vtkSlicerDynamicModelerAppendRule()
+vtkSlicerDynamicModelerAppendTool::vtkSlicerDynamicModelerAppendTool()
 {
   /////////
   // Inputs
@@ -94,17 +94,17 @@ vtkSlicerDynamicModelerAppendRule::vtkSlicerDynamicModelerAppendRule()
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerAppendRule::~vtkSlicerDynamicModelerAppendRule()
+vtkSlicerDynamicModelerAppendTool::~vtkSlicerDynamicModelerAppendTool()
 = default;
 
 //----------------------------------------------------------------------------
-const char* vtkSlicerDynamicModelerAppendRule::GetName()
+const char* vtkSlicerDynamicModelerAppendTool::GetName()
 {
   return "Append";
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerAppendRule::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerAppendTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
     {
@@ -172,7 +172,7 @@ bool vtkSlicerDynamicModelerAppendRule::RunInternal(vtkMRMLDynamicModelerNode* s
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerAppendRule::RemoveDuplicateCells(vtkPolyData* input)
+bool vtkSlicerDynamicModelerAppendTool::RemoveDuplicateCells(vtkPolyData* input)
 {
   vtkNew<vtkPolyData> output;
   if (input->GetNumberOfPolys() == 0)

@@ -32,7 +32,7 @@
 #include "vtkSlicerModuleLogic.h"
 
 // Logic includes
-#include <vtkSlicerDynamicModelerRule.h>
+#include <vtkSlicerDynamicModelerTool.h>
 
 // STD includes
 #include <cstdlib>
@@ -54,11 +54,11 @@ public:
   vtkTypeMacro(vtkSlicerDynamicModelerLogic, vtkSlicerModuleLogic);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
-  /// Returns the current rule object that is being used with the surface editor node
-  vtkSlicerDynamicModelerRule* GetDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode);
+  /// Returns the current tool object that is being used with the surface editor node
+  vtkSlicerDynamicModelerTool* GetDynamicModelerTool(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
-  /// Run the editor rule specified by the surface editor node
-  void RunDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode);
+  /// Run the editor tool specified by the surface editor node
+  void RunDynamicModelerTool(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
   /// Detects circular references in the output nodes that are used as inputs
   bool HasCircularReference(vtkMRMLDynamicModelerNode* surfaceEditorNode);
@@ -76,11 +76,11 @@ protected:
   void OnMRMLSceneNodeRemoved(vtkMRMLNode* node) override;
   void OnMRMLSceneEndImport() override;
 
-  /// Ensures that the vtkSlicerDynamicModelerRule for each rule exists, and is up-to-date.
-  void UpdateDynamicModelerRule(vtkMRMLDynamicModelerNode* surfaceEditorNode);
+  /// Ensures that the vtkSlicerDynamicModelerTool for each tool exists, and is up-to-date.
+  void UpdateDynamicModelerTool(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
-  typedef std::map<std::string, vtkSmartPointer<vtkSlicerDynamicModelerRule> > DynamicModelerRuleList;
-  DynamicModelerRuleList Rules;
+  typedef std::map<std::string, vtkSmartPointer<vtkSlicerDynamicModelerTool> > DynamicModelerToolList;
+  DynamicModelerToolList Tools;
 
 private:
 

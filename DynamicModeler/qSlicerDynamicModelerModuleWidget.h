@@ -29,7 +29,7 @@
 
 class qSlicerDynamicModelerModuleWidgetPrivate;
 class vtkMRMLNode;
-class vtkSlicerDynamicModelerRule;
+class vtkSlicerDynamicModelerTool;
 
 /// \ingroup Slicer_QtModules_ExtensionTemplate
 class Q_SLICER_QTMODULES_DYNAMICMODELER_EXPORT qSlicerDynamicModelerModuleWidget :
@@ -43,9 +43,9 @@ public:
   ~qSlicerDynamicModelerModuleWidget() override;
 
 public:
-  /// Add a rule button to the top of the widget.
-  /// The button will create a new node using the rule when clicked.
-  void addRuleButton(QIcon icon, vtkSlicerDynamicModelerRule* rule);
+  /// Add a tool button to the top of the widget.
+  /// The button will create a new node using the tool when clicked.
+  void addToolButton(QIcon icon, vtkSlicerDynamicModelerTool* tool);
 
 protected:
   QScopedPointer<qSlicerDynamicModelerModuleWidgetPrivate> d_ptr;
@@ -61,7 +61,7 @@ protected:
   void updateOutputWidgets();
 
 protected slots:
-  void onAddRuleClicked();
+  void onAddToolClicked();
   void onParameterNodeChanged();
   void updateWidgetFromMRML();
   void updateMRMLFromWidget();

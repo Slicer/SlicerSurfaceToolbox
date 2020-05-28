@@ -18,7 +18,7 @@
 
 ==============================================================================*/
 
-#include "vtkSlicerDynamicModelerMirrorRule.h"
+#include "vtkSlicerDynamicModelerMirrorTool.h"
 
 #include "vtkMRMLDynamicModelerNode.h"
 
@@ -39,14 +39,14 @@
 #include <vtkTransformPolyDataFilter.h>
 
 //----------------------------------------------------------------------------
-vtkRuleNewMacro(vtkSlicerDynamicModelerMirrorRule);
+vtkToolNewMacro(vtkSlicerDynamicModelerMirrorTool);
 
 const char* MIRROR_INPUT_MODEL_REFERENCE_ROLE = "Mirror.InputModel";
 const char* MIRROR_INPUT_PLANE_REFERENCE_ROLE = "Mirror.InputPlane";
 const char* MIRROR_OUTPUT_MODEL_REFERENCE_ROLE = "Mirror.OutputModel";
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerMirrorRule::vtkSlicerDynamicModelerMirrorRule()
+vtkSlicerDynamicModelerMirrorTool::vtkSlicerDynamicModelerMirrorTool()
 {
   /////////
   // Inputs
@@ -118,17 +118,17 @@ vtkSlicerDynamicModelerMirrorRule::vtkSlicerDynamicModelerMirrorRule()
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerMirrorRule::~vtkSlicerDynamicModelerMirrorRule()
+vtkSlicerDynamicModelerMirrorTool::~vtkSlicerDynamicModelerMirrorTool()
 = default;
 
 //----------------------------------------------------------------------------
-const char* vtkSlicerDynamicModelerMirrorRule::GetName()
+const char* vtkSlicerDynamicModelerMirrorTool::GetName()
 {
   return "Mirror";
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerMirrorRule::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerMirrorTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
     {

@@ -18,8 +18,8 @@
 
 ==============================================================================*/
 
-#ifndef __vtkSlicerDynamicModelerRule_h
-#define __vtkSlicerDynamicModelerRule_h
+#ifndef __vtkSlicerDynamicModelerTool_h
+#define __vtkSlicerDynamicModelerTool_h
 
 #include "vtkSlicerDynamicModelerModuleLogicExport.h"
 
@@ -39,44 +39,44 @@ class vtkMRMLDisplayNode;
 class vtkMRMLDynamicModelerNode;
 class vtkMRMLNode;
 
-/// Helper macro for supporting cloning of rules
-#ifndef vtkRuleNewMacro
-#define vtkRuleNewMacro(newClass) \
+/// Helper macro for supporting cloning of tools
+#ifndef vtkToolNewMacro
+#define vtkToolNewMacro(newClass) \
 vtkStandardNewMacro(newClass); \
-vtkSlicerDynamicModelerRule* newClass::CreateRuleInstance() \
+vtkSlicerDynamicModelerTool* newClass::CreateToolInstance() \
 { \
 return newClass::New(); \
 }
 #endif
 
-/// \brief Dynamic modeler rule
+/// \brief Dynamic modeler tool
 ///
-/// Abstract class for parmetric surface modification rules.
-/// Each rule can have multiple input and output nodes (stored in the InputNodeInfo and OutputNodeInfo lists).
-class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerRule : public vtkObject
+/// Abstract class for parmetric surface modification tools.
+/// Each tool can have multiple input and output nodes (stored in the InputNodeInfo and OutputNodeInfo lists).
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerTool : public vtkObject
 {
 public:
-  vtkTypeMacro(vtkSlicerDynamicModelerRule, vtkObject);
+  vtkTypeMacro(vtkSlicerDynamicModelerTool, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /// Create instance of the default node. Similar to New but virtual method.
   /// Subclasses should implement this method by
-  virtual vtkSlicerDynamicModelerRule* CreateRuleInstance() = 0;
+  virtual vtkSlicerDynamicModelerTool* CreateToolInstance() = 0;
 
-  /// Create a new instance of this rule and copy its contents.
-  virtual vtkSlicerDynamicModelerRule* Clone();
+  /// Create a new instance of this tool and copy its contents.
+  virtual vtkSlicerDynamicModelerTool* Clone();
 
-  /// Human-readable name of the mesh modification rule.
+  /// Human-readable name of the mesh modification tool.
   virtual const char* GetName() = 0;
 
-  /// The number of vtkMRMLNode that can be used as input for this rule.
+  /// The number of vtkMRMLNode that can be used as input for this tool.
   /// Some inputs may be required \sa GetNthInputNodeRequired.
   int GetNumberOfInputNodes();
 
-  /// The number of parameters that can be used to change the behavior of the rule
+  /// The number of parameters that can be used to change the behavior of the tool
   int GetNumberOfInputParameters();
 
-  /// The number of vtkMRMLNode that can be used as output for this rule.
+  /// The number of vtkMRMLNode that can be used as output for this tool.
   /// Some outputs may be required \sa GetNthOutputNodeRequired.
   int GetNumberOfOutputNodes();
 
@@ -92,7 +92,7 @@ public:
   /// Returns the reference role of the Nth input node.
   std::string GetNthInputNodeReferenceRole(int n);
 
-  /// Returns true if the input is required for the rule to be run.
+  /// Returns true if the input is required for the tool to be run.
   bool GetNthInputNodeRequired(int n);
 
   /// Returns true if the input is repeatable
@@ -116,7 +116,7 @@ public:
   /// Returns the reference role of the Nth output node.
   std::string GetNthOutputNodeReferenceRole(int n);
 
-  /// Returns true if the output is required for the rule to be run.
+  /// Returns true if the output is required for the tool to be run.
   bool GetNthOutputNodeRequired(int n);
 
   /// Returns the events that must be observed to enable continuous updates for the current output.
@@ -147,10 +147,10 @@ public:
   /// Returns true if all of the required inputs have been specified for the surface editor node.
   virtual bool HasOutput(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
-  /// Get a list of all input nodes from the rule node
+  /// Get a list of all input nodes from the tool node
   virtual void GetInputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& inputNodes);
 
-  /// Get a list of all output nodes from the rule node
+  /// Get a list of all output nodes from the tool node
   virtual void GetOutputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& outputNodes);
 
   /// Creates display nodes for outputs if they do not exist
@@ -158,7 +158,7 @@ public:
   /// in the input.
   virtual void CreateOutputDisplayNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
-  /// Run the surface editor rule.
+  /// Run the surface editor tool.
   /// Checks to ensure that all of the required inputs have been set.
   bool Run(vtkMRMLDynamicModelerNode* surfaceEditorNode);
 
@@ -172,13 +172,13 @@ public:
   };
 
 protected:
-  vtkSlicerDynamicModelerRule();
-  ~vtkSlicerDynamicModelerRule() override;
-  void operator=(const vtkSlicerDynamicModelerRule&);
+  vtkSlicerDynamicModelerTool();
+  ~vtkSlicerDynamicModelerTool() override;
+  void operator=(const vtkSlicerDynamicModelerTool&);
 
 protected:
 
-  /// Run the rule on the input nodes and apply the results to the output nodes
+  /// Run the tool on the input nodes and apply the results to the output nodes
   virtual bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) = 0;
 
   /// Struct containing all of the relevant info for input and output nodes.
@@ -229,4 +229,4 @@ protected:
 
 };
 
-#endif // __vtkSlicerDynamicModelerRule_h
+#endif // __vtkSlicerDynamicModelerTool_h

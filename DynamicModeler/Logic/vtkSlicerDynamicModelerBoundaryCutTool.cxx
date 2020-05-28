@@ -18,7 +18,7 @@
 
 ==============================================================================*/
 
-#include "vtkSlicerDynamicModelerBoundaryCutRule.h"
+#include "vtkSlicerDynamicModelerBoundaryCutTool.h"
 
 // MRML includes
 #include <vtkMRMLMarkupsClosedCurveNode.h>
@@ -50,7 +50,7 @@
 #include "vtkMRMLDynamicModelerNode.h"
 
 //----------------------------------------------------------------------------
-vtkRuleNewMacro(vtkSlicerDynamicModelerBoundaryCutRule);
+vtkToolNewMacro(vtkSlicerDynamicModelerBoundaryCutTool);
 
 const char* INPUT_BORDER_REFERENCE_ROLE = "BoundaryCut.InputBorder";
 const char* INPUT_MODEL_REFERENCE_ROLE = "BoundaryCut.InputModel";
@@ -58,7 +58,7 @@ const char* INPUT_SEED_REFERENCE_ROLE = "BoundaryCut.InputSeed";
 const char* OUTPUT_MODEL_REFERENCE_ROLE = "BoundaryCut.OutputModel";
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerBoundaryCutRule::vtkSlicerDynamicModelerBoundaryCutRule()
+vtkSlicerDynamicModelerBoundaryCutTool::vtkSlicerDynamicModelerBoundaryCutTool()
 {
   /////////
   // Inputs
@@ -145,17 +145,17 @@ vtkSlicerDynamicModelerBoundaryCutRule::vtkSlicerDynamicModelerBoundaryCutRule()
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerBoundaryCutRule::~vtkSlicerDynamicModelerBoundaryCutRule()
+vtkSlicerDynamicModelerBoundaryCutTool::~vtkSlicerDynamicModelerBoundaryCutTool()
 = default;
 
 //----------------------------------------------------------------------------
-const char* vtkSlicerDynamicModelerBoundaryCutRule::GetName()
+const char* vtkSlicerDynamicModelerBoundaryCutTool::GetName()
 {
   return "BoundaryCut";
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerBoundaryCutRule::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerBoundaryCutTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
     {
@@ -303,7 +303,7 @@ bool vtkSlicerDynamicModelerBoundaryCutRule::RunInternal(vtkMRMLDynamicModelerNo
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerBoundaryCutRule::GetPositionForClosestPointRegion(vtkMRMLDynamicModelerNode* surfaceEditorNode, double closestPointRegion_World[3])
+void vtkSlicerDynamicModelerBoundaryCutTool::GetPositionForClosestPointRegion(vtkMRMLDynamicModelerNode* surfaceEditorNode, double closestPointRegion_World[3])
 {
   if (surfaceEditorNode->GetNumberOfNodeReferences(INPUT_SEED_REFERENCE_ROLE) > 0)
     {

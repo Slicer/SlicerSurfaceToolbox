@@ -18,7 +18,7 @@
 
 ==============================================================================*/
 
-#include "vtkSlicerDynamicModelerRule.h"
+#include "vtkSlicerDynamicModelerTool.h"
 
 // VTK includes
 #include <vtkObjectFactory.h>
@@ -32,40 +32,40 @@
 #include <vtkMRMLDisplayNode.h>
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerRule::vtkSlicerDynamicModelerRule()
+vtkSlicerDynamicModelerTool::vtkSlicerDynamicModelerTool()
 = default;
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerRule::~vtkSlicerDynamicModelerRule()
+vtkSlicerDynamicModelerTool::~vtkSlicerDynamicModelerTool()
 = default;
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerRule* vtkSlicerDynamicModelerRule::Clone()
+vtkSlicerDynamicModelerTool* vtkSlicerDynamicModelerTool::Clone()
 {
-  vtkSlicerDynamicModelerRule* clone = this->CreateRuleInstance();
+  vtkSlicerDynamicModelerTool* clone = this->CreateToolInstance();
   return clone;
 }
 
 //----------------------------------------------------------------------------
-int vtkSlicerDynamicModelerRule::GetNumberOfInputNodes()
+int vtkSlicerDynamicModelerTool::GetNumberOfInputNodes()
 {
   return this->InputNodeInfo.size();
 }
 
 //----------------------------------------------------------------------------
-int vtkSlicerDynamicModelerRule::GetNumberOfInputParameters()
+int vtkSlicerDynamicModelerTool::GetNumberOfInputParameters()
 {
   return this->InputParameterInfo.size();
 }
 
 //----------------------------------------------------------------------------
-int vtkSlicerDynamicModelerRule::GetNumberOfOutputNodes()
+int vtkSlicerDynamicModelerTool::GetNumberOfOutputNodes()
 {
   return this->OutputNodeInfo.size();
 }
 
 //----------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthInputNodeName(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthInputNodeName(int n)
 {
   if (n >= this->InputNodeInfo.size())
     {
@@ -76,7 +76,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthInputNodeName(int n)
 }
 
 //----------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthInputNodeDescription(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthInputNodeDescription(int n)
 {
   if (n >= this->InputNodeInfo.size())
     {
@@ -87,7 +87,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthInputNodeDescription(int n)
 }
 
 //----------------------------------------------------------------------------
-vtkStringArray* vtkSlicerDynamicModelerRule::GetNthInputNodeClassNames(int n)
+vtkStringArray* vtkSlicerDynamicModelerTool::GetNthInputNodeClassNames(int n)
 {
   if (n >= this->InputNodeInfo.size())
     {
@@ -98,7 +98,7 @@ vtkStringArray* vtkSlicerDynamicModelerRule::GetNthInputNodeClassNames(int n)
 }
 
 //----------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthInputNodeReferenceRole(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthInputNodeReferenceRole(int n)
 {
   if (n >= this->InputNodeInfo.size())
     {
@@ -109,7 +109,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthInputNodeReferenceRole(int n)
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerRule::GetNthInputNodeRequired(int n)
+bool vtkSlicerDynamicModelerTool::GetNthInputNodeRequired(int n)
 {
   if (n >= this->InputNodeInfo.size())
     {
@@ -120,7 +120,7 @@ bool vtkSlicerDynamicModelerRule::GetNthInputNodeRequired(int n)
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerRule::GetNthInputNodeRepeatable(int n)
+bool vtkSlicerDynamicModelerTool::GetNthInputNodeRepeatable(int n)
 {
   if (n >= this->InputNodeInfo.size())
     {
@@ -131,7 +131,7 @@ bool vtkSlicerDynamicModelerRule::GetNthInputNodeRepeatable(int n)
 }
 
 //----------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthOutputNodeName(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeName(int n)
 {
   if (n >= this->OutputNodeInfo.size())
     {
@@ -142,7 +142,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthOutputNodeName(int n)
 }
 
 //----------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthOutputNodeDescription(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeDescription(int n)
 {
   if (n >= this->OutputNodeInfo.size())
     {
@@ -153,7 +153,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthOutputNodeDescription(int n)
 }
 
 //----------------------------------------------------------------------------
-vtkStringArray* vtkSlicerDynamicModelerRule::GetNthOutputNodeClassNames(int n)
+vtkStringArray* vtkSlicerDynamicModelerTool::GetNthOutputNodeClassNames(int n)
 {
   if (n >= this->OutputNodeInfo.size())
     {
@@ -164,7 +164,7 @@ vtkStringArray* vtkSlicerDynamicModelerRule::GetNthOutputNodeClassNames(int n)
 }
 
 //----------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthOutputNodeReferenceRole(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeReferenceRole(int n)
 {
   if (n >= this->OutputNodeInfo.size())
     {
@@ -175,7 +175,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthOutputNodeReferenceRole(int n)
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerRule::GetNthOutputNodeRequired(int n)
+bool vtkSlicerDynamicModelerTool::GetNthOutputNodeRequired(int n)
 {
   if (n >= this->OutputNodeInfo.size())
     {
@@ -186,14 +186,14 @@ bool vtkSlicerDynamicModelerRule::GetNthOutputNodeRequired(int n)
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerRule::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSlicerDynamicModelerTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   Superclass::PrintSelf(os, indent);
   os << indent << "Name:\t" << this->GetName() << std::endl;
 }
 
 //---------------------------------------------------------------------------
-vtkIntArray* vtkSlicerDynamicModelerRule::GetNthInputNodeEvents(int n)
+vtkIntArray* vtkSlicerDynamicModelerTool::GetNthInputNodeEvents(int n)
 {
   if (n >= this->InputNodeInfo.size())
     {
@@ -204,7 +204,7 @@ vtkIntArray* vtkSlicerDynamicModelerRule::GetNthInputNodeEvents(int n)
 }
 
 //---------------------------------------------------------------------------
-vtkMRMLNode* vtkSlicerDynamicModelerRule::GetNthInputNode(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode)
+vtkMRMLNode* vtkSlicerDynamicModelerTool::GetNthInputNode(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if(!surfaceEditorNode)
     {
@@ -221,7 +221,7 @@ vtkMRMLNode* vtkSlicerDynamicModelerRule::GetNthInputNode(int n, vtkMRMLDynamicM
 }
 
 //---------------------------------------------------------------------------
-vtkMRMLNode* vtkSlicerDynamicModelerRule::GetNthOutputNode(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode)
+vtkMRMLNode* vtkSlicerDynamicModelerTool::GetNthOutputNode(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if(!surfaceEditorNode)
     {
@@ -238,7 +238,7 @@ vtkMRMLNode* vtkSlicerDynamicModelerRule::GetNthOutputNode(int n, vtkMRMLDynamic
 }
 
 //---------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthInputParameterName(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthInputParameterName(int n)
 {
   if (n >= this->InputParameterInfo.size())
     {
@@ -249,7 +249,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthInputParameterName(int n)
 }
 
 //---------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthInputParameterDescription(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthInputParameterDescription(int n)
 {
   if (n >= this->InputParameterInfo.size())
     {
@@ -260,7 +260,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthInputParameterDescription(int n)
 }
 
 //---------------------------------------------------------------------------
-std::string vtkSlicerDynamicModelerRule::GetNthInputParameterAttributeName(int n)
+std::string vtkSlicerDynamicModelerTool::GetNthInputParameterAttributeName(int n)
 {
   if (n >= this->InputParameterInfo.size())
     {
@@ -271,7 +271,7 @@ std::string vtkSlicerDynamicModelerRule::GetNthInputParameterAttributeName(int n
 }
 
 //---------------------------------------------------------------------------
-int vtkSlicerDynamicModelerRule::GetNthInputParameterType(int n)
+int vtkSlicerDynamicModelerTool::GetNthInputParameterType(int n)
 {
   if (n >= this->InputParameterInfo.size())
     {
@@ -282,7 +282,7 @@ int vtkSlicerDynamicModelerRule::GetNthInputParameterType(int n)
 }
 
 //---------------------------------------------------------------------------
-vtkVariant vtkSlicerDynamicModelerRule::GetNthInputParameterValue(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode)
+vtkVariant vtkSlicerDynamicModelerTool::GetNthInputParameterValue(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (n >= this->InputParameterInfo.size())
     {
@@ -299,7 +299,7 @@ vtkVariant vtkSlicerDynamicModelerRule::GetNthInputParameterValue(int n, vtkMRML
 }
 
 //---------------------------------------------------------------------------
-vtkStringArray* vtkSlicerDynamicModelerRule::GetNthInputParameterPossibleValues(int n)
+vtkStringArray* vtkSlicerDynamicModelerTool::GetNthInputParameterPossibleValues(int n)
 {
   if (n >= this->InputParameterInfo.size())
     {
@@ -310,7 +310,7 @@ vtkStringArray* vtkSlicerDynamicModelerRule::GetNthInputParameterPossibleValues(
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerRule::HasRequiredInputs(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerTool::HasRequiredInputs(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   for (int i = 0; i < this->GetNumberOfInputNodes(); ++i)
     {
@@ -329,7 +329,7 @@ bool vtkSlicerDynamicModelerRule::HasRequiredInputs(vtkMRMLDynamicModelerNode* s
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerRule::HasOutput(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerTool::HasOutput(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   for (int i = 0; i < this->GetNumberOfOutputNodes(); ++i)
     {
@@ -343,7 +343,7 @@ bool vtkSlicerDynamicModelerRule::HasOutput(vtkMRMLDynamicModelerNode* surfaceEd
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerRule::GetInputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& inputNodes)
+void vtkSlicerDynamicModelerTool::GetInputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& inputNodes)
 {
   for (int inputIndex = 0; inputIndex < this->GetNumberOfInputNodes(); ++inputIndex)
     {
@@ -361,7 +361,7 @@ void vtkSlicerDynamicModelerRule::GetInputNodes(vtkMRMLDynamicModelerNode* surfa
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerRule::GetOutputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& outputNodes)
+void vtkSlicerDynamicModelerTool::GetOutputNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode, std::vector<vtkMRMLNode*>& outputNodes)
 {
   for (int outputIndex = 0; outputIndex < this->GetNumberOfOutputNodes(); ++outputIndex)
     {
@@ -379,7 +379,7 @@ void vtkSlicerDynamicModelerRule::GetOutputNodes(vtkMRMLDynamicModelerNode* surf
 }
 
 //---------------------------------------------------------------------------
-void vtkSlicerDynamicModelerRule::CreateOutputDisplayNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+void vtkSlicerDynamicModelerTool::CreateOutputDisplayNodes(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!surfaceEditorNode)
     {
@@ -428,7 +428,7 @@ void vtkSlicerDynamicModelerRule::CreateOutputDisplayNodes(vtkMRMLDynamicModeler
 }
 
 //---------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerRule::Run(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerTool::Run(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
     {
