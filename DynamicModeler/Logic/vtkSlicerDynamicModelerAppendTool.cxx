@@ -180,7 +180,7 @@ bool vtkSlicerDynamicModelerAppendTool::RemoveDuplicateCells(vtkPolyData* input)
     // set up a polyData with same data arrays as input, but
     // no points, polys or data.
     output->ShallowCopy(input);
-    return 1;
+    return true;
     }
 
   // Copy over the original points. Assume there are no degenerate points.
@@ -254,4 +254,5 @@ bool vtkSlicerDynamicModelerAppendTool::RemoveDuplicateCells(vtkPolyData* input)
     output->Squeeze();
     }
   input->DeepCopy(output);
+  return true;
 }
