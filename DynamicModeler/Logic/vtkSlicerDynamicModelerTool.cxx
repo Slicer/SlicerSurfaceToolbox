@@ -67,7 +67,7 @@ int vtkSlicerDynamicModelerTool::GetNumberOfOutputNodes()
 //----------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthInputNodeName(int n)
 {
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return "";
@@ -78,7 +78,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthInputNodeName(int n)
 //----------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthInputNodeDescription(int n)
 {
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return "";
@@ -89,7 +89,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthInputNodeDescription(int n)
 //----------------------------------------------------------------------------
 vtkStringArray* vtkSlicerDynamicModelerTool::GetNthInputNodeClassNames(int n)
 {
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return nullptr;
@@ -100,7 +100,7 @@ vtkStringArray* vtkSlicerDynamicModelerTool::GetNthInputNodeClassNames(int n)
 //----------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthInputNodeReferenceRole(int n)
 {
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return "";
@@ -111,7 +111,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthInputNodeReferenceRole(int n)
 //----------------------------------------------------------------------------
 bool vtkSlicerDynamicModelerTool::GetNthInputNodeRequired(int n)
 {
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return false;
@@ -122,7 +122,7 @@ bool vtkSlicerDynamicModelerTool::GetNthInputNodeRequired(int n)
 //----------------------------------------------------------------------------
 bool vtkSlicerDynamicModelerTool::GetNthInputNodeRepeatable(int n)
 {
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return false;
@@ -133,7 +133,7 @@ bool vtkSlicerDynamicModelerTool::GetNthInputNodeRepeatable(int n)
 //----------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeName(int n)
 {
-  if (n >= this->OutputNodeInfo.size())
+  if (n >= this->GetNumberOfOutputNodes())
     {
     vtkErrorMacro("Output node " << n << " is out of range!");
     return "";
@@ -144,7 +144,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeName(int n)
 //----------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeDescription(int n)
 {
-  if (n >= this->OutputNodeInfo.size())
+  if (n >= this->GetNumberOfOutputNodes())
     {
     vtkErrorMacro("Output node " << n << " is out of range!");
     return "";
@@ -155,7 +155,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeDescription(int n)
 //----------------------------------------------------------------------------
 vtkStringArray* vtkSlicerDynamicModelerTool::GetNthOutputNodeClassNames(int n)
 {
-  if (n >= this->OutputNodeInfo.size())
+  if (n >= this->GetNumberOfOutputNodes())
     {
     vtkErrorMacro("Output node " << n << " is out of range!");
     return nullptr;
@@ -166,7 +166,7 @@ vtkStringArray* vtkSlicerDynamicModelerTool::GetNthOutputNodeClassNames(int n)
 //----------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeReferenceRole(int n)
 {
-  if (n >= this->OutputNodeInfo.size())
+  if (n >= this->GetNumberOfOutputNodes())
     {
     vtkErrorMacro("Output node " << n << " is out of range!");
     return "";
@@ -177,7 +177,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthOutputNodeReferenceRole(int n)
 //----------------------------------------------------------------------------
 bool vtkSlicerDynamicModelerTool::GetNthOutputNodeRequired(int n)
 {
-  if (n >= this->OutputNodeInfo.size())
+  if (n >= this->GetNumberOfOutputNodes())
     {
     vtkErrorMacro("Output node " << n << " is out of range!");
     return false;
@@ -195,7 +195,7 @@ void vtkSlicerDynamicModelerTool::PrintSelf(ostream& os, vtkIndent indent)
 //---------------------------------------------------------------------------
 vtkIntArray* vtkSlicerDynamicModelerTool::GetNthInputNodeEvents(int n)
 {
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return nullptr;
@@ -211,7 +211,7 @@ vtkMRMLNode* vtkSlicerDynamicModelerTool::GetNthInputNode(int n, vtkMRMLDynamicM
     vtkErrorMacro("Invalid parameter node");
     return nullptr;
     }
-  if (n >= this->InputNodeInfo.size())
+  if (n >= this->GetNumberOfInputNodes())
     {
     vtkErrorMacro("Input node " << n << " is out of range!");
     return nullptr;
@@ -228,7 +228,7 @@ vtkMRMLNode* vtkSlicerDynamicModelerTool::GetNthOutputNode(int n, vtkMRMLDynamic
     vtkErrorMacro("Invalid parameter node");
     return nullptr;
     }
-  if (n >= this->OutputNodeInfo.size())
+  if (n >= this->GetNumberOfOutputNodes())
     {
     vtkErrorMacro("Output node " << n << " is out of range!");
     return nullptr;
@@ -240,7 +240,7 @@ vtkMRMLNode* vtkSlicerDynamicModelerTool::GetNthOutputNode(int n, vtkMRMLDynamic
 //---------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthInputParameterName(int n)
 {
-  if (n >= this->InputParameterInfo.size())
+  if (n >= this->GetNumberOfInputParameters())
     {
     vtkErrorMacro("Parameter " << n << " is out of range!");
     return "";
@@ -251,7 +251,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthInputParameterName(int n)
 //---------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthInputParameterDescription(int n)
 {
-  if (n >= this->InputParameterInfo.size())
+  if (n >= this->GetNumberOfInputParameters())
     {
     vtkErrorMacro("Parameter " << n << " is out of range!");
     return "";
@@ -262,7 +262,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthInputParameterDescription(int n)
 //---------------------------------------------------------------------------
 std::string vtkSlicerDynamicModelerTool::GetNthInputParameterAttributeName(int n)
 {
-  if (n >= this->InputParameterInfo.size())
+  if (n >= this->GetNumberOfInputParameters())
     {
     vtkErrorMacro("Parameter " << n << " is out of range!");
     return "";
@@ -273,7 +273,7 @@ std::string vtkSlicerDynamicModelerTool::GetNthInputParameterAttributeName(int n
 //---------------------------------------------------------------------------
 int vtkSlicerDynamicModelerTool::GetNthInputParameterType(int n)
 {
-  if (n >= this->InputParameterInfo.size())
+  if (n >= this->GetNumberOfInputParameters())
     {
     vtkErrorMacro("Parameter " << n << " is out of range!");
     return PARAMETER_STRING;
@@ -284,7 +284,7 @@ int vtkSlicerDynamicModelerTool::GetNthInputParameterType(int n)
 //---------------------------------------------------------------------------
 vtkVariant vtkSlicerDynamicModelerTool::GetNthInputParameterValue(int n, vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
-  if (n >= this->InputParameterInfo.size())
+  if (n >= this->GetNumberOfInputParameters())
     {
     vtkErrorMacro("Parameter " << n << " is out of range!");
     return PARAMETER_STRING;
@@ -301,7 +301,7 @@ vtkVariant vtkSlicerDynamicModelerTool::GetNthInputParameterValue(int n, vtkMRML
 //---------------------------------------------------------------------------
 vtkStringArray* vtkSlicerDynamicModelerTool::GetNthInputParameterPossibleValues(int n)
 {
-  if (n >= this->InputParameterInfo.size())
+  if (n >= this->GetNumberOfInputParameters())
     {
     vtkErrorMacro("Parameter " << n << " is out of range!");
     return nullptr;
