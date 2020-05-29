@@ -174,20 +174,14 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
 
   vtkMRMLNode* inputNode = surfaceEditorNode->GetNodeReference(CURVE_CUT_INPUT_CURVE_REFERENCE_ROLE);
   vtkMRMLMarkupsCurveNode* curveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(inputNode);
-  vtkMRMLMarkupsClosedCurveNode* closedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(inputNode);
   if (!curveNode)
     {
     vtkErrorMacro("Invalid input curve node!");
     return false;
     }
 
-  double roughCenterOfMass[3] = { 0.0 };
   double bounds_World[6] = {0.0};
   inputModelNode->GetRASBounds(bounds_World);
-  for (int i = 0; i < 3; ++i)
-    {
-    roughCenterOfMass[i] = (bounds_World[2 * i] + bounds_World[2 * i + 1]) / 2.0;
-    }
 
   this->InputModelToWorldTransformFilter->SetInputData(inputModelNode->GetPolyData());
   if (inputModelNode->GetParentTransformNode())

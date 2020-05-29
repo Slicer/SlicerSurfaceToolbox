@@ -199,7 +199,6 @@ bool vtkSlicerDynamicModelerBoundaryCutTool::RunInternal(vtkMRMLDynamicModelerNo
   for (int i = 0; i < numberOfInputNodes; ++i)
     {
     vtkMRMLNode* inputNode = surfaceEditorNode->GetNthNodeReference(INPUT_BORDER_REFERENCE_ROLE, i);
-    double currentCenter_World[3] = { 0.0 };
 
     vtkNew<vtkPolyData> outputLinePolyData;
     vtkMRMLMarkupsPlaneNode* planeNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(inputNode);
