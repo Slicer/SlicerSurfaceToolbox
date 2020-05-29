@@ -162,8 +162,6 @@ bool vtkSlicerDynamicModelerAppendTool::RunInternal(vtkMRMLDynamicModelerNode* s
   outputPolyData->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
   this->RemoveDuplicateCells(outputPolyData);
 
-  vtkMRMLModelNode* firstInputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNthNodeReference(APPEND_INPUT_MODEL_REFERENCE_ROLE, 0));
-
   MRMLNodeModifyBlocker blocker(outputModelNode);
   outputModelNode->SetAndObservePolyData(outputPolyData);
   outputModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
