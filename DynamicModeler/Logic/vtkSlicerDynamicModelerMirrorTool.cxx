@@ -161,6 +161,8 @@ bool vtkSlicerDynamicModelerMirrorTool::RunInternal(vtkMRMLDynamicModelerNode* s
 
   if (!inputModelNode->GetMesh() || inputModelNode->GetMesh()->GetNumberOfPoints() == 0)
     {
+    vtkNew<vtkPolyData> outputPolyData;
+    outputModelNode->SetAndObservePolyData(outputPolyData);
     return true;
     }
 
