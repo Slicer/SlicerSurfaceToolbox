@@ -29,6 +29,8 @@
 
 // VTK includes
 #include <vtkAppendPolyData.h>
+#include <vtkCellData.h>
+#include <vtkCellLocator.h>
 #include <vtkCleanPolyData.h>
 #include <vtkClipPolyData.h>
 #include <vtkCommand.h>
@@ -38,6 +40,9 @@
 #include <vtkGeneralTransform.h>
 #include <vtkIntArray.h>
 #include <vtkPlane.h>
+#include <vtkPointData.h>
+#include <vtkPointLocator.h>
+#include <vtkPolyDataConnectivityFilter.h>
 #include <vtkSmartPointer.h>
 #include <vtkStringArray.h>
 #include <vtkStripper.h>
@@ -134,14 +139,21 @@ vtkSlicerDynamicModelerBoundaryCutTool::vtkSlicerDynamicModelerBoundaryCutTool()
   this->ClipPolyData->InsideOutOn();
   this->ClipPolyData->GenerateClippedOutputOn();
 
-  this->Connectivity = vtkSmartPointer<vtkConnectivityFilter>::New();
+  this->Connectivity = vtkSmartPointer<vtkPolyDataConnectivityFilter>::New();
   this->Connectivity->SetInputConnection(this->ClipPolyData->GetClippedOutputPort());
-  this->Connectivity->SetExtractionModeToClosestPointRegion();
+  this->Connectivity->SetExtractionModeToPointSeededRegions();
+
+  this->ColorConnectivity = vtkSmartPointer<vtkConnectivityFilter>::New();
+  this->ColorConnectivity->ColorRegionsOn();
+  this->ColorConnectivity->SetExtractionModeToAllRegions();
+  this->ColorConnectivity->SetInputConnection(this->Connectivity->GetOutputPort());
 
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->OutputWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->OutputWorldToModelTransformFilter->SetInputConnection(this->Connectivity->GetOutputPort());
+  this->OutputWorldToModelTransformFilter->SetInputConnection(this->ColorConnectivity->GetOutputPort());
   this->OutputWorldToModelTransformFilter->SetTransform(this->OutputWorldToModelTransform);
+
+  this->ClippedModelPointLocator = vtkSmartPointer<vtkPointLocator>::New();
 }
 
 //----------------------------------------------------------------------------
@@ -274,13 +286,23 @@ bool vtkSlicerDynamicModelerBoundaryCutTool::RunInternal(vtkMRMLDynamicModelerNo
   vtkNew<vtkImplicitPolyDataPointDistance> distance;
   distance->SetInput(cleanFilter->GetOutput());
 
-  double closestPointRegion_World[3] = { 0.0 };
-  this->GetPositionForClosestPointRegion(surfaceEditorNode, closestPointRegion_World);
-
   this->ClipPolyData->SetClipFunction(distance);
+  this->ClipPolyData->Update();
 
-  this->Connectivity->SetClosestPoint(closestPointRegion_World);
+  this->ClippedModelPointLocator->SetDataSet(this->ClipPolyData->GetOutput());
+  this->ClippedModelPointLocator->BuildLocator();
 
+  vtkNew<vtkPoints> seedPoints;
+  this->GetSeedPoints(surfaceEditorNode, seedPoints);
+  this->Connectivity->InitializeSeedList();
+  for (int i = 0; i < seedPoints->GetNumberOfPoints(); ++i)
+    {
+    double* seedPoint = seedPoints->GetPoint(i);
+    vtkIdType pointId = this->ClippedModelPointLocator->FindClosestPoint(seedPoint);
+    this->Connectivity->AddSeed(pointId);
+    }
+
+  this->ColorOutputRegions(seedPoints);
   if (outputModelNode && outputModelNode->GetParentTransformNode())
     {
     outputModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputWorldToModelTransform);
@@ -302,18 +324,105 @@ bool vtkSlicerDynamicModelerBoundaryCutTool::RunInternal(vtkMRMLDynamicModelerNo
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerBoundaryCutTool::GetPositionForClosestPointRegion(vtkMRMLDynamicModelerNode* surfaceEditorNode, double closestPointRegion_World[3])
+void vtkSlicerDynamicModelerBoundaryCutTool::ColorOutputRegions(vtkPoints* seedPoints)
 {
-  if (surfaceEditorNode->GetNumberOfNodeReferences(INPUT_SEED_REFERENCE_ROLE) > 0)
+  this->ColorConnectivity->Update();
+
+  vtkPolyData* coloredPolyData = this->ColorConnectivity->GetPolyDataOutput();
+  if (coloredPolyData)
     {
-    vtkMRMLMarkupsFiducialNode* seedNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(
-      surfaceEditorNode->GetNthNodeReference(INPUT_SEED_REFERENCE_ROLE, 0));
-    if (seedNode && seedNode->GetNumberOfControlPoints() > 0)
+    coloredPolyData->GetPointData()->RemoveArray("RegionId"); // We only want the need the cell data color
+
+    vtkIdTypeArray* regionArray = vtkIdTypeArray::SafeDownCast(coloredPolyData->GetCellData()->GetArray("RegionId"));
+    if (regionArray)
       {
-      seedNode->GetNthControlPointPositionWorld(0, closestPointRegion_World);
-      return;
+      std::map<vtkIdType, vtkIdType> regionMap;
+      vtkNew<vtkCellLocator> cellLocator;
+      cellLocator->SetDataSet(coloredPolyData);
+      cellLocator->BuildLocator();
+
+      // Determine what the scalar value should be for each of the input seed regions.
+      // Scalar values should be fiducial index + 1.
+      for (int i = 0; i < seedPoints->GetNumberOfPoints(); ++i)
+        {
+        double* seedPoint = seedPoints->GetPoint(i);
+        vtkIdType cellId = -1;
+        int subId;
+        double dist2;
+        double closestPoint[3];
+        cellLocator->FindClosestPoint(seedPoint, closestPoint, cellId, subId, dist2);
+        if (cellId > 0)
+          {
+          vtkIdType oldRegionId = regionArray->GetValue(cellId);
+          vtkIdType newRegionId = i + 1;
+          regionMap[oldRegionId] = newRegionId;
+          }
+        }
+
+      // Replace values in the cell data array with the updated region ids
+      long long* pointer = regionArray->GetPointer(0);
+      for (int i = 0; i < regionArray->GetNumberOfValues(); ++i)
+        {
+        if (regionMap.find(*pointer) == regionMap.end())
+          {
+          *pointer = 0;
+          }
+        else
+          {
+          *pointer = regionMap[*pointer];
+          }
+        ++pointer;
+        }
       }
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkSlicerDynamicModelerBoundaryCutTool::GetSeedPoints(vtkMRMLDynamicModelerNode* surfaceEditorNode, vtkPoints* seedPoints)
+{
+  if (!surfaceEditorNode)
+    {
+    vtkErrorMacro("vtkSlicerDynamicModelerBoundaryCutTool::GetSeedPoints: Invalid surfaceEditorNode");
+    return;
+    }
+
+  if (!seedPoints)
+    {
+    vtkErrorMacro("vtkSlicerDynamicModelerBoundaryCutTool::GetSeedPoints: Invalid seedPoints");
+    return;
+    }
+
+  vtkMRMLMarkupsFiducialNode* seedNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(
+    surfaceEditorNode->GetNthNodeReference(INPUT_SEED_REFERENCE_ROLE, 0));
+
+  if (!seedNode || seedNode->GetNumberOfControlPoints() == 0)
+    {
+    double defaultSeedPoint[3] = { 0.0, 0.0, 0.0 };
+    this->GetDefaultSeedPoint(surfaceEditorNode, defaultSeedPoint);
+    seedPoints->InsertNextPoint(defaultSeedPoint);
+    return;
+    }
+
+  for (int i = 0; i < seedNode->GetNumberOfControlPoints(); ++i)
+    {
+    double seedPoint[3] = { 0.0, 0.0, 0.0 };
+    seedNode->GetNthControlPointPositionWorld(i, seedPoint);
+    seedPoints->InsertNextPoint(seedPoint);
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkSlicerDynamicModelerBoundaryCutTool::GetDefaultSeedPoint(vtkMRMLDynamicModelerNode * surfaceEditorNode, double defaultSeedPoint[3])
+{
+  if (!surfaceEditorNode)
+    {
+    vtkErrorMacro("GetDefaultSeedPoint::GetSeedPoints: Invalid surfaceEditorNode");
+    return;
+    }
+
+  defaultSeedPoint[0] = 0.0;
+  defaultSeedPoint[1] = 0.0;
+  defaultSeedPoint[2] = 0.0;
 
   int numberOfInputNodes = surfaceEditorNode->GetNumberOfNodeReferences(INPUT_BORDER_REFERENCE_ROLE);
   for (int i = 0; i < numberOfInputNodes; ++i)
@@ -341,6 +450,6 @@ void vtkSlicerDynamicModelerBoundaryCutTool::GetPositionForClosestPointRegion(vt
         }
       }
     vtkMath::MultiplyScalar(currentCenter_World, 1.0 / numberOfInputNodes);
-    vtkMath::Add(currentCenter_World, closestPointRegion_World, closestPointRegion_World);
+    vtkMath::Add(currentCenter_World, defaultSeedPoint, defaultSeedPoint);
     }
 }
