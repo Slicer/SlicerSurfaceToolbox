@@ -41,7 +41,9 @@ class vtkGeometryFilter;
 class vtkImplicitBoolean;
 class vtkMRMLDynamicModelerNode;
 class vtkPlane;
+class vtkPointLocator;
 class vtkPolyData;
+class vtkPolyDataConnectivityFilter;
 class vtkReverseSense;
 class vtkThreshold;
 class vtkTransform;
@@ -71,17 +73,28 @@ protected:
   ~vtkSlicerDynamicModelerBoundaryCutTool() override;
   void operator=(const vtkSlicerDynamicModelerBoundaryCutTool&);
 
-  void GetPositionForClosestPointRegion(vtkMRMLDynamicModelerNode* surfaceEditorNode, double closestPointRegion_World[3]);
+  /// Populates the list of seed points corresponding to the regions to be extracted.
+  virtual void GetSeedPoints(vtkMRMLDynamicModelerNode* surfaceEditorNode, vtkPoints* points);
+
+  /// The default seed point location. Calculated from the center of all input control points
+  virtual void GetDefaultSeedPoint(vtkMRMLDynamicModelerNode* surfaceEditorNode, double seedPoint[3]);
+
+  /// Sets the CellData scalars according to which region each cell belongs to.
+  /// Seed scalars start at 1 and are incremented by 1 for each seed.
+  virtual void ColorOutputRegions(vtkPoints* seedPoints);
 
 protected:
-  vtkSmartPointer<vtkGeneralTransform>        InputModelToWorldTransform;
-  vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform>           InputModelToWorldTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter>    InputModelToWorldTransformFilter;
 
-  vtkSmartPointer<vtkClipPolyData>            ClipPolyData;
-  vtkSmartPointer<vtkConnectivityFilter>      Connectivity;
+  vtkSmartPointer<vtkClipPolyData>               ClipPolyData;
+  vtkSmartPointer<vtkPolyDataConnectivityFilter> Connectivity;
+  vtkSmartPointer<vtkConnectivityFilter>         ColorConnectivity;
 
-  vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
-  vtkSmartPointer<vtkTransformPolyDataFilter> OutputWorldToModelTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform>           OutputWorldToModelTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter>    OutputWorldToModelTransformFilter;
+
+  vtkSmartPointer<vtkPointLocator>               ClippedModelPointLocator;
 };
 
 #endif // __vtkSlicerDynamicModelerBoundaryCutTool_h
