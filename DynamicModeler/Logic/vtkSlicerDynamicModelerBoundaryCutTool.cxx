@@ -128,9 +128,12 @@ vtkSlicerDynamicModelerBoundaryCutTool::vtkSlicerDynamicModelerBoundaryCutTool()
     );
   this->OutputNodeInfo.push_back(outputModel);
 
+  this->InputCleanFilter = vtkSmartPointer<vtkCleanPolyData>::New();
+
   this->InputModelToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelToWorldTransform);
+  this->InputModelToWorldTransformFilter->SetInputConnection(this->InputCleanFilter->GetOutputPort());
 
   double epsilon = 1e-5;
   this->ClipPolyData = vtkSmartPointer<vtkClipPolyData>::New();
@@ -148,9 +151,12 @@ vtkSlicerDynamicModelerBoundaryCutTool::vtkSlicerDynamicModelerBoundaryCutTool()
   this->ColorConnectivity->SetExtractionModeToAllRegions();
   this->ColorConnectivity->SetInputConnection(this->Connectivity->GetOutputPort());
 
+  this->OutputCleanFilter = vtkSmartPointer<vtkCleanPolyData>::New();
+  this->OutputCleanFilter->SetInputConnection(this->ColorConnectivity->GetOutputPort());
+
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->OutputWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->OutputWorldToModelTransformFilter->SetInputConnection(this->ColorConnectivity->GetOutputPort());
+  this->OutputWorldToModelTransformFilter->SetInputConnection(this->OutputCleanFilter->GetOutputPort());
   this->OutputWorldToModelTransformFilter->SetTransform(this->OutputWorldToModelTransform);
 
   this->ClippedModelPointLocator = vtkSmartPointer<vtkPointLocator>::New();
@@ -196,7 +202,7 @@ bool vtkSlicerDynamicModelerBoundaryCutTool::RunInternal(vtkMRMLDynamicModelerNo
     return true;
     }
 
-  this->InputModelToWorldTransformFilter->SetInputData(inputPolyData);
+  this->InputCleanFilter->SetInputData(inputPolyData);
   if (inputModelNode->GetParentTransformNode())
     {
     inputModelNode->GetParentTransformNode()->GetTransformToWorld(this->InputModelToWorldTransform);
@@ -274,17 +280,18 @@ bool vtkSlicerDynamicModelerBoundaryCutTool::RunInternal(vtkMRMLDynamicModelerNo
       }
     appendFilter->AddInputData(outputLinePolyData);
     }
-  vtkNew<vtkCleanPolyData> cleanFilter;
-  cleanFilter->SetInputConnection(appendFilter->GetOutputPort());
-  cleanFilter->Update();
 
-  if (cleanFilter->GetOutput()->GetNumberOfPoints() < 1)
+  // Remove duplicate points from the input curves
+  vtkNew<vtkCleanPolyData> curvePointCleanFilter;
+  curvePointCleanFilter->SetInputConnection(appendFilter->GetOutputPort());
+  curvePointCleanFilter->Update();
+  if (curvePointCleanFilter->GetOutput()->GetNumberOfPoints() < 1)
     {
     return false;
     }
 
   vtkNew<vtkImplicitPolyDataPointDistance> distance;
-  distance->SetInput(cleanFilter->GetOutput());
+  distance->SetInput(curvePointCleanFilter->GetOutput());
 
   this->ClipPolyData->SetClipFunction(distance);
   this->ClipPolyData->Update();

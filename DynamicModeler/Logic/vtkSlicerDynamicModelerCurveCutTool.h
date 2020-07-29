@@ -64,13 +64,14 @@ protected:
   void operator=(const vtkSlicerDynamicModelerCurveCutTool&);
 
 protected:
+  vtkSmartPointer<vtkCleanPolyData>           CleanFilter;
+
   vtkSmartPointer<vtkGeneralTransform>        InputModelToWorldTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
 
   vtkSmartPointer<vtkSelectPolyData>          SelectionFilter;
   vtkSmartPointer<vtkClipPolyData>            ClipFilter;
   vtkSmartPointer<vtkConnectivityFilter>      ConnectivityFilter;
-  vtkSmartPointer<vtkCleanPolyData>           CleanFilter;
 
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputWorldToModelTransformFilter;

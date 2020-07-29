@@ -84,12 +84,16 @@ protected:
   virtual void ColorOutputRegions(vtkPoints* seedPoints);
 
 protected:
+  vtkSmartPointer<vtkCleanPolyData>              InputCleanFilter;
+
   vtkSmartPointer<vtkGeneralTransform>           InputModelToWorldTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter>    InputModelToWorldTransformFilter;
 
   vtkSmartPointer<vtkClipPolyData>               ClipPolyData;
   vtkSmartPointer<vtkPolyDataConnectivityFilter> Connectivity;
   vtkSmartPointer<vtkConnectivityFilter>         ColorConnectivity;
+
+  vtkSmartPointer<vtkCleanPolyData>              OutputCleanFilter;
 
   vtkSmartPointer<vtkGeneralTransform>           OutputWorldToModelTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter>    OutputWorldToModelTransformFilter;

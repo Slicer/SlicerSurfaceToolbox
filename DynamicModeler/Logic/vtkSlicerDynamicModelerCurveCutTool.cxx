@@ -114,11 +114,15 @@ vtkSlicerDynamicModelerCurveCutTool::vtkSlicerDynamicModelerCurveCutTool()
   );
   this->OutputNodeInfo.push_back(outputOutsideModel);
 
+  this->CleanFilter = vtkSmartPointer<vtkCleanPolyData>::New();
+
   this->InputModelToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->InputModelToWorldTransformFilter->SetInputConnection(this->CleanFilter->GetOutputPort());
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelToWorldTransform);
 
   this->SelectionFilter = vtkSmartPointer<vtkSelectPolyData>::New();
+  this->SelectionFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   this->SelectionFilter->GenerateSelectionScalarsOn();
   this->SelectionFilter->SetSelectionModeToSmallestRegion();
 
@@ -129,12 +133,9 @@ vtkSlicerDynamicModelerCurveCutTool::vtkSlicerDynamicModelerCurveCutTool()
   this->ConnectivityFilter = vtkSmartPointer<vtkConnectivityFilter>::New();
   this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetOutputPort());
 
-  this->CleanFilter = vtkSmartPointer<vtkCleanPolyData>::New();
-  this->CleanFilter->SetInputConnection(this->ConnectivityFilter->GetOutputPort());
-
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->OutputWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->OutputWorldToModelTransformFilter->SetInputConnection(this->CleanFilter->GetOutputPort());
+  this->OutputWorldToModelTransformFilter->SetInputConnection(this->ConnectivityFilter->GetOutputPort());
   this->OutputWorldToModelTransformFilter->SetTransform(this->OutputWorldToModelTransform);
 }
 
@@ -183,7 +184,7 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   double bounds_World[6] = {0.0};
   inputModelNode->GetRASBounds(bounds_World);
 
-  this->InputModelToWorldTransformFilter->SetInputData(inputModelNode->GetPolyData());
+  this->CleanFilter->SetInputData(inputModelNode->GetPolyData());
   if (inputModelNode->GetParentTransformNode())
     {
     inputModelNode->GetParentTransformNode()->GetTransformToWorld(this->InputModelToWorldTransform);
@@ -193,7 +194,6 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
     this->InputModelToWorldTransform->Identity();
     }
 
-  this->SelectionFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   this->SelectionFilter->SetLoop(curveNode->GetCurvePointsWorld());
 
   if (outputOutsideModelNode)
@@ -217,10 +217,10 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
       }
     this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetOutputPort());
     this->OutputWorldToModelTransformFilter->Update();
-    
+
     vtkNew<vtkPolyData> outputMesh;
     outputMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
-    
+
     MRMLNodeModifyBlocker blocker(outputInsideModelNode);
     outputInsideModelNode->SetAndObserveMesh(outputMesh);
     outputInsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
@@ -238,10 +238,10 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
       }
     this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetClippedOutputPort());
     this->OutputWorldToModelTransformFilter->Update();
-    
+
     vtkNew<vtkPolyData> outputMesh;
     outputMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
-    
+
     MRMLNodeModifyBlocker blocker(outputOutsideModelNode);
     outputOutsideModelNode->SetAndObserveMesh(outputMesh);
     outputOutsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
