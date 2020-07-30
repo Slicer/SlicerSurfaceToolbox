@@ -678,8 +678,6 @@ void qSlicerDynamicModelerModuleWidget::updateMRMLFromWidget()
   for (qMRMLNodeComboBox* inputNodeSelector : inputNodeSelectors)
     {
     QString referenceRole = inputNodeSelector->property("ReferenceRole").toString();
-    int inputIndex = inputNodeSelector->property("InputIndex").toInt();
-    int inputSelectorIndex = inputNodeSelector->property("InputSelectorIndex").toInt();
     QString currentNodeID = inputNodeSelector->currentNodeID();
     d->DynamicModelerNode->AddNodeReferenceID(referenceRole.toUtf8(), currentNodeID.toUtf8());
     }
