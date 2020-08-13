@@ -1,13 +1,19 @@
 import os
-import csv
 import unittest
-import string
+import logging
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
+#
+# SurfaceToolbox
+#
 
 class SurfaceToolbox(ScriptedLoadableModule):
+  """Uses ScriptedLoadableModule base class, available at:
+  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
+  """
+
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "Surface Toolbox"
@@ -27,243 +33,104 @@ Click apply to activate the pipeline and then click the Toggle button to compare
 This module was developed by Luca Antiga, Orobix Srl, with a little help from Steve Pieper, Isomics, Inc.
 """
 
-
-def numericInputFrame(parent, label, tooltip, minimum, maximum, step, decimals):
-  inputFrame = qt.QFrame(parent)
-  inputFrame.setLayout(qt.QHBoxLayout())
-  inputLabel = qt.QLabel(label, inputFrame)
-  inputLabel.setToolTip(tooltip)
-  inputFrame.layout().addWidget(inputLabel)
-  inputSlider = ctk.ctkSliderWidget(inputFrame)
-  inputSlider.minimum = minimum
-  inputSlider.maximum = maximum
-  inputSlider.singleStep = step
-  inputSlider.decimals = decimals
-  inputSlider.setToolTip(tooltip)
-  inputFrame.layout().addWidget(inputSlider)
-  return inputFrame, inputSlider
-
+#
+# SurfaceToolboxWidget
+#
 
 class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
+  """Uses ScriptedLoadableModuleWidget base class, available at:
+  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
+  """
 
-  def __init__(self, parent):
+  def __init__(self, parent=None):
+    """
+    Called when the user opens the module the first time and the widget is initialized.
+    """
     ScriptedLoadableModuleWidget.__init__(self, parent)
-    VTKObservationMixin.__init__(self)
-
+    VTKObservationMixin.__init__(self)  # needed for parameter node observation
     self.logic = None
-    self.parameterNodeSelector = None
-    self.inputModelSelector = None
-    self.outputModelSelector = None
-    self.updateGUIFromState = None
+    self._parameterNode = None
+    self._updatingGUIFromParameterNode = False
 
   def setup(self):
+    """
+    Called when the user opens the module the first time and the widget is initialized.
+    """
     ScriptedLoadableModuleWidget.setup(self)
 
+    # Load widget from .ui file (created by Qt Designer).
+    # Additional widgets can be instantiated manually and added to self.layout.
+    uiWidget = slicer.util.loadUI(self.resourcePath('UI/SurfaceToolbox.ui'))
+    self.layout.addWidget(uiWidget)
+    self.ui = slicer.util.childWidgetVariables(uiWidget)
+
+    # Set scene in MRML widgets. Make sure that in Qt designer the top-level qMRMLWidget's
+    # "mrmlSceneChanged(vtkMRMLScene*)" signal in is connected to each MRML widget's.
+    # "setMRMLScene(vtkMRMLScene*)" slot.
+    uiWidget.setMRMLScene(slicer.mrmlScene)
+
+    # Create logic class. Logic implements all computations that should be possible to run
+    # in batch mode, without a graphical user interface.
     self.logic = SurfaceToolboxLogic()
+    self.logic.updateProcessCallback = self.updateProcess
 
-    # Instantiate and connect widgets ...
-    self.parameterNodeSelector = slicer.qMRMLNodeComboBox()
-    self.parameterNodeSelector.nodeTypes = ["vtkMRMLScriptedModuleNode"]
-    self.parameterNodeSelector.addAttribute("vtkMRMLScriptedModuleNode", "ModuleName", "SurfaceToolbox")
-    self.parameterNodeSelector.selectNodeUponCreation = True
-    self.parameterNodeSelector.addEnabled = True
-    self.parameterNodeSelector.renameEnabled = True
-    self.parameterNodeSelector.removeEnabled = True
-    self.parameterNodeSelector.noneEnabled = False
-    self.parameterNodeSelector.showHidden = True
-    self.parameterNodeSelector.showChildNodeTypes = False
-    self.parameterNodeSelector.baseName = "SurfaceToolbox"
-    self.parameterNodeSelector.setMRMLScene(slicer.mrmlScene)
-    self.parameterNodeSelector.setToolTip("Pick parameter set")
-    self.layout.addWidget(self.parameterNodeSelector)
+    # Connections
 
-    inputModelSelectorFrame = qt.QFrame(self.parent)
-    inputModelSelectorFrame.setLayout(qt.QHBoxLayout())
-    self.parent.layout().addWidget(inputModelSelectorFrame)
+    # These connections ensure that we update parameter node when scene is closed
+    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
+    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
 
-    inputModelSelectorLabel = qt.QLabel("Input Model: ", inputModelSelectorFrame)
-    inputModelSelectorLabel.setToolTip("Select the input model")
-    inputModelSelectorFrame.layout().addWidget(inputModelSelectorLabel)
+    # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
+    # (in the selected parameter node).
 
-    inputModelSelector = slicer.qMRMLNodeComboBox(inputModelSelectorFrame)
-    inputModelSelector.nodeTypes = ["vtkMRMLModelNode"]
-    inputModelSelector.selectNodeUponCreation = False
-    inputModelSelector.addEnabled = False
-    inputModelSelector.removeEnabled = False
-    inputModelSelector.noneEnabled = True
-    inputModelSelector.showHidden = False
-    inputModelSelector.showChildNodeTypes = False
-    inputModelSelector.setMRMLScene(slicer.mrmlScene)
-    inputModelSelectorFrame.layout().addWidget(inputModelSelector)
-    self.inputModelSelector = inputModelSelector
+    self.parameterEditWidgets = [
+      (self.ui.inputModelSelector, "inputModel"),
+      (self.ui.outputModelSelector, "outputModel"),
+      (self.ui.decimationButton, "decimation"),
+      (self.ui.reductionSlider, "decimationReduction"),
+      (self.ui.boundaryDeletionCheckBox, "decimationBoundaryDeletion"),
+      (self.ui.smoothingButton, "smoothing"),
+      (self.ui.smoothingMethodComboBox, "smoothingMethod"),
+      (self.ui.laplaceIterationsSlider, "smoothingLaplaceIterations"),
+      (self.ui.laplaceRelaxationSlider, "smoothingLaplaceRelaxation"),
+      (self.ui.taubinIterationsSlider, "smoothingTaubinIterations"),
+      (self.ui.taubinPassBandSlider, "smoothingTaubinPassBand"),
+      (self.ui.boundarySmoothingCheckBox, "smoothingBoundarySmoothing"),
+      (self.ui.normalsButton, "normals"),
+      (self.ui.autoOrientNormalsCheckBox, "normalsAutoOrient"),
+      (self.ui.flipNormalsCheckBox, "normalsFlip"),
+      (self.ui.splittingCheckBox, "normalsSplitting"),
+      (self.ui.featureAngleSlider, "normalsFeatureAngle"),
+      (self.ui.mirrorButton, "mirror"),
+      (self.ui.mirrorXCheckBox, "mirrorX"),
+      (self.ui.mirrorYCheckBox, "mirrorY"),
+      (self.ui.mirrorZCheckBox, "mirrorZ"),
+      (self.ui.cleanerButton, "cleaner"),
+      (self.ui.fillHolesButton, "fillHoles"),
+      (self.ui.fillHolesSizeSlider, "fillHolesSize"),
+      (self.ui.connectivityButton, "connectivity"),
+      (self.ui.scaleMeshButton, "scale"),
+      (self.ui.scaleXSlider, "scaleX"),
+      (self.ui.scaleYSlider, "scaleY"),
+      (self.ui.scaleZSlider, "scaleZ"),
+      (self.ui.translateMeshButton, "translate"),
+      (self.ui.translationXSlider, "translateX"),
+      (self.ui.translationXSlider, "translateY"),
+      (self.ui.translationXSlider, "translateZ"),
+      (self.ui.relaxButton, "relax"),
+      (self.ui.relaxIterationsSlider, "relaxIterations"),
+      (self.ui.bordersOutButton, "bordersOut"),
+      (self.ui.translateCenterToOriginButton, "translateCenterToOrigin")
+    ]
 
-    outputModelSelectorFrame = qt.QFrame(self.parent)
-    outputModelSelectorFrame.setLayout(qt.QHBoxLayout())
-    self.parent.layout().addWidget(outputModelSelectorFrame)
+    slicer.util.addParameterEditWidgetConnections(self.parameterEditWidgets, self.updateParameterNodeFromGUI)
 
-    outputModelSelectorLabel = qt.QLabel("Output Model: ", outputModelSelectorFrame)
-    outputModelSelectorLabel.setToolTip("Select the output model")
-    outputModelSelectorFrame.layout().addWidget(outputModelSelectorLabel)
+    # Buttons
+    self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+    self.ui.toggleModelsButton.connect('clicked()', self.onToggleModels)
 
-    outputModelSelector = slicer.qMRMLNodeComboBox(outputModelSelectorFrame)
-    outputModelSelector.nodeTypes = ["vtkMRMLModelNode"]
-    outputModelSelector.selectNodeUponCreation = False
-    outputModelSelector.addEnabled = True
-    outputModelSelector.renameEnabled = True
-    outputModelSelector.removeEnabled = True
-    outputModelSelector.noneEnabled = True
-    outputModelSelector.showHidden = False
-    outputModelSelector.showChildNodeTypes = False
-    outputModelSelector.baseName = "Model"
-    outputModelSelector.selectNodeUponCreation = True
-    outputModelSelector.setMRMLScene(slicer.mrmlScene)
-    outputModelSelectorFrame.layout().addWidget(outputModelSelector)
-    self.outputModelSelector = outputModelSelector
-
-    # Decimation
-    decimationButton = qt.QPushButton("Decimation")
-    decimationButton.objectName = "DecimationButton"
-    decimationButton.checkable = True
-    self.layout.addWidget(decimationButton)
-    decimationFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(decimationFrame)
-    decimationFormLayout = qt.QFormLayout(decimationFrame)
-
-    reductionFrame, reductionSlider = numericInputFrame(
-      self.parent, "Reduction:",
-      "Specifies the desired reduction in the total number of polygons (e.g., if Reduction is set"
-      " to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0, 0.999, 0.01, 2)
-    decimationFormLayout.addWidget(reductionFrame)
-
-    boundaryDeletionCheckBox = qt.QCheckBox("Boundary deletion")
-    boundaryDeletionCheckBox.setToolTip("If disabled then boundaries will not be modified by decimation (it uses DecimatePro algorithm, which tends to create more ill-shaped triangles).")
-    decimationFormLayout.addWidget(boundaryDeletionCheckBox)
-
-    # Smoothing
-    smoothingButton = qt.QPushButton("Smoothing")
-    smoothingButton.objectName = "SmoothingButton"
-    smoothingButton.checkable = True
-    self.layout.addWidget(smoothingButton)
-    smoothingFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(smoothingFrame)
-    smoothingFormLayout = qt.QFormLayout(smoothingFrame)
-
-    smoothingMethodCombo = qt.QComboBox(smoothingFrame)
-    smoothingMethodCombo.addItem("Laplace")
-    smoothingMethodCombo.addItem("Taubin")
-    smoothingFormLayout.addWidget(smoothingMethodCombo)
-
-    laplaceMethodFrame = qt.QFrame(self.parent)
-    smoothingFormLayout.addWidget(laplaceMethodFrame)
-    laplaceMethodFormLayout = qt.QFormLayout(laplaceMethodFrame)
-
-    laplaceIterationsFrame, laplaceIterationsSlider = numericInputFrame(
-      self.parent, "Iterations:",
-      "Determines the maximum number of smoothing iterations. Higher value allows more smoothing."
-      " In general, small relaxation factors and large numbers of iterations are more stable than"
-      "larger relaxation factors and smaller numbers of iterations.", 0.0, 500.0, 1.0, 0)
-    laplaceMethodFormLayout.addWidget(laplaceIterationsFrame)
-
-    laplaceRelaxationFrame, laplaceRelaxationSlider = numericInputFrame(
-      self.parent, "Relaxation:",
-      "Specifies how much points may be displaced during each iteration. "
-      "Higher value results in more smoothing.", 0.0, 1.0, 0.1, 1)
-    laplaceMethodFormLayout.addWidget(laplaceRelaxationFrame)
-
-    taubinMethodFrame = qt.QFrame(self.parent)
-    smoothingFormLayout.addWidget(taubinMethodFrame)
-    taubinMethodFormLayout = qt.QFormLayout(taubinMethodFrame)
-
-    taubinIterationsFrame, taubinIterationsSlider = numericInputFrame(
-      self.parent, "Iterations:",
-      "Determines the maximum number of smoothing iterations. Higher value allows more accurate smoothing."
-      " Typically 10-20 iterations are enough.", 0.0, 100.0, 1.0, 0)
-    taubinMethodFormLayout.addWidget(taubinIterationsFrame)
-
-    taubinPassBandFrame, taubinPassBandSlider = numericInputFrame(
-      self.parent, "Pass Band:",
-      "Number between 0 and 2. Lower values produce more smoothing.", 0.0, 2.0, 0.0001, 4)
-    taubinMethodFormLayout.addWidget(taubinPassBandFrame)
-
-    boundarySmoothingCheckBox = qt.QCheckBox("Boundary Smoothing")
-    smoothingFormLayout.addWidget(boundarySmoothingCheckBox)
-
-    # Normals
-    normalsButton = qt.QPushButton("Normals")
-    normalsButton.objectName = "NormalsButton"
-    normalsButton.checkable = True
-    self.layout.addWidget(normalsButton)
-    normalsFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(normalsFrame)
-    normalsFormLayout = qt.QFormLayout(normalsFrame)
-
-    autoOrientNormalsCheckBox = qt.QCheckBox("Auto-orient Normals")
-    autoOrientNormalsCheckBox.setToolTip("Orient the normals outwards from closed surface")
-    normalsFormLayout.addWidget(autoOrientNormalsCheckBox)
-
-    flipNormalsCheckBox = qt.QCheckBox("Flip Normals")
-    flipNormalsCheckBox.setToolTip("Flip normal direction from its current or auto-oriented state")
-    normalsFormLayout.addWidget(flipNormalsCheckBox)
-
-    splittingCheckBox = qt.QCheckBox("Splitting")
-    normalsFormLayout.addWidget(splittingCheckBox)
-
-    featureAngleFrame, featureAngleSlider = numericInputFrame(
-      self.parent, "Feature Angle:", "Feature Angle for Splitting", 0.0, 180.0, 1.0, 0)
-    normalsFormLayout.addWidget(featureAngleFrame)
-
-    # Mirror
-    mirrorButton = qt.QPushButton("Mirror")
-    mirrorButton.objectName = "MirrorButton"
-    mirrorButton.checkable = True
-    self.layout.addWidget(mirrorButton)
-    mirrorFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(mirrorFrame)
-    mirrorFormLayout = qt.QFormLayout(mirrorFrame)
-
-    mirrorXCheckBox = qt.QCheckBox("X-axis")
-    mirrorXCheckBox.setToolTip("Flip model along its X axis")
-    mirrorFormLayout.addWidget(mirrorXCheckBox)
-
-    mirrorYCheckBox = qt.QCheckBox("Y-axis")
-    mirrorYCheckBox.setToolTip("Flip model along its Y axis")
-    mirrorFormLayout.addWidget(mirrorYCheckBox)
-
-    mirrorZCheckBox = qt.QCheckBox("Z-axis")
-    mirrorZCheckBox.setToolTip("Flip model along its Z axis")
-    mirrorFormLayout.addWidget(mirrorZCheckBox)
-
-    # Cleaner
-    cleanerButton = qt.QPushButton("Cleaner")
-    cleanerButton.objectName = "CleanerButton"
-    cleanerButton.checkable = True
-    self.layout.addWidget(cleanerButton)
-
-    # Fill holes
-    fillHolesButton = qt.QPushButton("Fill holes")
-    fillHolesButton.objectName = "FillHolesButton"
-    fillHolesButton.checkable = True
-    self.layout.addWidget(fillHolesButton)
-
-    fillHolesFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(fillHolesFrame)
-    fillHolesFormLayout = qt.QFormLayout(fillHolesFrame)
-
-    fillHolesSizeFrame, fillHolesSizeSlider = numericInputFrame(
-      self.parent, "Maximum hole size:",
-      "Specifies the maximum size of holes that will be filled. This is represented as a radius to the bounding"
-      " circumsphere containing the hole. Note that this is an approximate area; the actual area cannot be"
-      " computed without first triangulating the hole. ", 0.0, 1000, 0.1, 1)
-    fillHolesFormLayout.addWidget(fillHolesSizeFrame)
-
-    # Connectivity
-    connectivityButton = qt.QPushButton("Connectivity")
-    connectivityButton.objectName = "ConnectivityButton"
-    connectivityButton.checkable = True
-    self.layout.addWidget(connectivityButton)
-    # connectivityFrame = qt.QFrame(self.parent)
-    # self.layout.addWidget(connectivityFrame)
-    # connectivityFormLayout = qt.QFormLayout(connectivityFrame)
+    # Make sure parameter node is initialized (needed for module reload)
+    self.initializeParameterNode()
 
     # TODO: connectivity could be
     # - largest connected
@@ -271,659 +138,395 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # - pick a region interactively
     # - turn a multiple connected surface into a model hierarchy
 
-    # Scale Mesh
-    scaleButton = qt.QPushButton("Scale Mesh")
-    scaleButton.objectName = "ScaleMeshButton"
-    scaleButton.checkable = True
-    self.layout.addWidget(scaleButton)
-    scaleFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(scaleFrame)
-    scaleFormLayout = qt.QFormLayout(scaleFrame)
-
-    scaleXFrame, scaleXSlider = numericInputFrame(
-      self.parent, "Scale X:",
-      "Specifies the desired scale along an axis.", 0, 50.0, .5, 2)
-    scaleFormLayout.addWidget(scaleXFrame)
-
-    scaleYFrame, scaleYSlider = numericInputFrame(
-      self.parent, "Scale Y:",
-      "Specifies the desired scale along an axis.", 0, 50.0, .5, 2)
-    scaleFormLayout.addWidget(scaleYFrame)
-
-    scaleZFrame, scaleZSlider = numericInputFrame(
-      self.parent, "Scale Z:",
-      "Specifies the desired scale along an axis.", 0, 50.0, .5, 2)
-    scaleFormLayout.addWidget(scaleZFrame)
-
-    # Translate Mesh
-    translateButton = qt.QPushButton("Translate Mesh")
-    translateButton.objectName = "TranslateMeshButton"
-    translateButton.checkable = True
-    self.layout.addWidget(translateButton)
-    translateFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(translateFrame)
-    translateFormLayout = qt.QFormLayout(translateFrame)
-
-    transXFrame, transXSlider = numericInputFrame(
-      self.parent, "Translate X:",
-      "Specifies the desired translation along an axis.", -100.0, 100.0, 5, 2)
-    translateFormLayout.addWidget(transXFrame)
-
-    transYFrame, transYSlider = numericInputFrame(
-      self.parent, "Translate Y:",
-      "Specifies the desired translation along an axis.", -100.0, 100.0, 5, 2)
-    translateFormLayout.addWidget(transYFrame)
-
-    transZFrame, transZSlider = numericInputFrame(
-      self.parent, "Translate Z:",
-      "Specifies the desired translation along an axis.", -100.0, 100.0, 5, 2)
-    translateFormLayout.addWidget(transZFrame)
-
-    # Relax Polygons
-    relaxButton = qt.QPushButton("Relax Polygons")
-    relaxButton.objectName = "RelaxPolygonsButton"
-    relaxButton.checkable = True
-    self.layout.addWidget(relaxButton)
-    relaxFrame = qt.QFrame(self.parent)
-    self.layout.addWidget(relaxFrame)
-    relaxFormLayout = qt.QFormLayout(relaxFrame)
-
-    relaxIterationsFrame, relaxIterationsSlider = numericInputFrame(
-      self.parent, "Iterations:",
-      "Specifies the desired reduction in the total number of polygons (e.g., if Reduction is set"
-      " to 0.9, this filter will try to reduce the data set to 10% of its original size).", 0.0, 100.0, .5, 2)
-    relaxFormLayout.addWidget(relaxIterationsFrame)
-
-    # Borders Out
-    borderButton = qt.QPushButton("Borders Out")
-    borderButton.objectName = "BordersOutButton"
-    borderButton.checkable = True
-    self.layout.addWidget(borderButton)
-
-    # Translate center to origin.
-    originButton = qt.QPushButton("Translate center to origin")
-    originButton.objectName = "TranslateCenterToOriginButton"
-    originButton.checkable = True
-    self.layout.addWidget(originButton)
-
-    buttonFrame = qt.QFrame(self.parent)
-    buttonFrame.setLayout(qt.QHBoxLayout())
-    self.layout.addWidget(buttonFrame)
-
-    toggleModelsButton = qt.QPushButton("Toggle Models")
-    toggleModelsButton.toolTip = "Show original model."
-    buttonFrame.layout().addWidget(toggleModelsButton)
-
-    applyButton = qt.QPushButton("Apply")
-    applyButton.objectName = "ApplyButton"
-    applyButton.toolTip = "Filter surface."
-    buttonFrame.layout().addWidget(applyButton)
-
-    self.layout.addStretch(1)
-
-    class state(object):
-      processValue = ""
-      parameterNode = self.logic.getParameterNode()
-      inputParamFile = ""
-      outputParamFile = ""
-      inputModelNode = None
-      outputModelNode = None
-      decimation = False
-      reduction = 0.8
-      boundaryDeletion = True
-      smoothing = False
-      smoothingMethod = "Laplace"
-      laplaceIterations = 100
-      laplaceRelaxation = 0.5
-      taubinIterations = 30
-      taubinPassBand = 0.1
-      boundarySmoothing = True
-      normals = False
-      flipNormals = False
-      autoOrientNormals = False
-      mirror = False
-      mirrorX = False
-      mirrorY = False
-      mirrorZ = False
-      splitting = False
-      featureAngle = 30.0
-      cleaner = False
-      fillHoles = False
-      fillHolesSize = 1000.0
-      connectivity = False
-      scale = False
-      scaleX = 0.5
-      scaleY = 0.5
-      scaleZ = 0.5
-      translate = False
-      transX = 0
-      transY = 0
-      transZ = 0
-      relax = False
-      relaxIterations = 0
-      border = False
-      origin = False
-
-    scope_locals = locals()
-
-    def connect(obj, evt, cmd):
-      def callback(*args):
-        current_locals = scope_locals.copy()
-        current_locals.update({'args': args})
-        exec(cmd, globals(), current_locals)
-        updateGUIFromState()
-      obj.connect(evt, callback)
-
-    def updateGUIFromState():
-
-      decimationButton.checked = state.decimation
-      decimationFrame.visible = state.decimation
-      boundaryDeletionCheckBox.checked = state.boundaryDeletion
-      reductionSlider.value = state.reduction
-
-      smoothingButton.checked = state.smoothing
-      smoothingFrame.visible = state.smoothing
-      laplaceMethodFrame.visible = state.smoothingMethod == "Laplace"
-      laplaceIterationsSlider.value = state.laplaceIterations
-      laplaceRelaxationSlider.value = state.laplaceRelaxation
-      taubinMethodFrame.visible = state.smoothingMethod == "Taubin"
-      taubinIterationsSlider.value = state.taubinIterations
-      taubinPassBandSlider.value = state.taubinPassBand
-      boundarySmoothingCheckBox.checked = state.boundarySmoothing
-
-      normalsButton.checked = state.normals
-      normalsFrame.visible = state.normals
-      autoOrientNormalsCheckBox.checked = state.autoOrientNormals
-      flipNormalsCheckBox.checked = state.flipNormals
-      splittingCheckBox.checked = state.splitting
-      featureAngleFrame.enabled = state.splitting
-      featureAngleSlider.value = state.featureAngle
-      featureAngleFrame.enabled = state.splitting
-
-      mirrorButton.checked = state.mirror
-      mirrorFrame.visible = state.mirror
-      mirrorXCheckBox.checked = state.mirrorX
-      mirrorYCheckBox.checked = state.mirrorY
-      mirrorZCheckBox.checked = state.mirrorZ
-
-      cleanerButton.checked = state.cleaner
-
-      fillHolesButton.checked = state.fillHoles
-      fillHolesFrame.visible = state.fillHoles
-      fillHolesSizeSlider.value = state.fillHolesSize
-
-      connectivityButton.checked = state.connectivity
-
-      scaleButton.checked = state.scale
-      scaleFrame.visible = state.scale
-      scaleXSlider.value = state.scaleX
-      scaleYSlider.value = state.scaleY
-      scaleZSlider.value = state.scaleZ
-
-      translateButton.checked = state.translate
-      translateFrame.visible = state.translate
-      transXSlider.value = state.transX
-      transYSlider.value = state.transY
-      transZSlider.value = state.transZ
-
-      relaxButton.checked = state.relax
-      relaxFrame.visible = state.relax
-      relaxIterationsSlider.value = state.relaxIterations
-
-      borderButton.checked = state.border
-
-      originButton.checked = state.origin
-
-      toggleModelsButton.enabled = state.inputModelNode is not None and state.outputModelNode is not None
-      applyButton.enabled = state.inputModelNode is not None and state.outputModelNode is not None
-
-    connect(inputModelSelector, 'currentNodeChanged(vtkMRMLNode*)', 'state.inputModelNode = args[0]')
-    connect(outputModelSelector, 'currentNodeChanged(vtkMRMLNode*)', 'state.outputModelNode = args[0]')
-
-    def checkDefine(value, parameter):
-      if str(parameter) == "False":
-        return False
-      if str(parameter) == "True":
-        return True
-      if parameter == "" or (str(value) == str(parameter)):
-        return value
-      else:
-        return parameter
-
-    def updateGuiFromMRML(node):
-      if node is None:
-        return
-      state.decimation = checkDefine(state.decimation, node.GetParameter("Decimation"))
-      state.reduction = float(checkDefine(state.reduction, node.GetParameter("DecimateReduction")))
-      state.boundaryDeletion = checkDefine(state.boundaryDeletion, node.GetParameter("DecimateBoundary"))
-      state.smoothing = checkDefine(state.smoothing, node.GetParameter("smoothing"))
-      state.smoothingMethod = checkDefine(state.smoothingMethod, node.GetParameter("smoothingMethod"))
-      state.laplaceIterations = int(checkDefine(state.laplaceIterations, node.GetParameter("SmoothingLaplaceIterations")))
-      state.laplaceRelaxation = float(checkDefine(state.laplaceIterations, node.GetParameter("SmoothingLaplaceRelaxation")))
-      state.taubinIterations = int(checkDefine(state.taubinIterations, node.GetParameter("SmoothingTaubinIterations")))
-      state.taubinPassBand = float(checkDefine(state.taubinPassBand, node.GetParameter("SmoothingTaubinPassBand")))
-      state.boundarySmoothing = checkDefine(state.boundarySmoothing, node.GetParameter("SmoothingTaubinBoundary"))
-      state.normals = checkDefine(state.normals, node.GetParameter("normals"))
-      state.flipNormals = checkDefine(state.flipNormals, node.GetParameter("NormalsFlip"))
-      state.autoOrientNormals = checkDefine(state.autoOrientNormals, node.GetParameter("NormalsOrient"))
-      state.mirror = checkDefine(state.mirror, node.GetParameter("mirror"))
-      state.mirrorX = checkDefine(state.mirrorX, node.GetParameter("mirrorX"))
-      state.mirrorY = checkDefine(state.mirrorY, node.GetParameter("mirrorY"))
-      state.mirrorZ = checkDefine(state.mirrorZ, node.GetParameter("mirrorZ"))
-      state.splitting = checkDefine(state.splitting, node.GetParameter("NormalsSplitting"))
-      state.featureAngle = float(checkDefine(state.featureAngle, node.GetParameter("NormalsAngle")))
-      state.cleaner = checkDefine(state.cleaner, node.GetParameter("cleaner"))
-      state.fillHoles = checkDefine(state.fillHoles, node.GetParameter("fillHoles"))
-      state.fillHolesSize = float(checkDefine(state.fillHolesSize, node.GetParameter("fillHolesSize")))
-      state.connectivity = checkDefine(state.connectivity, node.GetParameter("connectivity"))
-      state.scale = checkDefine(state.scale, node.GetParameter("scale"))
-      state.scaleX = float(checkDefine(state.scaleX, node.GetParameter("ScaleDimX")))
-      state.scaleY = float(checkDefine(state.scaleY, node.GetParameter("ScaleDimY")))
-      state.scaleZ = float(checkDefine(state.scaleZ, node.GetParameter("ScaleDimZ")))
-      state.translate = checkDefine(state.translate, node.GetParameter("translate"))
-      state.transX = float(checkDefine(state.transX, node.GetParameter("TransDimX")))
-      state.transY = float(checkDefine(state.transY, node.GetParameter("TransDimY")))
-      state.transZ = float(checkDefine(state.transZ, node.GetParameter("TransDimZ")))
-      state.relax = checkDefine(state.relax, node.GetParameter("relax"))
-      state.relaxIterations = float(checkDefine(state.relaxIterations, node.GetParameter("RelaxIterations")))
-      state.border = checkDefine(state.border, node.GetParameter("border"))
-      state.origin = checkDefine(state.origin, node.GetParameter("origin"))
-      updateGUIFromState()
-
-    def initializeModelNode(node):
-      displayNode = slicer.vtkMRMLModelDisplayNode()
-      storageNode = slicer.vtkMRMLModelStorageNode()
-      displayNode.SetScene(slicer.mrmlScene)
-      storageNode.SetScene(slicer.mrmlScene)
-      slicer.mrmlScene.AddNode(displayNode)
-      slicer.mrmlScene.AddNode(storageNode)
-      node.SetAndObserveDisplayNodeID(displayNode.GetID())
-      node.SetAndObserveStorageNodeID(storageNode.GetID())
-
-    self.parameterNodeSelector.setCurrentNode(self.logic.getParameterNode())
-    self.parameterNodeSelector.connect('currentNodeChanged(vtkMRMLNode*)', updateGuiFromMRML)
-    self.parameterNodeSelector.connect('nodeAdded(vtkMRMLNode*)', updateGuiFromMRML)
-    connect(self.parameterNodeSelector, 'currentNodeChanged(vtkMRMLNode*)', 'state.parameterNode = args[0]')
-
-    outputModelSelector.connect('nodeAddedByUser(vtkMRMLNode*)', initializeModelNode)
-
-    connect(decimationButton, 'clicked(bool)', 'state.decimation = args[0]')
-    connect(reductionSlider, 'valueChanged(double)', 'state.reduction = args[0]')
-    connect(boundaryDeletionCheckBox, 'stateChanged(int)', 'state.boundaryDeletion = bool(args[0])')
-
-    connect(smoothingButton, 'clicked(bool)', 'state.smoothing = args[0]')
-    connect(smoothingMethodCombo, 'currentIndexChanged(QString)', 'state.smoothingMethod = args[0]')
-
-    connect(laplaceIterationsSlider, 'valueChanged(double)', 'state.laplaceIterations = int(args[0])')
-    connect(laplaceRelaxationSlider, 'valueChanged(double)', 'state.laplaceRelaxation = args[0]')
-
-    connect(taubinIterationsSlider, 'valueChanged(double)', 'state.taubinIterations = int(args[0])')
-    connect(taubinPassBandSlider, 'valueChanged(double)', 'state.taubinPassBand = args[0]')
-
-    connect(boundarySmoothingCheckBox, 'stateChanged(int)', 'state.boundarySmoothing = bool(args[0])')
-
-    connect(normalsButton, 'clicked(bool)', 'state.normals = args[0]')
-    connect(autoOrientNormalsCheckBox, 'toggled(bool)', 'state.autoOrientNormals = bool(args[0])')
-    connect(flipNormalsCheckBox, 'toggled(bool)', 'state.flipNormals = bool(args[0])')
-    connect(splittingCheckBox, 'stateChanged(int)', 'state.splitting = bool(args[0])')
-    connect(featureAngleSlider, 'valueChanged(double)', 'state.featureAngle = args[0]')
-
-    connect(mirrorButton, 'clicked(bool)', 'state.mirror = args[0]')
-    connect(mirrorXCheckBox, 'toggled(bool)', 'state.mirrorX = bool(args[0])')
-    connect(mirrorYCheckBox, 'toggled(bool)', 'state.mirrorY = bool(args[0])')
-    connect(mirrorZCheckBox, 'toggled(bool)', 'state.mirrorZ = bool(args[0])')
-
-    connect(cleanerButton, 'clicked(bool)', 'state.cleaner = args[0]')
-
-    connect(fillHolesButton, 'clicked(bool)', 'state.fillHoles = args[0]')
-    connect(fillHolesSizeSlider, 'valueChanged(double)', 'state.fillHolesSize = args[0]')
-
-    connect(connectivityButton, 'clicked(bool)', 'state.connectivity = args[0]')
-
-    connect(scaleButton, 'clicked(bool)', 'state.scale = args[0]')
-    connect(scaleXSlider, 'valueChanged(double)', 'state.scaleX = args[0]')
-    connect(scaleYSlider, 'valueChanged(double)', 'state.scaleY = args[0]')
-    connect(scaleZSlider, 'valueChanged(double)', 'state.scaleZ = args[0]')
-
-    connect(translateButton, 'clicked(bool)', 'state.translate = args[0]')
-    connect(transXSlider, 'valueChanged(double)', 'state.transX = args[0]')
-    connect(transYSlider, 'valueChanged(double)', 'state.transY = args[0]')
-    connect(transZSlider, 'valueChanged(double)', 'state.transZ = args[0]')
-
-    connect(relaxButton, 'clicked(bool)', 'state.relax = args[0]')
-    connect(relaxIterationsSlider, 'valueChanged(double)', 'state.relaxIterations = args[0]')
-
-    connect(borderButton, 'clicked(bool)', 'state.border = args[0]')
-
-    connect(originButton, 'clicked(bool)', 'state.origin = args[0]')
-
-    def updateProcess(value):
-      """Display changing process value"""
-      updateGUIFromState()
-      if state.processValue != "Apply":
-          applyButton.text = value
-      applyButton.repaint()
-      return
-
-    def onApply():
-      logic = SurfaceToolboxLogic()
-      result = logic.applyFilters(state, updateProcess)
-      slicer.app.processEvents()
-      if result:
-        state.inputModelNode.GetModelDisplayNode().VisibilityOff()
-        state.outputModelNode.GetModelDisplayNode().VisibilityOn()
-      else:
-        state.inputModelNode.GetModelDisplayNode().VisibilityOn()
-        state.outputModelNode.GetModelDisplayNode().VisibilityOff()
-      updateGUIFromState()
-      applyButton.text = "Apply"
-
-    applyButton.connect('clicked()', onApply)
-
-    def onToggleModels():
-      updateGUIFromState()
-      if state.inputModelNode.GetModelDisplayNode().GetVisibility():
-        state.inputModelNode.GetModelDisplayNode().VisibilityOff()
-        state.outputModelNode.GetModelDisplayNode().VisibilityOn()
-        toggleModelsButton.text = "Toggle Models (Output)"
-      else:
-        state.inputModelNode.GetModelDisplayNode().VisibilityOn()
-        state.outputModelNode.GetModelDisplayNode().VisibilityOff()
-        toggleModelsButton.text = "Toggle Models (Input)"
-
-    toggleModelsButton.connect('clicked()', onToggleModels)
-
-    updateGUIFromState()
-
-    self.updateGUIFromState = updateGUIFromState
-
-    # Connect observers to scene events
-    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
-    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
-    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndImportEvent, self.onSceneEndImport)
-
-  def enter(self):
-    """Runs whenever the module is reopened
-    """
-    # Set parameter set node if absent
-    self.selectParameterNode()
-
-  def selectParameterNode(self):
-    if self.parameterNodeSelector.currentNode() is None:
-      parameterNode = self.logic.getParameterNode()
-      self.parameterNodeSelector.setCurrentNodeID(parameterNode.GetID())
-
-  def onSceneStartClose(self, caller, event):
-    pass
-
-  def onSceneEndClose(self, caller, event):
-    if self.parent.isEntered:
-      self.selectParameterNode()
-
-  def onSceneEndImport(self, caller, event):
-    if self.parent.isEntered:
-      self.selectParameterNode()
+    self.updateGUIFromParameterNode()
 
   def cleanup(self):
+    """
+    Called when the application closes and the module widget is destroyed.
+    """
     self.removeObservers()
 
-
-class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
-  """Perform filtering
-  """
-
-  def __init__(self, parent=None):
-    ScriptedLoadableModuleLogic.__init__(self, parent)
-    self.isSingletonParameterNode = False
-
-  @staticmethod
-  def parameterDefine(state, parameter, value):
-    """Define a parameter if not already defined
+  def enter(self):
     """
-    if state.parameterNode.GetParameter(str(parameter)) == "" or state.parameterNode.GetParameter(str(parameter)) != value:
-      state.parameterNode.SetParameter(str(parameter), str(value))
+    Called each time the user opens this module.
+    """
+    # Make sure parameter node exists and observed
+    self.initializeParameterNode()
 
-  @staticmethod
-  def loadParameters(state):
-    parameterNames = state.parameterNode.GetParameterNamesAsCommaSeparatedList().split(',')
-    for parameterName in parameterNames:
-      if not parameterName.startswith("ModuleName") and parameterName != "":
-        state.parameterNode.SetAttribute(parameterName, state.parameterNode.GetParameter(str(parameterName)))
+  def exit(self):
+    """
+    Called each time the user opens a different module.
+    """
+    # Do not react to parameter node changes (GUI wlil be updated when the user enters into the module)
+    self.removeObserver(self._parameterNode, vtk.vtkCommand.ModifiedEvent, self.updateGUIFromParameterNode)
 
-  @staticmethod
-  def saveParameters(state):
-    parameterNames = state.parameterNode.GetParameterNamesAsCommaSeparatedList().split(',')
-    for parameterName in parameterNames:
+  def onSceneStartClose(self, caller, event):
+    """
+    Called just before the scene is closed.
+    """
+    # Parameter node will be reset, do not use it anymore
+    self.setParameterNode(None)
 
-      if not parameterName.startswith("ModuleName"): #and (state.parameterNode.GetParameter(str(i)) != state.parameterNode.GetParameter((str(i))))):
-        state.parameterNode.SetAttribute(parameterName, state.parameterNode.GetParameter(str(parameterName)))
+  def onSceneEndClose(self, caller, event):
+    """
+    Called just after the scene is closed.
+    """
+    # If this module is shown while the scene is closed then recreate a new parameter node immediately
+    if self.parent.isEntered:
+      self.initializeParameterNode()
 
-  def applyFilters(self, state, updateProcess):
+  def initializeParameterNode(self):
+    """
+    Ensure parameter node exists and observed.
+    """
+    # Parameter node stores all user choices in parameter values, node selections, etc.
+    # so that when the scene is saved and reloaded, these settings are restored.
+
+    self.setParameterNode(self.logic.getParameterNode())
+
+    # Select default input nodes if nothing is selected yet to save a few clicks for the user
+    if not self._parameterNode.GetNodeReference("inputModel"):
+      firstModelNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLModelNode")
+      if firstModelNode:
+        self._parameterNode.SetNodeReferenceID("inputModel", firstModelNode.GetID())
+
+  def setParameterNode(self, inputParameterNode):
+    """
+    Set and observe parameter node.
+    Observation is needed because when the parameter node is changed then the GUI must be updated immediately.
+    """
+
+    if inputParameterNode:
+      self.logic.setDefaultParameters(inputParameterNode)
+
+    # Unobserve previously selected parameter node and add an observer to the newly selected.
+    # Changes of parameter node are observed so that whenever parameters are changed by a script or any other module
+    # those are reflected immediately in the GUI.
+    if self._parameterNode is not None:
+      self.removeObserver(self._parameterNode, vtk.vtkCommand.ModifiedEvent, self.updateGUIFromParameterNode)
+    self._parameterNode = inputParameterNode
+    if self._parameterNode is not None:
+      self.addObserver(self._parameterNode, vtk.vtkCommand.ModifiedEvent, self.updateGUIFromParameterNode)
+
+    # Initial GUI update
+    self.updateGUIFromParameterNode()
+
+  def updateGUIFromParameterNode(self, caller=None, event=None):
+    """
+    This method is called whenever parameter node is changed.
+    The module GUI is updated to show the current state of the parameter node.
+    """
+
+    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+      return
+
+    # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
+    self._updatingGUIFromParameterNode = True
+
+    # Update node selectors and sliders
+    slicer.util.updateParameterEditWidgetsFromNode(self.parameterEditWidgets, self._parameterNode)
+
+    # Update buttons states and tooltips
+    isLaplace = (self._parameterNode.GetParameter('smoothingMethod') == "Laplace")
+    self.ui.laplaceIterationsLabel.setVisible(isLaplace)
+    self.ui.laplaceIterationsSlider.setVisible(isLaplace)
+    self.ui.laplaceRelaxationLabel.setVisible(isLaplace)
+    self.ui.laplaceRelaxationSlider.setVisible(isLaplace)
+    self.ui.taubinIterationsLabel.setVisible(not isLaplace)
+    self.ui.taubinIterationsSlider.setVisible(not isLaplace)
+    self.ui.taubinPassBandLabel.setVisible(not isLaplace)
+    self.ui.taubinPassBandSlider.setVisible(not isLaplace)
+
+    modelsSelected = (self._parameterNode.GetNodeReference("inputModel") and self._parameterNode.GetNodeReference("outputModel"))
+    self.ui.toggleModelsButton.enabled = modelsSelected
+    self.ui.applyButton.enabled = modelsSelected
+
+    # All the GUI updates are done
+    self._updatingGUIFromParameterNode = False
+
+  def updateParameterNodeFromGUI(self, caller=None, event=None):
+    """
+    This method is called when the user makes any change in the GUI.
+    The changes are saved into the parameter node (so that they are restored when the scene is saved and loaded).
+    """
+    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+      return
+    wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
+    slicer.util.updateNodeFromParameterEditWidgets(self.parameterEditWidgets, self._parameterNode)
+    self._parameterNode.EndModify(wasModified)
+
+  def updateProcess(self, value):
+    """Display changing process value"""
+    self.ui.applyButton.text = value
+    self.ui.applyButton.repaint()
+
+  def onApplyButton(self):
+    """
+    Run processing when user clicks "Apply" button.
+    """
     slicer.app.pauseRender()
     qt.QApplication.setOverrideCursor(qt.Qt.WaitCursor)
     try:
-      self.loadParameters(state)
-
-      surface = state.inputModelNode.GetPolyDataConnection()
-
-      if state.outputModelNode.GetPolyData() is None:
-        state.outputModelNode.SetAndObserveMesh(vtk.vtkPolyData())
-      state.outputModelNode.GetPolyData().DeepCopy(state.inputModelNode.GetPolyData())
-
-      self.parameterDefine(state, "outputVolume", state.outputModelNode.GetID())
-
-      # define which selections were made
-      self.parameterDefine(state, "decimation", state.decimation)
-      self.parameterDefine(state, "smoothing", state.smoothing)
-      self.parameterDefine(state, "normals", state.normals)
-      self.parameterDefine(state, "mirror", state.mirror)
-      self.parameterDefine(state, "cleaner", state.cleaner)
-      self.parameterDefine(state, "fillHoles", state.fillHoles)
-      self.parameterDefine(state, "connectivity", state.connectivity)
-      self.parameterDefine(state, "scale", state.scale)
-      self.parameterDefine(state, "translate", state.translate)
-      self.parameterDefine(state, "relax", state.relax)
-      self.parameterDefine(state, "border", state.border)
-      self.parameterDefine(state, "origin", state.origin)
-
-      if str(state.parameterNode.GetParameter("decimation")) == "True":
-        state.processValue = "Decimation..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "DecimateReduction", str(state.reduction))
-        self.parameterDefine(state, "DecimateBoundary", str(state.boundaryDeletion))
-
-        decimateBoundary = state.parameterNode.GetParameter("DecimateBoundary") == "True"
-        parameters = {"inputModel": state.parameterNode.GetParameter("outputVolume"),
-          "outputModel": state.parameterNode.GetParameter("outputVolume"),
-          "reductionFactor": float(state.parameterNode.GetParameter("DecimateReduction"))}
-        if decimateBoundary:
-          # use default FastQuadric decimation method if boundary can be decimated
-          parameters["method"] = "FastQuadric"
-        else:
-          parameters["method"] = "DecimatePro"
-          parameters["boundaryDeletion"] = False
-
-        decimationMaker = slicer.modules.decimation
-        slicer.cli.runSync(decimationMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("smoothing")) == "True":
-        state.processValue = "Smoothing..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "SmoothingLaplaceBoundary", str(state.boundarySmoothing))
-        self.parameterDefine(state, "SmoothingLaplaceIterations", str(state.laplaceIterations))
-        self.parameterDefine(state, "SmoothingLaplaceRelaxation", str(state.laplaceRelaxation))
-
-        self.parameterDefine(state, "SmoothingTaubinBoundary", str(state.boundarySmoothing))
-        self.parameterDefine(state, "SmoothingTaubinIterations", str(state.taubinIterations))
-        self.parameterDefine(state, "SmoothingTaubinPassBand", str(state.taubinPassBand))
-        self.parameterDefine(state, "smoothingMethod", str(state.smoothingMethod))
-
-        # Keeping default python.
-        if state.parameterNode.GetParameter("smoothingMethod") == "Laplace":
-          smoothing = vtk.vtkSmoothPolyDataFilter()
-          smoothing.SetBoundarySmoothing(state.parameterNode.GetParameter("SmoothingLaplaceBoundary") == "True")
-          smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingLaplaceIterations")))
-          smoothing.SetRelaxationFactor(float(state.parameterNode.GetParameter("SmoothingLaplaceRelaxation")))
-          smoothing.SetInputConnection(surface)
-          surface = smoothing.GetOutputPort()
-        else:  # "Taubin"
-          smoothing = vtk.vtkWindowedSincPolyDataFilter()
-          smoothing.SetBoundarySmoothing(state.parameterNode.GetParameter("SmoothingTaubinBoundary") == "True")
-          smoothing.SetNumberOfIterations(int(state.parameterNode.GetParameter("SmoothingTaubinIterations")))
-          smoothing.SetPassBand(float(state.parameterNode.GetParameter("SmoothingTaubinPassBand")))
-          smoothing.SetInputConnection(surface)
-          surface = smoothing.GetOutputPort()
-
-      if str(state.parameterNode.GetParameter("normals")) == "True":
-        state.processValue = "Normals..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "NormalsOrient", str(state.autoOrientNormals))
-        self.parameterDefine(state, "NormalsFlip", str(state.flipNormals))
-        self.parameterDefine(state, "NormalsSplitting", str(state.splitting))
-        self.parameterDefine(state, "NormalsAngle", str(state.featureAngle))
-
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "orient": state.parameterNode.GetParameter("NormalsOrient") == "True",
-                      "flip": state.parameterNode.GetParameter("NormalsFlip") == "True",
-                      "splitting": state.parameterNode.GetParameter("NormalsSplitting") == "True",
-                      "angle": float(state.parameterNode.GetParameter("NormalsAngle"))}
-
-        normalsMaker = slicer.modules.normals
-        slicer.cli.runSync(normalsMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("mirror")) == "True":
-        state.processValue = "Mirror..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "MirrorxAxis", str(state.mirrorX))
-        self.parameterDefine(state, "MirroryAxis", str(state.mirrorY))
-        self.parameterDefine(state, "MirrorzAxis", str(state.mirrorZ))
-
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "xAxis": state.parameterNode.GetParameter("MirrorxAxis") == "True",
-                      "yAxis": state.parameterNode.GetParameter("MirroryAxis") == "True",
-                      "zAxis": state.parameterNode.GetParameter("MirrorzAxis") == "True"}
-        mirrorMaker = slicer.modules.mirror
-        slicer.cli.runSync(mirrorMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("cleaner")) == "True":
-        state.processValue = "Cleaner..."
-        updateProcess(state.processValue)
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-        cleanerMaker = slicer.modules.cleaner
-        slicer.cli.runSync(cleanerMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("fillHoles")) == "True":
-        state.processValue = "Fill Holes..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "HolesMaximum", str(state.fillHolesSize))
-
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "holes": float(state.parameterNode.GetParameter("HolesMaximum"))}
-        fillHolesMaker = slicer.modules.fillholes
-        slicer.cli.runSync(fillHolesMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("connectivity")) == "True":
-        state.processValue = "Connectivity..."
-        updateProcess(state.processValue)
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-        connectivityMaker = slicer.modules.connectivity
-        slicer.cli.runSync(connectivityMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("scale")) == "True":
-        state.processValue = "Scale..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "scale.dimX", str(state.scaleX))
-        self.parameterDefine(state, "scale.dimY", str(state.scaleY))
-        self.parameterDefine(state, "scale.dimZ", str(state.scaleZ))
-
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "dimX": float(state.parameterNode.GetParameter("scale.dimX")),
-                      "dimY": float(state.parameterNode.GetParameter("scale.dimY")),
-                      "dimZ": float(state.parameterNode.GetParameter("scale.dimZ"))}
-        scaleMaker = slicer.modules.scalemesh
-        slicer.cli.runSync(scaleMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("translate")) == "True":
-        state.processValue = "Translating..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "trans.dimX", str(state.transX))
-        self.parameterDefine(state, "trans.dimY", str(state.transY))
-        self.parameterDefine(state, "trans.dimZ", str(state.transZ))
-
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "dimX": float(state.parameterNode.GetParameter("trans.DimX")),
-                      "dimY": float(state.parameterNode.GetParameter("trans.DimY")),
-                      "dimZ": float(state.parameterNode.GetParameter("trans.DimZ"))}
-        transMaker = slicer.modules.translatemesh
-        slicer.cli.runSync(transMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("relax")) == "True":
-        state.processValue = "Relaxing..."
-        updateProcess(state.processValue)
-
-        self.parameterDefine(state, "relax.Iterations", str(state.relaxIterations))
-
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "Iterations": float(state.parameterNode.GetParameter("relax.Iterations"))}
-        relaxMaker = slicer.modules.relaxpolygons
-        slicer.cli.runSync(relaxMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("border")) == "True":
-        state.processValue = "Changing Borders..."
-        updateProcess(state.processValue)
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-        borderMaker = slicer.modules.bordersout
-        slicer.cli.runSync(borderMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      if str(state.parameterNode.GetParameter("origin")) == "True":
-        state.processValue = "Moving Origin..."
-        updateProcess(state.processValue)
-        parameters = {"inputVolume": state.parameterNode.GetParameter("outputVolume"),
-                      "outputVolume": state.parameterNode.GetParameter("outputVolume")}
-        originMaker = slicer.modules.mc2origin
-        slicer.cli.runSync(originMaker, None, parameters)
-        surface = state.outputModelNode.GetPolyDataConnection()
-
-      state.outputModelNode.SetPolyDataConnection(surface)
-      state.processValue = "Apply"
-      updateProcess(state.processValue)
-
-      self.saveParameters(state)
+      inputModelNode = self._parameterNode.GetNodeReference("inputModel")
+      outputModelNode = self._parameterNode.GetNodeReference("outputModel")
+      self.logic.applyFilters(self._parameterNode)
+      slicer.app.processEvents()
+      inputModelNode.GetModelDisplayNode().VisibilityOff()
+      outputModelNode.GetModelDisplayNode().VisibilityOn()
+      #slicer.updateGUIFromParameterNode()
+      self.ui.applyButton.text = "Apply"
+    except Exception as e:
+      slicer.util.errorDisplay("Failed to compute output model: "+str(e))
+      import traceback
+      traceback.print_exc()
+      inputModelNode.GetModelDisplayNode().VisibilityOn()
+      outputModelNode.GetModelDisplayNode().VisibilityOff()
     finally:
       slicer.app.resumeRender()
       qt.QApplication.restoreOverrideCursor()
-    return True
 
+  def onToggleModels(self):
+    inputModelNode = self._parameterNode.GetNodeReference("inputModel")
+    outputModelNode = self._parameterNode.GetNodeReference("outputModel")
+    if inputModelNode.GetModelDisplayNode().GetVisibility():
+      inputModelNode.GetModelDisplayNode().VisibilityOff()
+      outputModelNode.GetModelDisplayNode().VisibilityOn()
+      self.ui.toggleModelsButton.text = "Toggle Models (Output)"
+    else:
+      inputModelNode.GetModelDisplayNode().VisibilityOn()
+      outputModelNode.GetModelDisplayNode().VisibilityOff()
+      self.ui.toggleModelsButton.text = "Toggle Models (Input)"
+
+#
+# SurfaceToolboxLogic
+#
+
+class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
+  """This class should implement all the actual
+  computation done by your module.  The interface
+  should be such that other python code can import
+  this class and make use of the functionality without
+  requiring an instance of the Widget.
+  Uses ScriptedLoadableModuleLogic base class, available at:
+  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
+  """
+
+  def __init__(self):
+    """
+    Called when the logic class is instantiated. Can be used for initializing member variables.
+    """
+    ScriptedLoadableModuleLogic.__init__(self)
+    self.updateProcessCallback = None
+
+  def setDefaultParameters(self, parameterNode):
+    """
+    Initialize parameter node with default settings.
+    """
+    defaultValues = [
+      ("decimation", "false"),
+      ("decimationReduction", "0.8"),
+      ("decimationBoundaryDeletion", "true"),
+      ("smoothing", "false"),
+      ("smoothingMethod", "Laplace"),
+      ("smoothingLaplaceIterations", "100"),
+      ("smoothingLaplaceRelaxation", "0.5"),
+      ("smoothingTaubinIterations", "30"),
+      ("smoothingTaubinPassBand", "0.1"),
+      ("smoothingBoundarySmoothing", "true"),
+      ("normals", "false"),
+      ("normalsAutoOrient", "false"),
+      ("normalsFlip", "false"),
+      ("normalsSplitting", "false"),
+      ("normalsFeatureAngle", "30.0"),
+      ("mirror", "false"),
+      ("mirrorX", "false"),
+      ("mirrorY", "false"),
+      ("mirrorZ", "false"),
+      ("cleaner", "false"),
+      ("fillHoles", "false"),
+      ("fillHolesSize", "1000.0"),
+      ("connectivity", "false"),
+      ("scale", "false"),
+      ("scaleX", "0.5"),
+      ("scaleY", "0.5"),
+      ("scaleZ", "0.5"),
+      ("translate", "false"),
+      ("translateX", "0.0"),
+      ("translateY", "0.0"),
+      ("translateZ", "0.0"),
+      ("relax", "false"),
+      ("relaxIterations", "5"),
+      ("bordersOut", "false"),
+      ("translateCenterToOrigin", "false")
+    ]
+    for parameterName, defaultValue in defaultValues:
+      if not parameterNode.GetParameter(parameterName):
+        parameterNode.SetParameter(parameterName, defaultValue)
+
+  def updateProcess(self, message):
+    if not self.updateProcessCallback:
+      return
+    self.updateProcessCallback(message)
+
+  def runCLI(self, module, parameters):
+    cliNode = slicer.cli.runSync(module, None, parameters)
+    slicer.mrmlScene.RemoveNode(cliNode)
+
+  def applyFilters(self, parameterNode):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
+    inputModel = parameterNode.GetNodeReference("inputModel")
+
+    outputModel = parameterNode.GetNodeReference("outputModel")
+    if outputModel.GetPolyData() is None:
+      outputModel.SetAndObserveMesh(vtk.vtkPolyData())
+    outputModel.GetPolyData().DeepCopy(inputModel.GetPolyData())
+
+    outputModel.CreateDefaultDisplayNodes()
+    outputModel.AddDefaultStorageNode()
+
+    if parameterNode.GetParameter("decimation") == "true":
+      self.updateProcess("Decimation...")
+      decimateBoundary = parameterNode.GetParameter("decimationBoundary") == "true"
+      parameters = {
+        "inputModel": outputModel,
+        "outputModel": outputModel,
+        "reductionFactor": float(parameterNode.GetParameter("decimationReduction"))
+        }
+      if decimateBoundary:
+        # use default FastQuadric decimation method if boundary can be decimated
+        parameters["method"] = "FastQuadric"
+      else:
+        parameters["method"] = "DecimatePro"
+        parameters["boundaryDeletion"] = False
+      self.runCLI(slicer.modules.decimation, parameters)
+
+    if parameterNode.GetParameter("smoothing") == "true":
+      self.updateProcess("Smoothing...")
+      if parameterNode.GetParameter("smoothingMethod") == "Laplace":
+        smoothing = vtk.vtkSmoothPolyDataFilter()
+        smoothing.SetBoundarySmoothing(parameterNode.GetParameter("smoothingBoundarySmoothing") == "true")
+        smoothing.SetNumberOfIterations(int(float(parameterNode.GetParameter("smoothingLaplaceIterations"))))
+        smoothing.SetRelaxationFactor(float(parameterNode.GetParameter("smoothingLaplaceRelaxation")))
+      else:  # "Taubin"
+        smoothing = vtk.vtkWindowedSincPolyDataFilter()
+        smoothing.SetBoundarySmoothing(parameterNode.GetParameter("smoothingBoundarySmoothing") == "true")
+        smoothing.SetNumberOfIterations(int(float(parameterNode.GetParameter("smoothingTaubinIterations"))))
+        smoothing.SetPassBand(float(parameterNode.GetParameter("smoothingTaubinPassBand")))
+      smoothing.SetInputData(outputModel.GetPolyData())
+      smoothing.Update()
+      outputModel.SetAndObservePolyData(smoothing.GetOutput())
+
+    if parameterNode.GetParameter("normals") == "true":
+      self.updateProcess("Normals...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel,
+        "orient": parameterNode.GetParameter("normalsOrient") == "true",
+        "flip": parameterNode.GetParameter("normalsFlip") == "true",
+        "splitting": parameterNode.GetParameter("normalsSplitting") == "true",
+        "angle": float(parameterNode.GetParameter("normalsFeatureAngle"))}
+      self.runCLI(slicer.modules.normals, parameters)
+
+    if parameterNode.GetParameter("mirror") == "true":
+      self.updateProcess("Mirror...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel,
+        "xAxis": parameterNode.GetParameter("mirrorX") == "true",
+        "yAxis": parameterNode.GetParameter("mirrorY") == "true",
+        "zAxis": parameterNode.GetParameter("mirrorZ") == "true"
+        }
+      self.runCLI(slicer.modules.mirror, parameters)
+
+    if parameterNode.GetParameter("cleaner") == "true":
+      self.updateProcess("Cleaner...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel
+        }
+      self.runCLI(slicer.modules.cleaner, parameters)
+
+    if parameterNode.GetParameter("fillHoles") == "true":
+      self.updateProcess("Fill Holes...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel,
+        "holes": float(parameterNode.GetParameter("fillHolesSize"))
+        }
+      self.runCLI(slicer.modules.fillholes, parameters)
+
+    if parameterNode.GetParameter("connectivity") == "true":
+      self.updateProcess("Connectivity...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel
+        }
+      self.runCLI(slicer.modules.connectivity, parameters)
+
+    if parameterNode.GetParameter("scale") == "true":
+      self.updateProcess("Scale...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel,
+        "dimX": float(parameterNode.GetParameter("scaleX")),
+        "dimY": float(parameterNode.GetParameter("scaleY")),
+        "dimZ": float(parameterNode.GetParameter("scaleZ"))
+        }
+      self.runCLI(slicer.modules.scalemesh, parameters)
+
+    if parameterNode.GetParameter("translate") == "true":
+      self.updateProcess("Translating...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel,
+        "dimX": float(parameterNode.GetParameter("translateX")),
+        "dimY": float(parameterNode.GetParameter("translateY")),
+        "dimZ": float(parameterNode.GetParameter("translateZ"))
+        }
+      self.runCLI(slicer.modules.translatemesh, parameters)
+
+    if parameterNode.GetParameter("relax") == "true":
+      self.updateProcess("Relaxing...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel,
+        "Iterations": int(float(parameterNode.GetParameter("relaxIterations")))
+        }
+      self.runCLI(slicer.modules.relaxpolygons, parameters)
+
+    if parameterNode.GetParameter("border") == "true":
+      self.updateProcess("Changing Borders...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel
+      }
+      self.runCLI(slicer.modules.bordersout, parameters)
+
+    if parameterNode.GetParameter("translateCenterToOrigin") == "true":
+      self.updateProcess("Moving Origin...")
+      parameters = {
+        "inputVolume": outputModel,
+        "outputVolume": outputModel
+      }
+      self.runCLI(slicer.modules.mc2origin, parameters)
+
+    self.updateProcess("Done.")
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
+
+#
+# SurfaceToolboxTest
+#
 
 class SurfaceToolboxTest(ScriptedLoadableModuleTest):
   """
   This is the test case for your scripted module.
+  Uses ScriptedLoadableModuleTest base class, available at:
+  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
   def setUp(self):
@@ -935,11 +538,9 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     """Run as few or as many tests as needed here.
     """
     self.setUp()
-    self.test_SurfaceToolbox1()
-    self.setUp()
-    self.test_SurfaceToolbox2()
+    self.test_AllProcessing()
 
-  def test_SurfaceToolbox1(self):
+  def test_AllProcessing(self):
     """ Ideally you should have several levels of tests.  At the lowest level
     tests should exercise the functionality of the logic with different inputs
     (both valid and invalid).  At higher levels your tests should emulate the
@@ -956,48 +557,42 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     # first, get some data
     #
     import SampleData
-    SampleData.downloadFromURL(
+    modelNode = SampleData.downloadFromURL(
       nodeNames='cow',
       fileNames='cow.vtp',
       loadFileTypes='ModelFile',
       uris='https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/d5aa4901d186902f90e17bf3b5917541cb6cb8cf223bfeea736631df4c047652',
-      checksums='SHA256:d5aa4901d186902f90e17bf3b5917541cb6cb8cf223bfeea736631df4c047652')
+      checksums='SHA256:d5aa4901d186902f90e17bf3b5917541cb6cb8cf223bfeea736631df4c047652')[0]
     self.delayDisplay('Finished with download and loading')
-
-    modelNode = slicer.util.getNode(pattern="cow_1")
 
     logic = SurfaceToolboxLogic()
     self.assertIsNotNone(logic)
 
-    slicer.util.selectModule(slicer.modules.surfacetoolbox)
-    slicer.modules.SurfaceToolboxWidget.inputModelSelector.setCurrentNode(modelNode)
+    parameterNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScriptedModuleNode")
+    logic.setDefaultParameters(parameterNode)
+
+    parameterNode.SetNodeReferenceID("inputModel", modelNode.GetID())
+
     outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "output")
-    slicer.modules.SurfaceToolboxWidget.outputModelSelector.setCurrentNode(outputModelNode)
+    parameterNode.SetNodeReferenceID("outputModel", outputModelNode.GetID())
+
+    parameterNode.SetParameter("decimation", "true")
+    parameterNode.SetParameter("smoothing", "true")
+    parameterNode.SetParameter("normals", "true")
+    parameterNode.SetParameter("mirror", "true")
+    parameterNode.SetParameter("mirrorX", "true")
+    parameterNode.SetParameter("cleaner", "true")
+    parameterNode.SetParameter("fillHoles", "true")
+    parameterNode.SetParameter("connectivity", "true")
+    parameterNode.SetParameter("scale", "true")
+    parameterNode.SetParameter("translate", "true")
+    parameterNode.SetParameter("translateX", "5.12")
+    parameterNode.SetParameter("relax", "true")
+    parameterNode.SetParameter("bordersOut", "true")
+    parameterNode.SetParameter("translateCenterToOrigin", "true")
+
     self.delayDisplay('Module selected, input and output configured')
 
-    for buttonName in [
-      "DecimationButton",
-      "SmoothingButton",
-      "NormalsButton",
-      "MirrorButton",
-      "CleanerButton",
-      "FillHolesButton",
-      "ConnectivityButton",
-      "ScaleMeshButton",
-      "TranslateMeshButton",
-      "RelaxPolygonsButton",
-      "BordersOutButton",
-      "TranslateCenterToOriginButton"
-    ]:
-      button = slicer.util.findChild(slicer.modules.SurfaceToolboxWidget.parent, buttonName)
-      if not button.checked:
-        button.click()
-
-    applyButton = slicer.util.findChild(slicer.modules.SurfaceToolboxWidget.parent, "ApplyButton")
-    applyButton.click()
+    logic.applyFilters(parameterNode)
 
     self.delayDisplay('Test passed!')
-
-  def test_SurfaceToolbox2(self):
-    """Re-run first test to ensure using the module after clearing the scene works as expected"""
-    self.test_SurfaceToolbox1()
