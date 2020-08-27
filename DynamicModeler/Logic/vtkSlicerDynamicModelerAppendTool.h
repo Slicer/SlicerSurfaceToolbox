@@ -71,6 +71,9 @@ protected:
 
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputWorldToModelTransformFilter;
+
+private:
+  vtkSlicerDynamicModelerAppendTool(const vtkSlicerDynamicModelerAppendTool&) = delete;
 };
 
 #endif // __vtkSlicerDynamicModelerAppendTool_h

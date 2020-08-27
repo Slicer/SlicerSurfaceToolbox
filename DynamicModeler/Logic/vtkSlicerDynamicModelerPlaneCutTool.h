@@ -82,6 +82,9 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputNegativeWorldToModelTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputNegativeWorldToModelTransform;
+
+private:
+  vtkSlicerDynamicModelerPlaneCutTool(const vtkSlicerDynamicModelerPlaneCutTool&) = delete;
 };
 
 #endif // __vtkSlicerDynamicModelerPlaneCutTool_h

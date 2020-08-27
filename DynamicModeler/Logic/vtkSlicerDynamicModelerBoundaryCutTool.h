@@ -99,6 +99,9 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter>    OutputWorldToModelTransformFilter;
 
   vtkSmartPointer<vtkPointLocator>               ClippedModelPointLocator;
+
+private:
+  vtkSlicerDynamicModelerBoundaryCutTool(const vtkSlicerDynamicModelerBoundaryCutTool&) = delete;
 };
 
 #endif // __vtkSlicerDynamicModelerBoundaryCutTool_h

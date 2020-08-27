@@ -71,6 +71,9 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
+
+private:
+  vtkSlicerDynamicModelerMirrorTool(const vtkSlicerDynamicModelerMirrorTool&) = delete;
 };
 
 #endif // __vtkSlicerDynamicModelerMirrorTool_h
