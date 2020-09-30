@@ -75,6 +75,9 @@ protected:
 
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputWorldToModelTransformFilter;
+
+private:
+  vtkSlicerDynamicModelerCurveCutTool(const vtkSlicerDynamicModelerCurveCutTool&) = delete;
 };
 
 #endif // __vtkSlicerDynamicModelerCurveCutTool_h

@@ -227,6 +227,8 @@ protected:
   using ParameterInfo = struct StructParameterInfo;
   std::vector<ParameterInfo> InputParameterInfo;
 
+private:
+  vtkSlicerDynamicModelerTool(const vtkSlicerDynamicModelerTool&) = delete;
 };
 
 #endif // __vtkSlicerDynamicModelerTool_h

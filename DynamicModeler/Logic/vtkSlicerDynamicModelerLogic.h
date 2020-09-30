@@ -83,9 +83,8 @@ protected:
   DynamicModelerToolList Tools;
 
 private:
-
-  vtkSlicerDynamicModelerLogic(const vtkSlicerDynamicModelerLogic&); // Not implemented
-  void operator=(const vtkSlicerDynamicModelerLogic&); // Not implemented
+  vtkSlicerDynamicModelerLogic(const vtkSlicerDynamicModelerLogic&) = delete;
+  void operator=(const vtkSlicerDynamicModelerLogic&) = delete;
 };
 
 #endif
