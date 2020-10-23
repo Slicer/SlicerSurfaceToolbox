@@ -185,7 +185,50 @@ void qSlicerDynamicModelerModuleWidget::onParameterNodeChanged()
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
+bool qSlicerDynamicModelerModuleWidget::isInputWidgetsRebuildRequired()
+{
+  Q_D(qSlicerDynamicModelerModuleWidget);
+
+  vtkSlicerDynamicModelerLogic* dynamicModelerLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
+  vtkSlicerDynamicModelerTool* tool = nullptr;
+  if (dynamicModelerLogic && d->DynamicModelerNode)
+    {
+    tool = dynamicModelerLogic->GetDynamicModelerTool(d->DynamicModelerNode);
+    }
+  if (!tool)
+    {
+    return true;
+    }
+
+  std::map<std::string, int> numberOfInputWidgetsByReferenceRole;
+  QList<qMRMLNodeComboBox*> inputNodeSelectors = d->InputNodesCollapsibleButton->findChildren<qMRMLNodeComboBox*>();
+  for (qMRMLNodeComboBox* inputNodeSelector : inputNodeSelectors)
+    {
+    QString referenceRole = inputNodeSelector->property("ReferenceRole").toString();
+    numberOfInputWidgetsByReferenceRole[referenceRole.toStdString()] += 1;
+    }
+
+  for (int i = 0; i < tool->GetNumberOfInputNodes(); ++i)
+    {
+    std::string inputReferenceRole = tool->GetNthInputNodeReferenceRole(i);
+    int expectedNumberOfInputWidgets = d->DynamicModelerNode->GetNumberOfNodeReferences(inputReferenceRole.c_str());
+    if (tool->GetNthInputNodeRepeatable(i))
+      {
+      expectedNumberOfInputWidgets += 1;
+      }
+    int numberOfInputWidgets = numberOfInputWidgetsByReferenceRole[inputReferenceRole];
+    if (numberOfInputWidgets != expectedNumberOfInputWidgets)
+      {
+      // We expected a different number of input widgets.
+      // A rebuild is required.
+      return true;
+      }
+    }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+void qSlicerDynamicModelerModuleWidget::rebuildInputWidgets()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   vtkSlicerDynamicModelerTool* tool = nullptr;
@@ -238,7 +281,7 @@ void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
       labelTextSS << name;
       if (tool->GetNthInputNodeRepeatable(inputIndex))
         {
-        labelTextSS << " [" << inputSelectorIndex << "]";
+        labelTextSS << " [" << inputSelectorIndex + 1 << "]"; // Start index at 1
         }
       labelTextSS << ":";
 
@@ -267,7 +310,7 @@ void qSlicerDynamicModelerModuleWidget::resetInputWidgets()
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerDynamicModelerModuleWidget::resetParameterWidgets()
+void qSlicerDynamicModelerModuleWidget::rebuildParameterWidgets()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
@@ -360,7 +403,7 @@ void qSlicerDynamicModelerModuleWidget::resetParameterWidgets()
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerDynamicModelerModuleWidget::resetOutputWidgets()
+void qSlicerDynamicModelerModuleWidget::rebuildOutputWidgets()
 {
   Q_D(qSlicerDynamicModelerModuleWidget);
   vtkSlicerDynamicModelerLogic* meshModifyLogic = vtkSlicerDynamicModelerLogic::SafeDownCast(this->logic());
@@ -576,53 +619,16 @@ void qSlicerDynamicModelerModuleWidget::updateWidgetFromMRML()
     toolName = d->DynamicModelerNode->GetToolName();
     }
 
-  bool rebuildInputsRequired = false;
-  if (tool)
-    {
-    std::map<int, int> emptyRepeatableInputCounts;
-    for (int i = 0; i < tool->GetNumberOfInputNodes(); ++i)
-      {
-      if (tool->GetNthInputNodeRepeatable(i))
-        {
-        emptyRepeatableInputCounts[i] = 0;
-        }
-      }
-
-    QList<qMRMLNodeComboBox*> inputNodeSelectors = d->InputNodesCollapsibleButton->findChildren<qMRMLNodeComboBox*>();
-    for (qMRMLNodeComboBox* inputNodeSelector : inputNodeSelectors)
-      {
-      int inputIndex = inputNodeSelector->property("InputIndex").toInt();
-      if (emptyRepeatableInputCounts.find(inputIndex) == emptyRepeatableInputCounts.end())
-        {
-        continue;
-        }
-
-      if (inputNodeSelector->currentNode() == nullptr)
-        {
-        ++emptyRepeatableInputCounts[inputIndex];
-        }
-      }
-
-    for (std::pair<int, int> emptyRepeatableInputCount : emptyRepeatableInputCounts)
-      {
-      if (emptyRepeatableInputCount.second != 1)
-        {
-        rebuildInputsRequired = true;
-        break;
-        }
-      }
-    }
-
   if (toolName != d->CurrentToolName)
     {
-    this->resetInputWidgets();
-    this->resetParameterWidgets();
-    this->resetOutputWidgets();
+    this->rebuildInputWidgets();
+    this->rebuildParameterWidgets();
+    this->rebuildOutputWidgets();
     d->CurrentToolName = toolName;
     }
-  else if (rebuildInputsRequired)
+  else if (this->isInputWidgetsRebuildRequired())
     {
-    this->resetInputWidgets();
+    this->rebuildInputWidgets();
     }
 
   this->updateInputWidgets();

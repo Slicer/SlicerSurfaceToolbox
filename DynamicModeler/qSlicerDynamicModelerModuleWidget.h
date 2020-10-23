@@ -52,9 +52,11 @@ protected:
 
   void setup() override;
 
-  void resetInputWidgets();
-  void resetParameterWidgets();
-  void resetOutputWidgets();
+  bool isInputWidgetsRebuildRequired();
+
+  void rebuildInputWidgets();
+  void rebuildParameterWidgets();
+  void rebuildOutputWidgets();
 
   void updateInputWidgets();
   void updateParameterWidgets();
