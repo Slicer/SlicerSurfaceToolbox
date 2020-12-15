@@ -32,6 +32,7 @@
 #include "vtkSlicerDynamicModelerAppendTool.h"
 #include "vtkSlicerDynamicModelerBoundaryCutTool.h"
 #include "vtkSlicerDynamicModelerCurveCutTool.h"
+#include "vtkSlicerDynamicModelerHollowTool.h"
 #include "vtkSlicerDynamicModelerLogic.h"
 #include "vtkSlicerDynamicModelerMirrorTool.h"
 #include "vtkSlicerDynamicModelerPlaneCutTool.h"
@@ -212,12 +213,6 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
     return QIcon(":Icons/PlaneCut.png");
     }
 
-  vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
-  if (strcmp(associatedNode->GetToolName(), mirrorTool->GetName()) == 0)
-    {
-    return QIcon(":Icons/Mirror.png");
-    }
-
   vtkNew<vtkSlicerDynamicModelerCurveCutTool> curveCutTool;
   if (strcmp(associatedNode->GetToolName(), curveCutTool->GetName()) == 0)
     {
@@ -228,6 +223,18 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
   if (strcmp(associatedNode->GetToolName(), boundaryCutTool->GetName()) == 0)
     {
     return QIcon(":Icons/BoundaryCut.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
+  if (strcmp(associatedNode->GetToolName(), mirrorTool->GetName()) == 0)
+    {
+    return QIcon(":Icons/Mirror.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerHollowTool> hollowTool;
+  if (strcmp(associatedNode->GetToolName(), hollowTool->GetName()) == 0)
+    {
+    return QIcon(":Icons/Hollow.png");
     }
 
   vtkNew<vtkSlicerDynamicModelerAppendTool> appendTool;

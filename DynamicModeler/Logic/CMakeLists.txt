@@ -24,6 +24,8 @@ set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}BoundaryCutTool.h
   vtkSlicer${MODULE_NAME}CurveCutTool.cxx
   vtkSlicer${MODULE_NAME}CurveCutTool.h
+  vtkSlicer${MODULE_NAME}HollowTool.cxx
+  vtkSlicer${MODULE_NAME}HollowTool.h
   vtkSlicer${MODULE_NAME}Logic.cxx
   vtkSlicer${MODULE_NAME}Logic.h
   vtkSlicer${MODULE_NAME}MirrorTool.cxx
