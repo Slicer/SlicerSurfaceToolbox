@@ -48,6 +48,7 @@
 #include <vtkSlicerDynamicModelerAppendTool.h>
 #include <vtkSlicerDynamicModelerBoundaryCutTool.h>
 #include <vtkSlicerDynamicModelerCurveCutTool.h>
+#include <vtkSlicerDynamicModelerHollowTool.h>
 #include <vtkSlicerDynamicModelerLogic.h>
 #include <vtkSlicerDynamicModelerMirrorTool.h>
 #include <vtkSlicerDynamicModelerPlaneCutTool.h>
@@ -107,14 +108,17 @@ void qSlicerDynamicModelerModuleWidget::setup()
   vtkNew<vtkSlicerDynamicModelerPlaneCutTool> planeCutTool;
   this->addToolButton(QIcon(":/Icons/DynamicModeler.png"), planeCutTool);
 
-  vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
-  this->addToolButton(QIcon(":/Icons/Mirror.png"), mirrorTool);
-
   vtkNew<vtkSlicerDynamicModelerCurveCutTool> curveCutTool;
   this->addToolButton(QIcon(":/Icons/CurveCut.png"), curveCutTool);
 
   vtkNew<vtkSlicerDynamicModelerBoundaryCutTool> boundaryCutTool;
   this->addToolButton(QIcon(":/Icons/BoundaryCut.png"), boundaryCutTool);
+
+  vtkNew<vtkSlicerDynamicModelerHollowTool> hollowTool;
+  this->addToolButton(QIcon(":/Icons/Hollow.png"), hollowTool);
+
+  vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
+  this->addToolButton(QIcon(":/Icons/Mirror.png"), mirrorTool);
 
   vtkNew<vtkSlicerDynamicModelerAppendTool> appendTool;
   this->addToolButton(QIcon(":/Icons/Append.png"), appendTool);
@@ -371,6 +375,7 @@ void qSlicerDynamicModelerModuleWidget::rebuildParameterWidgets()
     else if (type == vtkSlicerDynamicModelerTool::PARAMETER_DOUBLE)
       {
       ctkDoubleSpinBox* doubleSpinBox = new ctkDoubleSpinBox();
+      doubleSpinBox->setMinimum(-doubleSpinBox->maximum()); // allow negative values
       connect(doubleSpinBox, SIGNAL(valueChanged(double)),
         this, SLOT(updateMRMLFromWidget()));
       parameterSelector = doubleSpinBox;

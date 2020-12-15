@@ -2,6 +2,7 @@
   <qresource>
     <file>Icons/Append.png</file>
     <file>Icons/BoundaryCut.png</file>
+    <file>Icons/Hollow.png</file>
     <file>Icons/CurveCut.png</file>
     <file>Icons/PlaneCut.png</file>
     <file>Icons/Mirror.png</file>
