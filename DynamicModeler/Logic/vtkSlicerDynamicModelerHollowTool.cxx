@@ -104,7 +104,7 @@ vtkSlicerDynamicModelerHollowTool::vtkSlicerDynamicModelerHollowTool()
 
   this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
   this->NormalsFilter->SetInputConnection(this->TriangleFilter->GetOutputPort());
-  this->NormalsFilter->FlipNormalsOn();
+  this->NormalsFilter->AutoOrientNormalsOn();
 
   this->OutputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
