@@ -177,7 +177,7 @@ const char* vtkSlicerDynamicModelerPlaneCutTool::GetName()
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction)
+void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction, vtkPolyData* outputEndCap)
 {
   int operationType = cutFunction->GetOperationType();
   vtkNew<vtkAppendPolyData> appendFilter;
@@ -269,9 +269,8 @@ void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPolyData* polyData, vt
     endCapPolyData->GetPointData()->SetNormals(normals);
     appendFilter->AddInputData(endCapPolyData);
     }
-  appendFilter->AddInputData(polyData);
   appendFilter->Update();
-  polyData->ShallowCopy(appendFilter->GetOutput());
+  outputEndCap->ShallowCopy(appendFilter->GetOutput());
 }
 
 //----------------------------------------------------------------------------
@@ -383,13 +382,23 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   this->PlaneClipper->Update();
 
   bool capSurface = this->GetNthInputParameterValue(0, surfaceEditorNode).ToInt() != 0;
+  vtkNew<vtkPolyData> endCapPolyData;
+  if (capSurface)
+    {
+    this->CreateEndCap(this->PlaneClipper->GetOutput(), planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes, endCapPolyData);
+    }
+
   if (outputPositiveModelNode)
     {
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->DeepCopy(this->PlaneClipper->GetOutput());
+    outputMesh->ShallowCopy(this->PlaneClipper->GetOutput());
     if (capSurface)
       {
-      this->CreateEndCap(outputMesh, planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes);
+      vtkNew<vtkAppendPolyData> appendEndCap;
+      appendEndCap->AddInputData(outputMesh);
+      appendEndCap->AddInputData(endCapPolyData);
+      appendEndCap->Update();
+      outputMesh->ShallowCopy(appendEndCap->GetOutput());
       }
 
     this->OutputPositiveWorldToModelTransformFilter->SetInputData(outputMesh);
@@ -404,10 +413,19 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   if (outputNegativeModelNode)
     {
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->DeepCopy(this->PlaneClipper->GetClippedOutput());
+    outputMesh->ShallowCopy(this->PlaneClipper->GetClippedOutput());
     if (capSurface)
       {
-      this->CreateEndCap(outputMesh, planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes);
+      vtkNew<vtkReverseSense> reverseSense;
+      reverseSense->SetInputData(endCapPolyData);
+      reverseSense->ReverseCellsOn();
+      reverseSense->ReverseNormalsOn();
+
+      vtkNew<vtkAppendPolyData> appendEndCap;
+      appendEndCap->AddInputData(outputMesh);
+      appendEndCap->AddInputConnection(reverseSense->GetOutputPort());
+      appendEndCap->Update();
+      outputMesh->ShallowCopy(appendEndCap->GetOutput());
       }
 
     this->OutputNegativeWorldToModelTransformFilter->SetInputData(outputMesh);
