@@ -177,7 +177,7 @@ const char* vtkSlicerDynamicModelerPlaneCutTool::GetName()
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPolyData* vtkNotUsed(polyData), vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction, vtkPolyData* outputEndCap)
+void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction, vtkPolyData* outputEndCap)
 {
   int operationType = cutFunction->GetOperationType();
   vtkNew<vtkAppendPolyData> appendFilter;
@@ -385,7 +385,7 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   vtkNew<vtkPolyData> endCapPolyData;
   if (capSurface)
     {
-    this->CreateEndCap(this->PlaneClipper->GetOutput(), planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes, endCapPolyData);
+    this->CreateEndCap(planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes, endCapPolyData);
     }
 
   if (outputPositiveModelNode)
