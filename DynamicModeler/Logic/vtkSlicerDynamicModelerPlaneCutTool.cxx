@@ -177,7 +177,7 @@ const char* vtkSlicerDynamicModelerPlaneCutTool::GetName()
 }
 
 //----------------------------------------------------------------------------
-void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPolyData* polyData, vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction, vtkPolyData* outputEndCap)
+void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPolyData* vtkNotUsed(polyData), vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction, vtkPolyData* outputEndCap)
 {
   int operationType = cutFunction->GetOperationType();
   vtkNew<vtkAppendPolyData> appendFilter;
