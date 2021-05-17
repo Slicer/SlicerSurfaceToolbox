@@ -25,6 +25,7 @@ limitations under the License.
 #include "vtkSlicerDynamicModelerHollowTool.h"
 #include "vtkSlicerDynamicModelerMirrorTool.h"
 #include "vtkSlicerDynamicModelerPlaneCutTool.h"
+#include "vtkSlicerDynamicModelerROICutTool.h"
 #include "vtkSlicerDynamicModelerToolFactory.h"
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -125,6 +126,7 @@ void vtkSlicerDynamicModelerToolFactory::classInitialize()
   vtkSlicerDynamicModelerToolFactoryInstance->RegisterDynamicModelerTool(vtkSmartPointer<vtkSlicerDynamicModelerCurveCutTool>::New());
   vtkSlicerDynamicModelerToolFactoryInstance->RegisterDynamicModelerTool(vtkSmartPointer<vtkSlicerDynamicModelerBoundaryCutTool>::New());
   vtkSlicerDynamicModelerToolFactoryInstance->RegisterDynamicModelerTool(vtkSmartPointer<vtkSlicerDynamicModelerAppendTool>::New());
+  vtkSlicerDynamicModelerToolFactoryInstance->RegisterDynamicModelerTool(vtkSmartPointer<vtkSlicerDynamicModelerROICutTool>::New());
 }
 
 //----------------------------------------------------------------------------

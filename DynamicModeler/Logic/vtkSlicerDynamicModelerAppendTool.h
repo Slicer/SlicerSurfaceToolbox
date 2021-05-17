@@ -61,7 +61,7 @@ protected:
   ~vtkSlicerDynamicModelerAppendTool() override;
   void operator=(const vtkSlicerDynamicModelerAppendTool&);
 
-  /// Mehod duplicated from vtkRemoveDuplicatePolys
+  /// Method duplicated from vtkRemoveDuplicatePolys
   /// TODO: Remove when vtk is updated
   bool RemoveDuplicateCells(vtkPolyData* polyData);
 
