@@ -32,6 +32,8 @@ set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}MirrorTool.h
   vtkSlicer${MODULE_NAME}PlaneCutTool.cxx
   vtkSlicer${MODULE_NAME}PlaneCutTool.h
+  vtkSlicer${MODULE_NAME}ROICutTool.cxx
+  vtkSlicer${MODULE_NAME}ROICutTool.h
   vtkSlicer${MODULE_NAME}Tool.cxx
   vtkSlicer${MODULE_NAME}Tool.h
   vtkSlicer${MODULE_NAME}ToolFactory.cxx
