@@ -13,17 +13,17 @@
     <description><![CDATA[IO]]></description>
     <geometry fileExtensions=".obj,.vtp">
       <name>inputModel</name>
-      <label>Input Model</label>
+      <label>Input model</label>
       <channel>input</channel>
       <index>0</index>
-      <description><![CDATA[Input Model]]></description>
+      <description><![CDATA[Input model]]></description>
     </geometry>
     <geometry fileExtensions=".obj,.vtp">
       <name>outputModel</name>
-      <label>Output Model</label>
+      <label>Output model</label>
       <channel>output</channel>
       <index>1</index>
-      <description><![CDATA[Output Model]]></description>
+      <description><![CDATA[Output model]]></description>
     </geometry>
     <double>
       <name>reductionFactor</name>
