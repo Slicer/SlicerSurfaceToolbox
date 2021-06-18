@@ -114,13 +114,16 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       (self.ui.scaleYSlider, "scaleY"),
       (self.ui.scaleZSlider, "scaleZ"),
       (self.ui.translateMeshButton, "translate"),
+      (self.ui.translateToOriginCheckBox, "translateToOrigin"),
       (self.ui.translationXSlider, "translateX"),
-      (self.ui.translationXSlider, "translateY"),
-      (self.ui.translationXSlider, "translateZ"),
-      (self.ui.relaxButton, "relax"),
-      (self.ui.relaxIterationsSlider, "relaxIterations"),
-      (self.ui.bordersOutButton, "bordersOut"),
-      (self.ui.translateCenterToOriginButton, "translateCenterToOrigin")
+      (self.ui.translationYSlider, "translateY"),
+      (self.ui.translationZSlider, "translateZ"),
+      (self.ui.extractEdgesButton, "extractEdges"),
+      (self.ui.extractEdgesBoundaryCheckBox, "extractEdgesBoundary"),
+      (self.ui.extractEdgesFeatureCheckBox, "extractEdgesFeature"),
+      (self.ui.extractEdgesFeatureAngleSlider, "extractEdgesFeatureAngle"),
+      (self.ui.extractEdgesNonManifoldCheckBox, "extractEdgesNonManifold"),
+      (self.ui.extractEdgesManifoldCheckBox, "extractEdgesManifold"),
     ]
 
     slicer.util.addParameterEditWidgetConnections(self.parameterEditWidgets, self.updateParameterNodeFromGUI)
@@ -327,7 +330,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       ("decimationReduction", "0.8"),
       ("decimationBoundaryDeletion", "true"),
       ("smoothing", "false"),
-      ("smoothingMethod", "Laplace"),
+      ("smoothingMethod", "Taubin"),
       ("smoothingLaplaceIterations", "100"),
       ("smoothingLaplaceRelaxation", "0.5"),
       ("smoothingTaubinIterations", "30"),
@@ -351,13 +354,16 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       ("scaleY", "0.5"),
       ("scaleZ", "0.5"),
       ("translate", "false"),
+      ("translateToOriginCheckBox", "false"),
       ("translateX", "0.0"),
       ("translateY", "0.0"),
       ("translateZ", "0.0"),
-      ("relax", "false"),
-      ("relaxIterations", "5"),
-      ("bordersOut", "false"),
-      ("translateCenterToOrigin", "false")
+      ("extractEdges", "false"),
+      ("extractEdgesBoundary", "true"),
+      ("extractEdgesFeature", "true"),
+      ("extractEdgesFeatureAngle", "20"),
+      ("extractEdgesNonManifold", "false"),
+      ("extractEdgesManifold", "false"),
     ]
     for parameterName, defaultValue in defaultValues:
       if not parameterNode.GetParameter(parameterName):
@@ -368,9 +374,141 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       return
     self.updateProcessCallback(message)
 
-  def runCLI(self, module, parameters):
-    cliNode = slicer.cli.runSync(module, None, parameters)
+  @staticmethod
+  def decimate(inputModel, outputModel, reductionFactor=0.8, decimateBoundary=True, lossless=False, aggressiveness=7.0):
+    """Perform a topology-preserving reduction of surface triangles. FastMesh method uses Sven Forstmann's method
+    (https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
+
+    :param reductionFactor: Target reduction factor during decimation. Ratio of triangles that are requested to
+      be eliminated. 0.8 means that the mesh size is requested to be reduced by 80%.
+    :param decimateBoundary: If enabled then 'FastQuadric' method is used (it provides more even element sizes but cannot
+      be forced to preserve boundary), otherwise 'DecimatePro' method is used (that can preserve boundary edges but tend
+      to create more ill-shaped triangles).
+    :param lossless: Lossless remeshing for FastQuadric method. The flag has no effect if other method is used.
+    :param aggressiveness: Balances between accuracy and computation time for FastQuadric method (default = 7.0). The flag has no effect if other method is used.
+    """
+    parameters = {
+      "inputModel": inputModel,
+      "outputModel": outputModel,
+      "reductionFactor": reductionFactor,
+      "method": "FastQuadric" if decimateBoundary else "DecimatePro",
+      "boundaryDeletion": decimateBoundary
+      }
+    cliNode = slicer.cli.runSync(slicer.modules.decimation, None, parameters)
     slicer.mrmlScene.RemoveNode(cliNode)
+
+  @staticmethod
+  def smooth(inputModel, outputModel, method='Taubin', iterations=30, laplaceRelaxationFactor=0.5, taubinPassBand=0.1, boundarySmoothing=True):
+    """Smoothes surface model using a Laplacian filter or Taubin's non-shrinking algorithm.
+    """
+    if method == "Laplace":
+      smoothing = vtk.vtkSmoothPolyDataFilter()
+      smoothing.SetRelaxationFactor(laplaceRelaxationFactor)
+    else:  # "Taubin"
+      smoothing = vtk.vtkWindowedSincPolyDataFilter()
+      smoothing.SetPassBand(taubinPassBand)
+    smoothing.SetBoundarySmoothing(boundarySmoothing)
+    smoothing.SetNumberOfIterations(iterations)
+    smoothing.SetInputData(inputModel.GetPolyData())
+    smoothing.Update()
+    outputModel.SetAndObservePolyData(smoothing.GetOutput())
+
+  @staticmethod
+  def fillHoles(inputModel, outputModel, maximumHoleSize=1000.0):
+    """Fills up a hole in a open mesh.
+    """
+    fill = vtk.vtkFillHolesFilter()
+    fill.SetInputData(inputModel.GetPolyData())
+    fill.SetHoleSize(maximumHoleSize)
+
+    # Need to auto-orient normals, otherwise holes could appear to be unfilled when
+    # only front-facing elements are chosen to be visible.
+    normals = vtk.vtkPolyDataNormals()
+    normals.SetInputConnection(fill.GetOutputPort())
+    normals.SetAutoOrientNormals(True)
+    normals.Update()
+    outputModel.SetAndObservePolyData(normals.GetOutput())
+
+  @staticmethod
+  def transform(inputModel, outputModel, scaleX=1.0, scaleY=1.0, scaleZ=1.0, translateX=0.0, translateY=0.0, translateZ=0.0):
+    """Mesh relaxation based on vtkWindowedSincPolyDataFilter.
+    Scale of 1.0 means original size, >1.0 means magnification.
+    """
+    transform = vtk.vtkTransform()
+    transform.Translate(translateX, translateY, translateZ)
+    transform.Scale(scaleX, scaleY, scaleZ)
+    transformFilter = vtk.vtkTransformFilter()
+    transformFilter.SetInputData(inputModel.GetPolyData())
+    transformFilter.SetTransform(transform)
+
+    if transform.GetMatrix().Determinant() >= 0.0:
+      transformFilter.Update()
+      outputModel.SetAndObservePolyData(transformFilter.GetOutput())
+    else:
+      # The mesh is turned inside out, reverse the mesh cells to keep them facing outside
+      reverse = vtk.vtkReverseSense()
+      reverse.SetInputConnection(transformFilter.GetOutputPort())
+      reverse.Update()
+      outputModel.SetAndObservePolyData(reverse.GetOutput())
+
+  @staticmethod
+  def translateCenterToOrigin(inputModel, outputModel):
+    """Translate center of the mesh bounding box to the origin.
+    """
+    bounds = inputModel.GetMesh().GetBounds()
+    centerPosition = [(bounds[1]+bounds[0])/2.0, (bounds[3]+bounds[2])/2.0, (bounds[5]+bounds[4])/2.0]
+    SurfaceToolboxLogic.transform(inputModel, outputModel, translateX=-centerPosition[0], translateY=-centerPosition[1], translateZ=-centerPosition[2])
+
+  @staticmethod
+  def clean(inputModel, outputModel):
+    """Merge coincident points, remove unused points (i.e. not used by any cell), treatment of degenerate cells.
+    """
+    cleaner = vtk.vtkCleanPolyData()
+    cleaner.SetInputData(inputModel.GetPolyData())
+    cleaner.Update()
+    outputModel.SetAndObservePolyData(cleaner.GetOutput())
+
+  @staticmethod
+  def extractBoundaryEdges(inputModel, outputModel, boundary=False, feature=False, nonManifold=False, manifold=False, featureAngle=20):
+    """Extract edges of a model.
+    """
+    boundaryEdges = vtk.vtkFeatureEdges()
+    boundaryEdges.SetInputData(inputModel.GetPolyData())
+    boundaryEdges.ExtractAllEdgeTypesOff()
+    boundaryEdges.SetBoundaryEdges(boundary)
+    boundaryEdges.SetFeatureEdges(feature)
+    if feature:
+      boundaryEdges.SetFeatureAngle(featureAngle)
+    boundaryEdges.SetNonManifoldEdges(nonManifold)
+    boundaryEdges.SetManifoldEdges(manifold)
+    boundaryEdges.Update()
+    outputModel.SetAndObservePolyData(boundaryEdges.GetOutput())
+
+  @staticmethod
+  def computeNormals(inputModel, outputModel, autoOrient=False, flip=False, split=False, splitAngle=30.0):
+    """Generate surface normals for geometry algorithms or for improving visualization.
+    :param splitAngle: Normals will be split only along those edges where angle is larger than this value.
+    """
+    normals = vtk.vtkPolyDataNormals()
+    normals.SetInputData(inputModel.GetPolyData())
+    normals.SetAutoOrientNormals(autoOrient)
+    normals.SetFlipNormals(flip)
+    normals.SetSplitting(split)
+    if split:
+      # only applicable if splitting is enabled
+      normals.SetFeatureAngle(splitAngle)
+    normals.Update()
+    outputModel.SetAndObservePolyData(normals.GetOutput())
+
+  @staticmethod
+  def extractLargestConnectedComponent(inputModel, outputModel):
+    """Extract the largest connected portion of a surface model.
+    """
+    connect = vtk.vtkPolyDataConnectivityFilter()
+    connect.SetInputData(inputModel.GetPolyData())
+    connect.SetExtractionModeToLargestRegion()
+    connect.Update()
+    outputModel.SetAndObservePolyData(connect.GetOutput())
 
   def applyFilters(self, parameterNode):
     import time
@@ -378,140 +516,84 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     logging.info('Processing started')
 
     inputModel = parameterNode.GetNodeReference("inputModel")
-
     outputModel = parameterNode.GetNodeReference("outputModel")
-    if outputModel.GetPolyData() is None:
-      outputModel.SetAndObserveMesh(vtk.vtkPolyData())
-    outputModel.GetPolyData().DeepCopy(inputModel.GetPolyData())
+
+    if outputModel != inputModel:
+      if outputModel.GetPolyData() is None:
+        outputModel.SetAndObserveMesh(vtk.vtkPolyData())
+      outputModel.GetPolyData().DeepCopy(inputModel.GetPolyData())
 
     outputModel.CreateDefaultDisplayNodes()
     outputModel.AddDefaultStorageNode()
 
+    if parameterNode.GetParameter("cleaner") == "true":
+      self.updateProcess("Clean...")
+      SurfaceToolboxLogic.clean(outputModel, outputModel)
+
     if parameterNode.GetParameter("decimation") == "true":
       self.updateProcess("Decimation...")
-      decimateBoundary = parameterNode.GetParameter("decimationBoundary") == "true"
-      parameters = {
-        "inputModel": outputModel,
-        "outputModel": outputModel,
-        "reductionFactor": float(parameterNode.GetParameter("decimationReduction"))
-        }
-      if decimateBoundary:
-        # use default FastQuadric decimation method if boundary can be decimated
-        parameters["method"] = "FastQuadric"
-      else:
-        parameters["method"] = "DecimatePro"
-        parameters["boundaryDeletion"] = False
-      self.runCLI(slicer.modules.decimation, parameters)
+      SurfaceToolboxLogic.decimate(outputModel, outputModel,
+        reductionFactor=float(parameterNode.GetParameter("decimationReduction")),
+        decimateBoundary=parameterNode.GetParameter("decimationBoundary") == "true")
 
     if parameterNode.GetParameter("smoothing") == "true":
       self.updateProcess("Smoothing...")
-      if parameterNode.GetParameter("smoothingMethod") == "Laplace":
-        smoothing = vtk.vtkSmoothPolyDataFilter()
-        smoothing.SetBoundarySmoothing(parameterNode.GetParameter("smoothingBoundarySmoothing") == "true")
-        smoothing.SetNumberOfIterations(int(float(parameterNode.GetParameter("smoothingLaplaceIterations"))))
-        smoothing.SetRelaxationFactor(float(parameterNode.GetParameter("smoothingLaplaceRelaxation")))
-      else:  # "Taubin"
-        smoothing = vtk.vtkWindowedSincPolyDataFilter()
-        smoothing.SetBoundarySmoothing(parameterNode.GetParameter("smoothingBoundarySmoothing") == "true")
-        smoothing.SetNumberOfIterations(int(float(parameterNode.GetParameter("smoothingTaubinIterations"))))
-        smoothing.SetPassBand(float(parameterNode.GetParameter("smoothingTaubinPassBand")))
-      smoothing.SetInputData(outputModel.GetPolyData())
-      smoothing.Update()
-      outputModel.SetAndObservePolyData(smoothing.GetOutput())
-
-    if parameterNode.GetParameter("normals") == "true":
-      self.updateProcess("Normals...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel,
-        "orient": parameterNode.GetParameter("normalsOrient") == "true",
-        "flip": parameterNode.GetParameter("normalsFlip") == "true",
-        "splitting": parameterNode.GetParameter("normalsSplitting") == "true",
-        "angle": float(parameterNode.GetParameter("normalsFeatureAngle"))}
-      self.runCLI(slicer.modules.normals, parameters)
-
-    if parameterNode.GetParameter("mirror") == "true":
-      self.updateProcess("Mirror...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel,
-        "xAxis": parameterNode.GetParameter("mirrorX") == "true",
-        "yAxis": parameterNode.GetParameter("mirrorY") == "true",
-        "zAxis": parameterNode.GetParameter("mirrorZ") == "true"
-        }
-      self.runCLI(slicer.modules.mirror, parameters)
-
-    if parameterNode.GetParameter("cleaner") == "true":
-      self.updateProcess("Cleaner...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel
-        }
-      self.runCLI(slicer.modules.cleaner, parameters)
+      method = parameterNode.GetParameter("smoothingMethod")
+      SurfaceToolboxLogic.smooth(outputModel, outputModel,
+        method=parameterNode.GetParameter("smoothingMethod"),
+        iterations=int(float(parameterNode.GetParameter("smoothingLaplaceIterations" if method=='Laplace' else "smoothingTaubinIterations"))),
+        laplaceRelaxationFactor=float(parameterNode.GetParameter("smoothingLaplaceRelaxation")),
+        taubinPassBand=float(parameterNode.GetParameter("smoothingTaubinPassBand")),
+        boundarySmoothing=parameterNode.GetParameter("smoothingBoundarySmoothing") == "true")
 
     if parameterNode.GetParameter("fillHoles") == "true":
       self.updateProcess("Fill Holes...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel,
-        "holes": float(parameterNode.GetParameter("fillHolesSize"))
-        }
-      self.runCLI(slicer.modules.fillholes, parameters)
+      SurfaceToolboxLogic.fillHoles(outputModel, outputModel,
+        float(parameterNode.GetParameter("fillHolesSize")))
 
-    if parameterNode.GetParameter("connectivity") == "true":
-      self.updateProcess("Connectivity...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel
-        }
-      self.runCLI(slicer.modules.connectivity, parameters)
+    if parameterNode.GetParameter("normals") == "true":
+      self.updateProcess("Normals...")
+      SurfaceToolboxLogic.computeNormals(outputModel, outputModel,
+        autoOrient = parameterNode.GetParameter("normalsOrient") == "true",
+        flip=parameterNode.GetParameter("normalsFlip") == "true",
+        split=parameterNode.GetParameter("normalsSplitting") == "true",
+        splitAngle=float(parameterNode.GetParameter("normalsFeatureAngle")))
+
+    if parameterNode.GetParameter("mirror") == "true":
+      self.updateProcess("Mirror...")
+      SurfaceToolboxLogic.transform(outputModel, outputModel,
+        scaleX = -1.0 if parameterNode.GetParameter("mirrorX") == "true" else 1.0,
+        scaleY = -1.0 if parameterNode.GetParameter("mirrorY") == "true" else 1.0,
+        scaleZ = -1.0 if parameterNode.GetParameter("mirrorZ") == "true" else 1.0)
 
     if parameterNode.GetParameter("scale") == "true":
       self.updateProcess("Scale...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel,
-        "dimX": float(parameterNode.GetParameter("scaleX")),
-        "dimY": float(parameterNode.GetParameter("scaleY")),
-        "dimZ": float(parameterNode.GetParameter("scaleZ"))
-        }
-      self.runCLI(slicer.modules.scalemesh, parameters)
+      SurfaceToolboxLogic.transform(outputModel, outputModel,
+        scaleX = float(parameterNode.GetParameter("scaleX")),
+        scaleY = float(parameterNode.GetParameter("scaleY")),
+        scaleZ = float(parameterNode.GetParameter("scaleZ")))
 
     if parameterNode.GetParameter("translate") == "true":
       self.updateProcess("Translating...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel,
-        "dimX": float(parameterNode.GetParameter("translateX")),
-        "dimY": float(parameterNode.GetParameter("translateY")),
-        "dimZ": float(parameterNode.GetParameter("translateZ"))
-        }
-      self.runCLI(slicer.modules.translatemesh, parameters)
+      if parameterNode.GetParameter("translateToOrigin") == "true":
+        SurfaceToolboxLogic.translateCenterToOrigin(outputModel, outputModel)
+      SurfaceToolboxLogic.transform(outputModel, outputModel,
+        translateX = float(parameterNode.GetParameter("translateX")),
+        translateY = float(parameterNode.GetParameter("translateY")),
+        translateZ = float(parameterNode.GetParameter("translateZ")))
 
-    if parameterNode.GetParameter("relax") == "true":
-      self.updateProcess("Relaxing...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel,
-        "Iterations": int(float(parameterNode.GetParameter("relaxIterations")))
-        }
-      self.runCLI(slicer.modules.relaxpolygons, parameters)
+    if parameterNode.GetParameter("extractEdges") == "true":
+      self.updateProcess("Extracting boundary edges...")
+      SurfaceToolboxLogic.extractBoundaryEdges(outputModel, outputModel,
+        boundary = parameterNode.GetParameter("extractEdgesBoundary") == "true",
+        feature = parameterNode.GetParameter("extractEdgesFeature") == "true",
+        nonManifold = parameterNode.GetParameter("extractEdgesNonManifold") == "true",
+        manifold = parameterNode.GetParameter("extractEdgesManifold") == "true",
+        featureAngle = float(parameterNode.GetParameter("extractEdgesFeatureAngle")))
 
-    if parameterNode.GetParameter("border") == "true":
-      self.updateProcess("Changing Borders...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel
-      }
-      self.runCLI(slicer.modules.bordersout, parameters)
-
-    if parameterNode.GetParameter("translateCenterToOrigin") == "true":
-      self.updateProcess("Moving Origin...")
-      parameters = {
-        "inputVolume": outputModel,
-        "outputVolume": outputModel
-      }
-      self.runCLI(slicer.modules.mc2origin, parameters)
+    if parameterNode.GetParameter("connectivity") == "true":
+      self.updateProcess("Extract largest connected component...")
+      SurfaceToolboxLogic.extractLargestConnectedComponent(outputModel, outputModel)
 
     self.updateProcess("Done.")
 
@@ -588,8 +670,8 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     parameterNode.SetParameter("translate", "true")
     parameterNode.SetParameter("translateX", "5.12")
     parameterNode.SetParameter("relax", "true")
-    parameterNode.SetParameter("bordersOut", "true")
-    parameterNode.SetParameter("translateCenterToOrigin", "true")
+    parameterNode.SetParameter("extractEdges", "true")
+    parameterNode.SetParameter("translateToOrigin", "true")
 
     self.delayDisplay('Module selected, input and output configured')
 

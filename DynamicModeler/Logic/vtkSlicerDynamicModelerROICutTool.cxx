@@ -32,7 +32,8 @@
 
 // VTK includes
 #include <vtkAppendPolyData.h>
-#include <vtkClipPolyData.h>
+//#include <vtkClipPolyData.h>
+#include <vtkClipClosedSurface.h>
 #include <vtkCommand.h>
 #include <vtkGeneralTransform.h>
 #include <vtkImplicitBoolean.h>
@@ -133,7 +134,10 @@ vtkSlicerDynamicModelerROICutTool::vtkSlicerDynamicModelerROICutTool()
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
 
-  this->ROIClipper = vtkSmartPointer<vtkClipPolyData>::New();
+  //this->ROIClipper = vtkSmartPointer<vtkClipPolyData>::New();
+  //this->ROIClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+
+  this->ROIClipper = vtkSmartPointer<vtkClipClosedSurface>::New();
   this->ROIClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
 
   this->OutputInsideWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
@@ -143,7 +147,8 @@ vtkSlicerDynamicModelerROICutTool::vtkSlicerDynamicModelerROICutTool()
 
   this->OutputOutsideWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputOutsideWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputOutsideWorldToModelTransformFilter->SetInputConnection(this->ROIClipper->GetClippedOutputPort());
+  //this->OutputOutsideWorldToModelTransformFilter->SetInputConnection(this->ROIClipper->GetClippedOutputPort());
+  this->OutputOutsideWorldToModelTransformFilter->SetInputConnection(this->ROIClipper->GetOutputPort());
   this->OutputOutsideWorldToModelTransformFilter->SetTransform(this->OutputOutsideWorldToModelTransform);
 }
 
@@ -240,8 +245,8 @@ bool vtkSlicerDynamicModelerROICutTool::RunInternal(vtkMRMLDynamicModelerNode* d
   vtkNew<vtkPlanes> planes;
   roiNode->GetPlanesWorld(planes);
 
-  vtkNew<vtkImplicitBoolean> planeFunction;
-  planeFunction->SetOperationTypeToUnion();
+  //vtkNew<vtkImplicitBoolean> planeFunction;
+  //planeFunction->SetOperationTypeToUnion();
 
   vtkNew<vtkPlaneCollection> planeCollection;
   for (int i = 0; i < planes->GetNumberOfPlanes(); ++i)
@@ -262,12 +267,13 @@ bool vtkSlicerDynamicModelerROICutTool::RunInternal(vtkMRMLDynamicModelerNode* d
     plane->SetNormal(normal);
     plane->SetOrigin(origin);
 
-    planeFunction->AddFunction(plane);
+    //planeFunction->AddFunction(plane);
     planeCollection->AddItem(plane);
     }
 
-  this->ROIClipper->SetClipFunction(planeFunction);
-  this->ROIClipper->SetGenerateClippedOutput(outputOutsideModelNode != nullptr);
+  //this->ROIClipper->SetClipFunction(planeFunction);
+  this->ROIClipper->SetClippingPlanes(planeCollection);
+  //this->ROIClipper->SetGenerateClippedOutput(outputOutsideModelNode != nullptr);
 
   vtkMRMLTransformNode::GetTransformBetweenNodes(inputModelNode->GetParentTransformNode(), nullptr, this->InputModelNodeToWorldTransform);
 
@@ -281,12 +287,13 @@ bool vtkSlicerDynamicModelerROICutTool::RunInternal(vtkMRMLDynamicModelerNode* d
     capSurface = false;
     }
 
-  vtkNew<vtkPolyData> endCapPolyData;
+  this->ROIClipper->SetGenerateFaces(capSurface);
+/*  vtkNew<vtkPolyData> endCapPolyData;
   if (capSurface)
     {
     vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planeFunction, endCapPolyData);
     }
-
+    */
   if (outputInsideModelNode)
     {
     vtkMRMLTransformNode::GetTransformBetweenNodes(nullptr, outputInsideModelNode->GetParentTransformNode(), this->OutputInsideWorldToModelTransform);
@@ -300,14 +307,14 @@ bool vtkSlicerDynamicModelerROICutTool::RunInternal(vtkMRMLDynamicModelerNode* d
       outputInsideModelNode->SetAndObservePolyData(outputMesh);
       }
     outputMesh->DeepCopy(this->OutputInsideWorldToModelTransformFilter->GetOutput());
-    if (capSurface)
+    /*if (capSurface)
       {
       vtkNew<vtkAppendPolyData> appendEndCap;
       appendEndCap->AddInputData(outputMesh);
       appendEndCap->AddInputData(endCapPolyData);
       appendEndCap->Update();
       outputMesh->ShallowCopy(appendEndCap->GetOutput());
-      }
+      }*/
     outputInsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
     }
 
@@ -324,6 +331,7 @@ bool vtkSlicerDynamicModelerROICutTool::RunInternal(vtkMRMLDynamicModelerNode* d
       outputOutsideModelNode->SetAndObservePolyData(outputMesh);
       }
     outputMesh->DeepCopy(this->OutputOutsideWorldToModelTransformFilter->GetOutput());
+    /*
     if (capSurface)
       {
       vtkNew<vtkReverseSense> reverseSense;
@@ -337,6 +345,7 @@ bool vtkSlicerDynamicModelerROICutTool::RunInternal(vtkMRMLDynamicModelerNode* d
       appendEndCap->Update();
       outputMesh->ShallowCopy(appendEndCap->GetOutput());
       }
+      */
     outputOutsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
     }
 

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>279</width>
-    <height>1154</height>
+    <height>1225</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -92,9 +92,25 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="cleanerButton">
+     <property name="toolTip">
+      <string>Merge coincident points</string>
+     </property>
+     <property name="text">
+      <string>Clean</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="decimationButton">
      <property name="text">
-      <string>Decimation</string>
+      <string>Decimate</string>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -152,7 +168,7 @@
          <string>If disabled then boundaries will not be modified by decimation (it uses DecimatePro algorithm, which tends to create more ill-shaped triangles).</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
         </property>
        </widget>
       </item>
@@ -162,7 +178,7 @@
    <item>
     <widget class="QPushButton" name="smoothingButton">
      <property name="text">
-      <string>Smoothing</string>
+      <string>Smooth</string>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -331,7 +347,61 @@
          <string>If disabled then boundaries will not be modified by decimation (it uses DecimatePro algorithm, which tends to create more ill-shaped triangles).</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="fillHolesButton">
+     <property name="text">
+      <string>Fill holes</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frame_5">
+     <layout class="QFormLayout" name="formLayout_7">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_10">
+        <property name="text">
+         <string>Maximum hole size:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="ctkSliderWidget" name="fillHolesSizeSlider">
+        <property name="toolTip">
+         <string>Specifies the maximum size of holes that will be filled. This is represented as a radius to the bounding circumsphere containing the hole. Note that this is an approximate area; the actual area cannot be computed without first triangulating the hole.</string>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="pageStep">
+         <double>100.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>1000.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>100.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -341,7 +411,7 @@
    <item>
     <widget class="QPushButton" name="normalsButton">
      <property name="text">
-      <string>Normals</string>
+      <string>Compute surface normals</string>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -373,7 +443,7 @@
          <string>Orient the normals outwards from closed surface</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
         </property>
        </widget>
       </item>
@@ -397,7 +467,7 @@
          <string>Flip normal direction from its current or auto-oriented state</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
         </property>
        </widget>
       </item>
@@ -407,7 +477,7 @@
          <string>Allow sharp change in normals where angle between neighbor faces is above a threshold (feature angle).</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
         </property>
        </widget>
       </item>
@@ -481,7 +551,7 @@
          <string>Flip model along its X axis</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
         </property>
        </widget>
       </item>
@@ -498,7 +568,7 @@
          <string>Flip model along its Y axis</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
         </property>
        </widget>
       </item>
@@ -515,103 +585,17 @@
          <string>Flip model along its Z axis</string>
         </property>
         <property name="text">
-         <string> </string>
+         <string/>
         </property>
        </widget>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="cleanerButton">
-     <property name="toolTip">
-      <string>Merge coincident points</string>
-     </property>
-     <property name="text">
-      <string>Cleaner</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="fillHolesButton">
-     <property name="text">
-      <string>Fill holes</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QFrame" name="frame_5">
-     <layout class="QFormLayout" name="formLayout_7">
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_10">
-        <property name="text">
-         <string>Maximum hole size:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="ctkSliderWidget" name="fillHolesSizeSlider">
-        <property name="toolTip">
-         <string>Specifies the maximum size of holes that will be filled. This is represented as a radius to the bounding circumsphere containing the hole. Note that this is an approximate area; the actual area cannot be computed without first triangulating the hole.</string>
-        </property>
-        <property name="decimals">
-         <number>1</number>
-        </property>
-        <property name="singleStep">
-         <double>0.100000000000000</double>
-        </property>
-        <property name="pageStep">
-         <double>100.000000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>1000.000000000000000</double>
-        </property>
-        <property name="value">
-         <double>100.000000000000000</double>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="connectivityButton">
-     <property name="toolTip">
-      <string>Merge coincident points</string>
-     </property>
-     <property name="text">
-      <string>Connectivity</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
     </widget>
    </item>
    <item>
     <widget class="QPushButton" name="scaleMeshButton">
      <property name="text">
-      <string>Scale mesh</string>
+      <string>Scale</string>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -723,7 +707,7 @@
    <item>
     <widget class="QPushButton" name="translateMeshButton">
      <property name="text">
-      <string>Translate mesh</string>
+      <string>Translate</string>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -742,14 +726,14 @@
       <property name="bottomMargin">
        <number>6</number>
       </property>
-      <item row="0" column="0">
+      <item row="1" column="0">
        <widget class="QLabel" name="laplaceIterationsLabel_3">
         <property name="text">
          <string>Translate X:</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item row="1" column="1">
        <widget class="ctkSliderWidget" name="translationXSlider">
         <property name="toolTip">
          <string>Specifies the desired translation along an axis.</string>
@@ -774,21 +758,21 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="laplaceRelaxationLabel_3">
         <property name="text">
          <string>Translate Y:</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="taubinIterationsLabel_3">
         <property name="text">
          <string>Translate Z:</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="2" column="1">
        <widget class="ctkSliderWidget" name="translationYSlider">
         <property name="toolTip">
          <string>Specifies the desired translation along an axis.</string>
@@ -813,7 +797,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="ctkSliderWidget" name="translationZSlider">
         <property name="toolTip">
          <string>Specifies the desired translation along an axis.</string>
@@ -838,13 +822,33 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="laplaceIterationsLabel_5">
+        <property name="text">
+         <string>Center:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="translateToOriginCheckBox">
+        <property name="toolTip">
+         <string>Center the model by translating its bounding box center to the origin</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="relaxButton">
+    <widget class="QPushButton" name="extractEdgesButton">
+     <property name="toolTip">
+      <string>Extract boundary edges</string>
+     </property>
      <property name="text">
-      <string>Relax polygons</string>
+      <string>Extract edges</string>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -855,8 +859,8 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="frame_8">
-     <layout class="QFormLayout" name="formLayout_10">
+    <widget class="QFrame" name="frame_9">
+     <layout class="QFormLayout" name="formLayout_4">
       <property name="topMargin">
        <number>0</number>
       </property>
@@ -864,19 +868,56 @@
        <number>6</number>
       </property>
       <item row="0" column="0">
-       <widget class="QLabel" name="label_11">
+       <widget class="QLabel" name="laplaceIterationsLabel_4">
         <property name="text">
-         <string>Iterations:</string>
+         <string>Boundary edges:</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="ctkSliderWidget" name="relaxIterationsSlider">
+       <widget class="QCheckBox" name="extractEdgesBoundaryCheckBox">
         <property name="toolTip">
-         <string>More iterations will result in more evenly shaped cells but more distortion of the mesh.</string>
+         <string>edges used by one polygon or a line cell</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="laplaceRelaxationLabel_4">
+        <property name="text">
+         <string>Feature edges:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="extractEdgesFeatureCheckBox">
+        <property name="toolTip">
+         <string>edges used by two triangles and whose dihedral angle is larger than the specified feature angle</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="taubinIterationsLabel_5">
+        <property name="text">
+         <string>Feature angle:</string>
+        </property>
+        <property name="indent">
+         <number>10</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="ctkSliderWidget" name="extractEdgesFeatureAngleSlider">
+        <property name="toolTip">
+         <string>minimum angle to consider an edge to be a feature edge</string>
         </property>
         <property name="decimals">
-         <number>0</number>
+         <number>2</number>
         </property>
         <property name="singleStep">
          <double>1.000000000000000</double>
@@ -884,11 +925,48 @@
         <property name="pageStep">
          <double>10.000000000000000</double>
         </property>
+        <property name="minimum">
+         <double>0.000000000000000</double>
+        </property>
         <property name="maximum">
-         <double>100.000000000000000</double>
+         <double>180.000000000000000</double>
         </property>
         <property name="value">
-         <double>5.000000000000000</double>
+         <double>0.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="taubinIterationsLabel_6">
+        <property name="text">
+         <string>Manifold edges:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="extractEdgesManifoldCheckBox">
+        <property name="toolTip">
+         <string>edges used by exactly two polygons</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="taubinIterationsLabel_4">
+        <property name="text">
+         <string>Non-manifold edges:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QCheckBox" name="extractEdgesNonManifoldCheckBox">
+        <property name="toolTip">
+         <string>used by three or more polygons</string>
+        </property>
+        <property name="text">
+         <string/>
         </property>
        </widget>
       </item>
@@ -896,25 +974,12 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="bordersOutButton">
+    <widget class="QPushButton" name="connectivityButton">
      <property name="toolTip">
-      <string>Extract boundary edges</string>
+      <string>Keep largest connected component.</string>
      </property>
      <property name="text">
-      <string>Borders out</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="translateCenterToOriginButton">
-     <property name="text">
-      <string>Translate center to origin</string>
+      <string>Extract largest component</string>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -1018,12 +1083,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>94</x>
-     <y>125</y>
+     <x>103</x>
+     <y>162</y>
     </hint>
     <hint type="destinationlabel">
-     <x>15</x>
-     <y>157</y>
+     <x>24</x>
+     <y>214</y>
     </hint>
    </hints>
   </connection>
@@ -1034,12 +1099,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>159</x>
-     <y>475</y>
+     <x>260</x>
+     <y>613</y>
     </hint>
     <hint type="destinationlabel">
-     <x>204</x>
-     <y>499</y>
+     <x>260</x>
+     <y>640</y>
     </hint>
    </hints>
   </connection>
@@ -1050,8 +1115,8 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>94</x>
-     <y>212</y>
+     <x>103</x>
+     <y>244</y>
     </hint>
     <hint type="destinationlabel">
      <x>13</x>
@@ -1066,12 +1131,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>94</x>
-     <y>402</y>
+     <x>103</x>
+     <y>554</y>
     </hint>
     <hint type="destinationlabel">
-     <x>17</x>
-     <y>440</y>
+     <x>26</x>
+     <y>646</y>
     </hint>
    </hints>
   </connection>
@@ -1082,12 +1147,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>43</x>
-     <y>539</y>
+     <x>52</x>
+     <y>676</y>
     </hint>
     <hint type="destinationlabel">
-     <x>13</x>
-     <y>577</y>
+     <x>22</x>
+     <y>742</y>
     </hint>
    </hints>
   </connection>
@@ -1098,12 +1163,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>22</x>
-     <y>679</y>
+     <x>31</x>
+     <y>492</y>
     </hint>
     <hint type="destinationlabel">
-     <x>15</x>
-     <y>704</y>
+     <x>24</x>
+     <y>524</y>
     </hint>
    </hints>
   </connection>
@@ -1130,28 +1195,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>30</x>
-     <y>876</y>
+     <x>39</x>
+     <y>916</y>
     </hint>
     <hint type="destinationlabel">
-     <x>14</x>
-     <y>918</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>relaxButton</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>frame_8</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>69</x>
-     <y>1001</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>12</x>
-     <y>1020</y>
+     <x>23</x>
+     <y>1000</y>
     </hint>
    </hints>
   </connection>
@@ -1168,6 +1217,22 @@
     <hint type="destinationlabel">
      <x>106</x>
      <y>80</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>extractEdgesButton</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>frame_9</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>217</x>
+     <y>1015</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>268</x>
+     <y>1055</y>
     </hint>
    </hints>
   </connection>
