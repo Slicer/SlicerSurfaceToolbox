@@ -49,6 +49,7 @@
 #include <vtkSlicerDynamicModelerBoundaryCutTool.h>
 #include <vtkSlicerDynamicModelerCurveCutTool.h>
 #include <vtkSlicerDynamicModelerHollowTool.h>
+#include <vtkSlicerDynamicModelerMarginTool.h>
 #include <vtkSlicerDynamicModelerLogic.h>
 #include <vtkSlicerDynamicModelerMirrorTool.h>
 #include <vtkSlicerDynamicModelerPlaneCutTool.h>
@@ -117,6 +118,9 @@ void qSlicerDynamicModelerModuleWidget::setup()
 
   vtkNew<vtkSlicerDynamicModelerHollowTool> hollowTool;
   this->addToolButton(QIcon(":/Icons/Hollow.png"), hollowTool);
+
+  vtkNew<vtkSlicerDynamicModelerMarginTool> marginTool;
+  this->addToolButton(QIcon(":/Icons/Margin.png"), marginTool);
 
   vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
   this->addToolButton(QIcon(":/Icons/Mirror.png"), mirrorTool);

@@ -34,6 +34,7 @@
 #include "vtkSlicerDynamicModelerCurveCutTool.h"
 #include "vtkSlicerDynamicModelerHollowTool.h"
 #include "vtkSlicerDynamicModelerLogic.h"
+#include "vtkSlicerDynamicModelerMarginTool.h"
 #include "vtkSlicerDynamicModelerMirrorTool.h"
 #include "vtkSlicerDynamicModelerPlaneCutTool.h"
 #include "vtkSlicerDynamicModelerROICutTool.h"
@@ -236,6 +237,12 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
   if (strcmp(associatedNode->GetToolName(), hollowTool->GetName()) == 0)
     {
     return QIcon(":Icons/Hollow.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerMarginTool> marginTool;
+  if (strcmp(associatedNode->GetToolName(), marginTool->GetName()) == 0)
+    {
+    return QIcon(":Icons/Margin.png");
     }
 
   vtkNew<vtkSlicerDynamicModelerAppendTool> appendTool;

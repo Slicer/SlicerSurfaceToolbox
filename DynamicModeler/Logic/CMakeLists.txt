@@ -28,6 +28,8 @@ set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}HollowTool.h
   vtkSlicer${MODULE_NAME}Logic.cxx
   vtkSlicer${MODULE_NAME}Logic.h
+  vtkSlicer${MODULE_NAME}MarginTool.cxx
+  vtkSlicer${MODULE_NAME}MarginTool.h
   vtkSlicer${MODULE_NAME}MirrorTool.cxx
   vtkSlicer${MODULE_NAME}MirrorTool.h
   vtkSlicer${MODULE_NAME}PlaneCutTool.cxx
