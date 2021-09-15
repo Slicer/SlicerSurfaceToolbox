@@ -534,7 +534,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.updateProcess("Decimation...")
       SurfaceToolboxLogic.decimate(outputModel, outputModel,
         reductionFactor=float(parameterNode.GetParameter("decimationReduction")),
-        decimateBoundary=parameterNode.GetParameter("decimationBoundary") == "true")
+        decimateBoundary=parameterNode.GetParameter("decimationBoundaryDeletion") == "true")
 
     if parameterNode.GetParameter("smoothing") == "true":
       self.updateProcess("Smoothing...")
