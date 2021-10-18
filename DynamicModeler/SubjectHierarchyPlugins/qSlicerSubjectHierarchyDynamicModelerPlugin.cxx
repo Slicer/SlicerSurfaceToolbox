@@ -38,6 +38,7 @@
 #include "vtkSlicerDynamicModelerMirrorTool.h"
 #include "vtkSlicerDynamicModelerPlaneCutTool.h"
 #include "vtkSlicerDynamicModelerROICutTool.h"
+#include "vtkSlicerDynamicModelerSelectByPointsTool.h"
 
 // DynamicModeler MRML includes
 #include <vtkMRMLDynamicModelerNode.h>
@@ -255,6 +256,12 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
   if (strcmp(associatedNode->GetToolName(), roiCutTool->GetName()) == 0)
     {
       return QIcon(":Icons/ROICut.png");
+    }
+  
+  vtkNew<vtkSlicerDynamicModelerSelectByPointsTool> selectByPointsTool;
+  if (strcmp(associatedNode->GetToolName(), selectByPointsTool->GetName()) == 0)
+    {
+      return QIcon(":Icons/SelectByPoints.png");
     }
 
   return QIcon();

@@ -6,7 +6,9 @@
     <file>Icons/DynamicModeler.png</file>
     <file>Icons/Hollow.png</file>
     <file>Icons/Margin.png</file>
+    <file>Icons/PlaneCut.png</file>
     <file>Icons/Mirror.png</file>
     <file>Icons/ROICut.png</file>
+    <file>Icons/SelectByPoints.png</file>
   </qresource>
 </RCC>

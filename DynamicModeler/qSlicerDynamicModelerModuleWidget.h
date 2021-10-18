@@ -45,7 +45,7 @@ public:
 public:
   /// Add a tool button to the top of the widget.
   /// The button will create a new node using the tool when clicked.
-  void addToolButton(QIcon icon, vtkSlicerDynamicModelerTool* tool);
+  void addToolButton(QIcon icon, vtkSlicerDynamicModelerTool* tool, int row, int column);
 
 protected:
   QScopedPointer<qSlicerDynamicModelerModuleWidgetPrivate> d_ptr;

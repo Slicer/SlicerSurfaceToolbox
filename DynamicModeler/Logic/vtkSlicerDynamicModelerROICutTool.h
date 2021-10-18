@@ -33,9 +33,9 @@ class vtkTransformPolyDataFilter;
 
 #include "vtkSlicerDynamicModelerTool.h"
 
-/// \brief Dynamic modelling tool for cutting a single surface mesh with ROIs
+/// \brief Dynamic modeler tool for cutting a single surface mesh with ROIs.
 ///
-/// Has two node inputs (ROI and Surface), and two outputs (Positive/Negative direction surface segments)
+/// Has two node inputs (ROI and Surface), and two outputs (Positive/Negative direction surface segments).
 class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerROICutTool : public vtkSlicerDynamicModelerTool
 {
 public:

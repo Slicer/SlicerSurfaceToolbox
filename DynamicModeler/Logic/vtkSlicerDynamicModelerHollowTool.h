@@ -41,9 +41,9 @@ class vtkTriangleFilter;
 
 #include "vtkSlicerDynamicModelerTool.h"
 
-/// \brief Dynamic modelling tool for cutting a single surface mesh with planes
+/// \brief Dynamic modeler tool for cutting a single surface mesh with planes.
 ///
-/// Has two node inputs (Plane and Surface), and two outputs (Positive/Negative direction surface segments)
+/// Has two node inputs (Plane and Surface), and two outputs (Positive/Negative direction surface segments).
 class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerHollowTool : public vtkSlicerDynamicModelerTool
 {
 public:

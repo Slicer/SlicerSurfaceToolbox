@@ -4,6 +4,8 @@ set(KIT ${PROJECT_NAME})
 
 set(${KIT}_EXPORT_DIRECTIVE "VTK_SLICER_${MODULE_NAME_UPPER}_MODULE_LOGIC_EXPORT")
 
+add_subdirectory(FastMarching)
+
 #
 # vtkAddon
 #
@@ -13,6 +15,9 @@ endif()
 
 set(${KIT}_INCLUDE_DIRECTORIES
   ${vtkAddon_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/gw_geodesic
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/gw_core
   )
 
 set(${KIT}_SRCS
@@ -36,15 +41,26 @@ set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}PlaneCutTool.h
   vtkSlicer${MODULE_NAME}ROICutTool.cxx
   vtkSlicer${MODULE_NAME}ROICutTool.h
+  vtkSlicer${MODULE_NAME}SelectByPointsTool.cxx
+  vtkSlicer${MODULE_NAME}SelectByPointsTool.h
   vtkSlicer${MODULE_NAME}Tool.cxx
   vtkSlicer${MODULE_NAME}Tool.h
   vtkSlicer${MODULE_NAME}ToolFactory.cxx
   vtkSlicer${MODULE_NAME}ToolFactory.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkFastMarchingGeodesicDistance.cxx
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkFastMarchingGeodesicDistance.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkFastMarchingGeodesicPath.cxx
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkFastMarchingGeodesicPath.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkPolyDataGeodesicDistance.cxx
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkPolyDataGeodesicDistance.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkPolygonalSurfaceContourLineInterpolator2.cxx
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/vtkPolygonalSurfaceContourLineInterpolator2.h
   )
 
 set(${KIT}_TARGET_LIBRARIES
   vtkSlicer${MODULE_NAME}ModuleMRML
   vtkAddon
+  MeshGeodesics
   )
 
 #-----------------------------------------------------------------------------
