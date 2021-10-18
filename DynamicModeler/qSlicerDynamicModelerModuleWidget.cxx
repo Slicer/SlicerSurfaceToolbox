@@ -54,6 +54,7 @@
 #include <vtkSlicerDynamicModelerMirrorTool.h>
 #include <vtkSlicerDynamicModelerPlaneCutTool.h>
 #include <vtkSlicerDynamicModelerROICutTool.h>
+#include <vtkSlicerDynamicModelerSelectionTool.h>
 #include <vtkSlicerDynamicModelerToolFactory.h>
 
 // DynamicModeler MRML includes
@@ -130,6 +131,9 @@ void qSlicerDynamicModelerModuleWidget::setup()
 
   vtkNew<vtkSlicerDynamicModelerROICutTool> roiTool;
   this->addToolButton(QIcon(":/Icons/ROICut.png"), roiTool);
+
+  vtkNew<vtkSlicerDynamicModelerSelectionTool> selectionTool;
+  this->addToolButton(QIcon(":/Icons/Selection.png"), selectionTool);
 
   connect(d->SubjectHierarchyTreeView, SIGNAL(currentItemChanged(vtkIdType)),
     this, SLOT(onParameterNodeChanged()));

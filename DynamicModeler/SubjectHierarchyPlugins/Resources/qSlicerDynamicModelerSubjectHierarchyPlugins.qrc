@@ -7,5 +7,6 @@
     <file>Icons/CurveCut.png</file>
     <file>Icons/PlaneCut.png</file>
     <file>Icons/Mirror.png</file>
+    <file>Icons/Selection.png</file>
   </qresource>
 </RCC>
