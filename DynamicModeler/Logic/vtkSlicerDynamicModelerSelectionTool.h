@@ -27,6 +27,8 @@ class vtkPlane;
 class vtkPlaneCollection;
 class vtkPolyData;
 class vtkThreshold;
+class vtkAppendPolyData;
+class vtkDistancePolyDataFilter;
 class vtkTransformPolyDataFilter;
 class vtkDistancePolyDataFilter;
 
@@ -64,11 +66,11 @@ protected:
 
   vtkSmartPointer<vtkDistancePolyDataFilter>  ModelDistanceToFiducialsFilter;
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> OutputPositiveWorldToModelTransformFilter;
-  vtkSmartPointer<vtkGeneralTransform>        OutputPositiveWorldToModelTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter> OutputSelectionScalarsModelTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform>        OutputSelectionScalarsModelTransform;
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> OutputNegativeWorldToModelTransformFilter;
-  vtkSmartPointer<vtkGeneralTransform>        OutputNegativeWorldToModelTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter> OutputSelectedFacesModelTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform>        OutputSelectedFacesModelTransform;
 
 private:
   vtkSlicerDynamicModelerSelectionCutTool(const vtkSlicerDynamicModelerSelectionCutTool&) = delete;

@@ -45,7 +45,7 @@ vtkToolNewMacro(vtkSlicerDynamicModelerPlaneCutTool);
 const char* SELECTION_INPUT_MODEL_REFERENCE_ROLE = "Selection.InputModel";
 const char* SELECTION_INPUT_FIDUCIAL_LIST_REFERENCE_ROLE = "Selection.InputPlane";
 const char* SELECTION_OUTPUT_MODEL_WITH_SELECTION_SCALARS_REFERENCE_ROLE = "Selection.SelectionScalarsModel";
-const char* SELECTION_OUTPUT_MODEL_WITH_SELECTED_FACES_REFERENCE_ROLE = "Selection.SelectedFacesModels";
+const char* SELECTION_OUTPUT_MODEL_WITH_SELECTED_FACES_REFERENCE_ROLE = "Selection.SelectedFacesModel";
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerPlaneCutTool::vtkSlicerDynamicModelerPlaneCutTool()
@@ -76,77 +76,67 @@ vtkSlicerDynamicModelerPlaneCutTool::vtkSlicerDynamicModelerPlaneCutTool()
   vtkNew<vtkStringArray> inputFiducialListClassNames;
   inputFiducialListClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
   NodeInfo inputFiducialList(
-    "Plane node",
-    "Plane node to cut the model node.",
+    "Fiducials node",
+    "Fiducials node to make the selection of model's faces.",
     inputFiducialListClassNames,
     SELECTION_INPUT_FIDUCIAL_LIST_REFERENCE_ROLE,
     true,
-    true,
+    false,
     inputFiducialListEvents
     );
   this->InputNodeInfo.push_back(inputFiducialList);
 
   /////////
   // Outputs
-  NodeInfo outputPositiveModel(
-    "Clipped output model (positive side)",
-    "Portion of the cut model that is on the same side of the plane as the normal.",
+  NodeInfo outputSelectionScalarsModel(
+    "Model with selection scalars",
+    "All model cells have a selected scalar value that is 0 or 1.",
     inputModelClassNames,
     SELECTION_OUTPUT_MODEL_WITH_SELECTION_SCALARS_REFERENCE_ROLE,
     false,
     false
     );
-  this->OutputNodeInfo.push_back(outputPositiveModel);
+  this->OutputNodeInfo.push_back(outputSelectionScalarsModel);
 
-  NodeInfo outputNegativeModel(
-    "Clipped output model (negative side)",
-    "Portion of the cut model that is on the opposite side of the plane as the normal.",
+  NodeInfo outputSelectedFacesModel(
+    "Model of the selected cells.",
+    "Model that only contains the selected faces of the input model.",
     inputModelClassNames,
     SELECTION_OUTPUT_MODEL_WITH_SELECTED_FACES_REFERENCE_ROLE,
     false,
     false
     );
-  this->OutputNodeInfo.push_back(outputNegativeModel);
+  this->OutputNodeInfo.push_back(outputSelectedFacesModel);
 
   /////////
   // Parameters
-  ParameterInfo parameterCapSurface(
-    "Cap surface",
-    "Create a closed surface by triangulating the clipped region",
-    "CapSurface",
-    PARAMETER_BOOL,
-    true);
-  this->InputParameterInfo.push_back(parameterCapSurface);
-
-  ParameterInfo parameterOperationType(
-    "Operation type",
-    "Method used for combining the planes",
-    "OperationType",
-    PARAMETER_STRING_ENUM,
-    "Union");
-
-  vtkNew<vtkStringArray> possibleValues;
-  parameterOperationType.PossibleValues = possibleValues;
-  parameterOperationType.PossibleValues->InsertNextValue("Union");
-  parameterOperationType.PossibleValues->InsertNextValue("Intersection");
-  parameterOperationType.PossibleValues->InsertNextValue("Difference");
-  this->InputParameterInfo.push_back(parameterOperationType);
+  ParameterInfo parameterSelectionDistance(
+    "Selection distance",
+    "Selection distance of model's faces to input fiducials.",
+    "SelectionDistance",
+    PARAMETER_DOUBLE,
+    5.0);
+  this->InputParameterInfo.push_back(parameterSelectionDistance);
 
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
 
+  this->ModelDistanceToFiducialsFilter = vtkSmartPointer<vtkDistancePolyDataFilter>::New();
+  this->ModelDistanceToFiducialsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+  this->ModelDistanceToFiducialsFilter->SignedDistanceOff()
+
   this->PlaneClipper = vtkSmartPointer<vtkClipPolyData>::New();
   this->PlaneClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   this->PlaneClipper->SetValue(0.0);
 
-  this->OutputPositiveWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->OutputPositiveWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputPositiveWorldToModelTransformFilter->SetTransform(this->OutputPositiveWorldToModelTransform);
+  this->OutputSelectionScalarsModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->OutputSelectionScalarsModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
+  this->OutputSelectionScalarsModelTransformFilter->SetTransform(this->OutputSelectionScalarsModelTransform);
 
-  this->OutputNegativeWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->OutputNegativeWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputNegativeWorldToModelTransformFilter->SetTransform(this->OutputNegativeWorldToModelTransform);
+  this->OutputSelectedFacesModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->OutputSelectedFacesModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
+  this->OutputSelectedFacesModelTransformFilter->SetTransform(this->OutputSelectedFacesModelTransform);
 }
 
 //----------------------------------------------------------------------------
@@ -156,7 +146,7 @@ vtkSlicerDynamicModelerPlaneCutTool::~vtkSlicerDynamicModelerPlaneCutTool()
 //----------------------------------------------------------------------------
 const char* vtkSlicerDynamicModelerPlaneCutTool::GetName()
 {
-  return "Plane cut";
+  return "Selection";
 }
 
 //----------------------------------------------------------------------------
@@ -265,67 +255,21 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
     return false;
     }
 
-  vtkMRMLModelNode* outputPositiveModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(SELECTION_OUTPUT_MODEL_WITH_SELECTION_SCALARS_REFERENCE_ROLE));
-  vtkMRMLModelNode* outputNegativeModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(SELECTION_OUTPUT_MODEL_WITH_SELECTED_FACES_REFERENCE_ROLE));
-  if (!outputPositiveModelNode && !outputNegativeModelNode)
+  vtkMRMLModelNode* outputSelectionScalarsModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(SELECTION_OUTPUT_MODEL_WITH_SELECTION_SCALARS_REFERENCE_ROLE));
+  vtkMRMLModelNode* outputSelectedFacesModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(SELECTION_OUTPUT_MODEL_WITH_SELECTED_FACES_REFERENCE_ROLE));
+  if (!outputSelectionScalarsModelNode && !outputSelectedFacesModelNode)
     {
     // Nothing to output
     return true;
     }
 
-  vtkNew<vtkImplicitBoolean> planes;
-  std::string operationType = this->GetNthInputParameterValue(1, surfaceEditorNode).ToString();
-  if (operationType == "Intersection")
+  vtkMRMLNode* inputNode = surfaceEditorNode->GetNodeReference(SELECTION_INPUT_FIDUCIAL_LIST_REFERENCE_ROLE);
+  vtkMRMLMarkupsFiducialNode* fiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(inputNode);
+  if (!fiducialNode)
     {
-    planes->SetOperationTypeToIntersection();
+    vtkErrorMacro("Invalid input fiducial node!");
+    return false;
     }
-  else if (operationType == "Difference")
-    {
-    planes->SetOperationTypeToDifference();
-    }
-  else
-    {
-    planes->SetOperationTypeToUnion();
-    }
-
-  std::vector<vtkMRMLNode*> planeNodes;
-  surfaceEditorNode->GetNodeReferences(SELECTION_INPUT_FIDUCIAL_LIST_REFERENCE_ROLE, planeNodes);
-  vtkNew<vtkPlaneCollection> planeCollection;
-  int planeIndex = 0;
-  for (vtkMRMLNode* planeNode : planeNodes)
-    {
-    vtkMRMLMarkupsPlaneNode* inputPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(planeNode);
-    vtkMRMLSliceNode* inputSliceNode = vtkMRMLSliceNode::SafeDownCast(planeNode);
-    if (!inputPlaneNode && !inputSliceNode)
-      {
-      vtkErrorMacro("Invalid input plane nodes!");
-      return false;
-      }
-
-    double origin_World[3] = { 0.0, 0.0, 0.0 };
-    double normal_World[3] = { 0.0, 0.0, 1.0 };
-    if (inputPlaneNode)
-      {
-      inputPlaneNode->GetOriginWorld(origin_World);
-      inputPlaneNode->GetNormalWorld(normal_World);
-      }
-    if (inputSliceNode)
-      {
-      vtkMatrix4x4* sliceToRAS = inputSliceNode->GetSliceToRAS();
-      vtkNew<vtkTransform> sliceToRASTransform;
-      sliceToRASTransform->SetMatrix(sliceToRAS);
-      sliceToRASTransform->TransformPoint(origin_World, origin_World);
-      sliceToRASTransform->TransformVector(normal_World, normal_World);
-      }
-
-    vtkNew<vtkPlane> currentPlane;
-    currentPlane->SetNormal(normal_World);
-    currentPlane->SetOrigin(origin_World);
-    planeCollection->AddItem(currentPlane);
-    planes->AddFunction(currentPlane);
-    ++planeIndex;
-    }
-  this->PlaneClipper->SetClipFunction(planes);
 
   vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(SELECTION_INPUT_MODEL_REFERENCE_ROLE));
   if (!inputModelNode)
@@ -347,32 +291,24 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
     {
     this->InputModelNodeToWorldTransform->Identity();
     }
-  if (outputPositiveModelNode && outputPositiveModelNode->GetParentTransformNode())
+  if (outputSelectionScalarsModelNode && outputSelectionScalarsModelNode->GetParentTransformNode())
     {
-    outputPositiveModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputPositiveWorldToModelTransform);
+    outputSelectionScalarsModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputSelectionScalarsModelTransform);
     }
-  if (outputNegativeModelNode && outputNegativeModelNode->GetParentTransformNode())
+  if (outputSelectedFacesModelNode && outputSelectedFacesModelNode->GetParentTransformNode())
     {
-    outputNegativeModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputNegativeWorldToModelTransform);
+    outputSelectedFacesModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputSelectedFacesModelTransform);
     }
+
+  double selectionDistance = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
 
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
 
-  if (outputNegativeModelNode)
-    {
-    this->PlaneClipper->GenerateClippedOutputOn();
-    }
-  this->PlaneClipper->Update();
+  this->ModelDistanceToFiducialsFilter->Update();
 
-  bool capSurface = this->GetNthInputParameterValue(0, surfaceEditorNode).ToInt() != 0;
-  vtkNew<vtkPolyData> endCapPolyData;
-  if (capSurface)
+  if (outputSelectionScalarsModelNode)
     {
-    this->CreateEndCap(planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes, endCapPolyData);
-    }
-
-  if (outputPositiveModelNode)
-    {
+    //Do selectionScalarsModelProcessing
     vtkNew<vtkPolyData> outputMesh;
     outputMesh->ShallowCopy(this->PlaneClipper->GetOutput());
     if (capSurface)
@@ -384,17 +320,18 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
       outputMesh->ShallowCopy(appendEndCap->GetOutput());
       }
 
-    this->OutputPositiveWorldToModelTransformFilter->SetInputData(outputMesh);
-    this->OutputPositiveWorldToModelTransformFilter->Update();
-    outputMesh->DeepCopy(this->OutputPositiveWorldToModelTransformFilter->GetOutput());
+    this->OutputSelectionScalarsModelTransformFilter->SetInputData(outputMesh);
+    this->OutputSelectionScalarsModelTransformFilter->Update();
+    outputMesh->DeepCopy(this->OutputSelectionScalarsModelTransformFilter->GetOutput());
 
-    MRMLNodeModifyBlocker blocker(outputPositiveModelNode);
-    outputPositiveModelNode->SetAndObserveMesh(outputMesh);
-    outputPositiveModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+    MRMLNodeModifyBlocker blocker(outputSelectionScalarsModelNode);
+    outputSelectionScalarsModelNode->SetAndObserveMesh(outputMesh);
+    outputSelectionScalarsModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
     }
 
-  if (outputNegativeModelNode)
+  if (outputSelectedFacesModelNode)
     {
+    //Do selectedFacesModelProcessing
     vtkNew<vtkPolyData> outputMesh;
     outputMesh->ShallowCopy(this->PlaneClipper->GetClippedOutput());
     if (capSurface)
@@ -411,13 +348,13 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
       outputMesh->ShallowCopy(appendEndCap->GetOutput());
       }
 
-    this->OutputNegativeWorldToModelTransformFilter->SetInputData(outputMesh);
-    this->OutputNegativeWorldToModelTransformFilter->Update();
-    outputMesh->DeepCopy(this->OutputNegativeWorldToModelTransformFilter->GetOutput());
+    this->OutputSelectedFacesModelTransformFilter->SetInputData(outputMesh);
+    this->OutputSelectedFacesModelTransformFilter->Update();
+    outputMesh->DeepCopy(this->OutputSelectedFacesModelTransformFilter->GetOutput());
 
-    MRMLNodeModifyBlocker blocker(outputNegativeModelNode);
-    outputNegativeModelNode->SetAndObserveMesh(outputMesh);
-    outputNegativeModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+    MRMLNodeModifyBlocker blocker(outputSelectedFacesModelNode);
+    outputSelectedFacesModelNode->SetAndObserveMesh(outputMesh);
+    outputSelectedFacesModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
     }
 
   return true;
