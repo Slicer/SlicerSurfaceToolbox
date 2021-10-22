@@ -62,10 +62,6 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        InputModelNodeToWorldTransform;
 
-  vtkSmartPointer<vtkClipPolyData>            PlaneClipper;
-
-  vtkSmartPointer<vtkDistancePolyDataFilter>  ModelDistanceToFiducialsFilter;
-
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputSelectionScalarsModelTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputSelectionScalarsModelTransform;
 

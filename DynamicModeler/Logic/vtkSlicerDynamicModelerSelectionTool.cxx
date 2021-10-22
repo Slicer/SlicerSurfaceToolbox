@@ -38,6 +38,7 @@
 #include <vtkThreshold.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
+#include <vtkFastMarchingGeodesicDistance.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerSelectionTool);
@@ -112,11 +113,24 @@ vtkSlicerDynamicModelerSelectionTool::vtkSlicerDynamicModelerSelectionTool()
   // Parameters
   ParameterInfo parameterSelectionDistance(
     "Selection distance",
-    "Selection distance of model's faces to input fiducials.",
+    "Selection distance of model's points to input fiducials.",
     "SelectionDistance",
     PARAMETER_DOUBLE,
     5.0);
   this->InputParameterInfo.push_back(parameterSelectionDistance);
+
+  ParameterInfo parameterSelectionAlgorithm(
+  "Selection algorithm",
+  "Method used to calculate points distance to seeds.",
+  "SelectionAlgorithm",
+  PARAMETER_STRING_ENUM,
+  "SphereRadius");
+
+  vtkNew<vtkStringArray> possibleValues;
+  parameterSelectionAlgorithm.PossibleValues = possibleValues;
+  parameterSelectionAlgorithm.PossibleValues->InsertNextValue("SphereRadius");
+  parameterSelectionAlgorithm.PossibleValues->InsertNextValue("GeodesicDistance");
+  this->InputParameterInfo.push_back(parameterSelectionAlgorithm);
 
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -203,96 +217,170 @@ bool vtkSlicerDynamicModelerSelectionTool::RunInternal(vtkMRMLDynamicModelerNode
     outputSelectedFacesModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputSelectedFacesModelTransform);
     }
 
-  double selectionDistance = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
-
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
 
-  vtkNew<vtkAppendPolyData> appendFilter;
-  for (int i = 0; i < fiducialNode->GetNumberOfControlPoints(); i++)
+  double selectionDistance = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
+
+  std::string selectionAlgorithm = this->GetNthInputParameterValue(1, surfaceEditorNode).ToString();
+  if (selectionAlgorithm == "SphereRadius")
     {
-    double position[3] = { 0.0, 0.0, 0.0};
-    fiducialNode->GetNthControlPointPositionWorld(i,position);
-    vtkNew<vtkSphereSource> sphere;
-    sphere->SetRadius(0.1);
-    sphere->SetCenter(position);
-    sphere->SetThetaResolution(5);
-    sphere->SetPhiResolution(5);
-    sphere->Update();
-    appendFilter->AddInputData(sphere->GetOutput());
-    }
-
-  appendFilter->Update();
-
-  this->ModelDistanceToFiducialsFilter->SetInputData(0, this->InputModelToWorldTransformFilter->GetOutput());
-  this->ModelDistanceToFiducialsFilter->SetInputData(1, appendFilter->GetOutput());
-  this->ModelDistanceToFiducialsFilter->Update();
-
-  if (outputSelectionScalarsModelNode)
-    {
-    //Do selectionScalarsModelProcessing
-
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->ShallowCopy(this->ModelDistanceToFiducialsFilter->GetOutput());
-    vtkCellData *cellScalars = outputMesh->GetCellData();
-    vtkDoubleArray *distanceArray = cellScalars.GetArray("Distance");
+    outputMesh->ShallowCopy(this->InputModelToWorldTransformFilter->GetOutput());
+
+    # Initialize the locator
+    vtkNew<vtkPointLocator> pointTree;
+    pointTree->SetDataSet(outputMesh);
+    pointTree->BuildLocator();
+
     vtkNew<vtkIntArray> selectionArray;
-    selectionArray->SetName("Selection")
-    selectionArray->SetNumberOfValues(outputMesh->GetNumberOfCells())
-    for (int i = 0; i < outputMesh->GetNumberOfCells(); i++)
+    selectionArray->SetName("Selection");
+    selectionArray->SetNumberOfValues(outputMesh->GetNumberOfPoints());
+    selectionArray->Fill(0);
+
+    for (int i = 0; i < fiducialNode->GetNumberOfControlPoints(); i++)
       {
-      if (distanceArray->GetTuple1(i) < selectionDistance)
+      position = [0,0,0];
+      fiducialList->GetNthControlPointPositionWorld(i,position);
+      vtkNew<vtkIdList> result;
+      pointTree->FindPointsWithinRadius(selectionDistance, position,
+                                      result);
+      
+      for (int j = 0; i < result->GetNumberOfIds(); i++)
         {
-        selectionArray->SetTuple1(i,1)
-        }
-      else
-        {
-        selectionArray->SetTuple1(i,0)
+        point_ind = result->GetId(j);
+        selectionArray->SetTuple1(point_ind, 1);
         }
       }
 
-    cellScalars->AddArray(selectionArray)
+    vtkPointData *pointScalars = vtkPointData::SafeDownCast(modelPolydata->GetPointData());
+    pointScalars->AddArray(selectionArray);
 
-    this->OutputSelectionScalarsModelTransformFilter->SetInputData(outputMesh);
-    this->OutputSelectionScalarsModelTransformFilter->Update();
-    outputMesh->DeepCopy(this->OutputSelectionScalarsModelTransformFilter->GetOutput());
+    if (outputSelectionScalarsModelNode)
+      {
+      //Do selectionScalarsModelProcessing
+      this->OutputSelectionScalarsModelTransformFilter->SetInputData(outputMesh);
+      this->OutputSelectionScalarsModelTransformFilter->Update();
+      outputMesh->DeepCopy(this->OutputSelectionScalarsModelTransformFilter->GetOutput());
 
-    MRMLNodeModifyBlocker blocker(outputSelectionScalarsModelNode);
-    outputSelectionScalarsModelNode->SetAndObserveMesh(outputMesh);
-    outputSelectionScalarsModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+      MRMLNodeModifyBlocker blocker(outputSelectionScalarsModelNode);
+      outputSelectionScalarsModelNode->SetAndObserveMesh(outputMesh);
+      outputSelectionScalarsModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
 
-    # Set up coloring by selection array
-    vtkMRMLModelDisplayNode* outputDisplayNode = outputSelectionScalarsModelNode->GetDisplayNode();
-    outputDisplayNode->SetActiveScalar("Selection", vtk::vtkAssignAttribute::CELL_DATA);
-    outputDisplayNode->SetAndObserveColorNodeID("vtkMRMLColorTableNodeWarm1");
-    outputDisplayNode->SetScalarVisibility(true);
+      # Set up coloring by selection array
+      vtkMRMLModelDisplayNode* outputDisplayNode = outputSelectionScalarsModelNode->GetDisplayNode();
+      outputDisplayNode->SetActiveScalar("Selection", vtk::vtkAssignAttribute::POINT_DATA);
+      //outputDisplayNode->SetAndObserveColorNodeID("vtkMRMLColorTableNodeWarm1");
+      outputDisplayNode->SetScalarVisibility(true);
+      }
+
+    if (outputSelectedFacesModelNode)
+      {
+      //Do selectedFacesModelProcessing
+
+      vtkNew<vtkThreshold> thresholdFilter;
+      thresholdFilter->SetInputData(outputMesh);
+      thresholdFilter->ThresholdBetween(0.9, 1.1);
+      thresholdFilter->SetInputArrayToProcess(0, 0, 0,
+          vtk::vtkDataObject::FIELD_ASSOCIATION_POINTS,
+          "Selection");
+      thresholdFilter->Update();
+      vtkNew<vtkGeometryFilter> geometryFilter;
+      geometryFilter->SetInputData(thresholdFilter->GetOutput());
+      geometryFilter->Update();
+
+      this->OutputSelectedFacesModelTransformFilter->SetInputData(geometryFilter->GetOutput());
+      this->OutputSelectedFacesModelTransformFilter->Update();
+      outputMesh->DeepCopy(this->OutputSelectedFacesModelTransformFilter->GetOutput());
+
+      MRMLNodeModifyBlocker blocker(outputSelectedFacesModelNode);
+      outputSelectedFacesModelNode->SetAndObserveMesh(outputMesh);
+      outputSelectedFacesModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+      }
     }
-
-  if (outputSelectedFacesModelNode)
+  else
     {
-    //Do selectedFacesModelProcessing
+      # Initialize the locator
+      vtkNew<vtkPointLocator> pointTree;
+      pointTree->SetDataSet(outputMesh);
+      pointTree->BuildLocator();
 
-    vtkNew<vtkThreshold> thresholdFilter;
-    thresholdFilter->SetInputData(this->ModelDistanceToFiducialsFilter->GetOutput());
-    thresholdFilter->ThresholdBetween(0, selectionDistance);
-    thresholdFilter->SetInputArrayToProcess(0, 0, 0,
-        vtk::vtkDataObject::FIELD_ASSOCIATION_CELLS,
-        "Distance");
-    thresholdFilter->Update();
-    vtkNew<vtkGeometryFilter> geometryFilter;
-    geometryFilter->SetInputData(thresholdFilter->GetOutput());
-    geometryFilter->Update();
+      vtkNew<vtkIdList> seeds;
+      
+      for (int i = 0; i < fiducialNode->GetNumberOfControlPoints(); i++)
+        {
+        position = [0,0,0];
+        fiducialList->GetNthControlPointPositionWorld(i,position);
+        vtkIdType pointIDOfClosestPoint = pointTree->FindClosestPoint(position)
+        seeds->InsertNextId(pointIDOfClosestPoint);
 
-    vtkNew<vtkPolyData> outputMesh;
-    outputMesh->ShallowCopy(geometryFilter->GetOutput());
+      vtkNew<vtkFastMarchingGeodesicDistance> Geodesic;
+      Geodesic->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+      Geodesic->SetFieldDataName("FMMDist");
+      Geodesic->SetSeeds(seeds.GetPointer());
+      Geodesic->SetDistanceStopCriterion(selectionDistance);
+      Geodesic->Update();
 
-    this->OutputSelectedFacesModelTransformFilter->SetInputData(outputMesh);
-    this->OutputSelectedFacesModelTransformFilter->Update();
-    outputMesh->DeepCopy(this->OutputSelectedFacesModelTransformFilter->GetOutput());
+      if (outputSelectionScalarsModelNode)
+        {
+        vtkNew<vtkPolyData> outputMesh;
+        outputMesh->ShallowCopy(Geodesic->GetOutput());
 
-    MRMLNodeModifyBlocker blocker(outputSelectedFacesModelNode);
-    outputSelectedFacesModelNode->SetAndObserveMesh(outputMesh);
-    outputSelectedFacesModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+        vtkPointData *pointScalars = vtkPointData::SafeDownCast(outputMesh->GetPointData());
+        vtkFloatArray *distanceArray = pointScalars.GetArray("FMMDist")
+        vtkNew<vtkIntArray> selectionArray;
+        selectionArray->SetName("Selection");
+        selectionArray->SetNumberOfValues(outputMesh.GetNumberOfPoints());
+        selectionArray->Fill(0);
+        for (int i = 0; i < outputMesh->GetNumberOfPoints(); i++)
+          {
+          if (distanceArray->GetTuple1(i) < selectionDistance)
+            {
+            selectionArray->SetTuple1(i,1)
+            }
+          }
+
+        pointScalars->AddArray(selectionArray)
+
+        //Do selectionScalarsModelProcessing
+        this->OutputSelectionScalarsModelTransformFilter->SetInputData(outputMesh);
+        this->OutputSelectionScalarsModelTransformFilter->Update();
+        outputMesh->DeepCopy(this->OutputSelectionScalarsModelTransformFilter->GetOutput());
+
+        MRMLNodeModifyBlocker blocker(outputSelectionScalarsModelNode);
+        outputSelectionScalarsModelNode->SetAndObserveMesh(outputMesh);
+        outputSelectionScalarsModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+
+        # Set up coloring by selection array
+        vtkMRMLModelDisplayNode* outputDisplayNode = outputSelectionScalarsModelNode->GetDisplayNode();
+        outputDisplayNode->SetActiveScalar("Selection", vtk::vtkAssignAttribute::POINT_DATA);
+        //outputDisplayNode->SetAndObserveColorNodeID("vtkMRMLColorTableNodeWarm1");
+        outputDisplayNode->SetScalarVisibility(true);
+        }
+      if (outputSelectedFacesModelNode)
+        {
+        //Do selectedFacesModelProcessing
+        vtkNew<vtkThreshold> thresholdFilter;
+        thresholdFilter->SetInputData(Geodesic->GetOutput());
+        thresholdFilter->ThresholdBetween(0, selectionDistance);
+        thresholdFilter->SetInputArrayToProcess(0, 0, 0,
+            vtk::vtkDataObject::FIELD_ASSOCIATION_POINTS,
+            "FMMDist");
+        thresholdFilter->Update();
+        vtkNew<vtkGeometryFilter> geometryFilter;
+        geometryFilter->SetInputData(thresholdFilter->GetOutput());
+        geometryFilter->Update();
+
+        this->OutputSelectedFacesModelTransformFilter->SetInputData(geometryFilter->GetOutput());
+        this->OutputSelectedFacesModelTransformFilter->Update();
+        outputMesh->DeepCopy(this->OutputSelectedFacesModelTransformFilter->GetOutput());
+
+        MRMLNodeModifyBlocker blocker(outputSelectedFacesModelNode);
+        outputSelectedFacesModelNode->SetAndObserveMesh(outputMesh);
+        outputSelectedFacesModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+        }
     }
+
+  
 
   return true;
 }
