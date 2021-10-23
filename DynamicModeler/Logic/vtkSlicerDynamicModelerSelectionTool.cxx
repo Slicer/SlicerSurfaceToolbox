@@ -7,7 +7,7 @@
 #include "vtkMRMLDynamicModelerNode.h"
 
 // MRML includes
-#include <vtkMRMLMarkupsPlaneNode.h>
+#include <vtkMRMLMarkupsFiducialNode.h>
 #include <vtkMRMLModelNode.h>
 #include <vtkMRMLSliceNode.h>
 #include <vtkMRMLTransformNode.h>
@@ -44,7 +44,7 @@
 vtkToolNewMacro(vtkSlicerDynamicModelerSelectionTool);
 
 const char* SELECTION_INPUT_MODEL_REFERENCE_ROLE = "Selection.InputModel";
-const char* SELECTION_INPUT_FIDUCIAL_LIST_REFERENCE_ROLE = "Selection.InputPlane";
+const char* SELECTION_INPUT_FIDUCIAL_LIST_REFERENCE_ROLE = "Selection.InputFiducial";
 const char* SELECTION_OUTPUT_MODEL_WITH_SELECTION_SCALARS_REFERENCE_ROLE = "Selection.SelectionScalarsModel";
 const char* SELECTION_OUTPUT_MODEL_WITH_SELECTED_FACES_REFERENCE_ROLE = "Selection.SelectedFacesModel";
 
@@ -135,14 +135,6 @@ vtkSlicerDynamicModelerSelectionTool::vtkSlicerDynamicModelerSelectionTool()
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
-
-  this->ModelDistanceToFiducialsFilter = vtkSmartPointer<vtkDistancePolyDataFilter>::New();
-  this->ModelDistanceToFiducialsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-  this->ModelDistanceToFiducialsFilter->SignedDistanceOff()
-
-  this->PlaneClipper = vtkSmartPointer<vtkClipPolyData>::New();
-  this->PlaneClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-  this->PlaneClipper->SetValue(0.0);
 
   this->OutputSelectionScalarsModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputSelectionScalarsModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
