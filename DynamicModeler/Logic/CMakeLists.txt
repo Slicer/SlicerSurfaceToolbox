@@ -4,6 +4,9 @@ set(KIT ${PROJECT_NAME})
 
 set(${KIT}_EXPORT_DIRECTIVE "VTK_SLICER_${MODULE_NAME_UPPER}_MODULE_LOGIC_EXPORT")
 
+add_subdirectory(Source)
+add_subdirectory(FastMarching)
+
 #
 # vtkAddon
 #
@@ -13,6 +16,8 @@ endif()
 
 set(${KIT}_INCLUDE_DIRECTORIES
   ${vtkAddon_INCLUDE_DIRS}
+  Source
+  FastMarching
   )
 
 set(${KIT}_SRCS
