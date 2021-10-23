@@ -49,10 +49,7 @@ public:
 
   /// Run the faces selection on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
-
-  /// Create an end cap on the clipped surface
-  static void CreateEndCap(vtkPlaneCollection* planes, vtkPolyData* originalPolyData, vtkImplicitBoolean* cutFunction, vtkPolyData* outputEndCap);
-
+  
 protected:
   vtkSlicerDynamicModelerSelectionCutTool();
   ~vtkSlicerDynamicModelerSelectionCutTool() override;

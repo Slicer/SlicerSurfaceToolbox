@@ -91,7 +91,7 @@ vtkSlicerDynamicModelerSelectionTool::vtkSlicerDynamicModelerSelectionTool()
   // Outputs
   NodeInfo outputSelectionScalarsModel(
     "Model with selection scalars",
-    "All model cells have a selected scalar value that is 0 or 1.",
+    "All model points have a selected scalar value that is 0 or 1.",
     inputModelClassNames,
     SELECTION_OUTPUT_MODEL_WITH_SELECTION_SCALARS_REFERENCE_ROLE,
     false,
@@ -178,6 +178,11 @@ bool vtkSlicerDynamicModelerSelectionTool::RunInternal(vtkMRMLDynamicModelerNode
     {
     vtkErrorMacro("Invalid input fiducial node!");
     return false;
+    }
+  if (fiducialNode->GetNumberOfControlPoints() == 0)
+    {
+    // Nothing to output
+    return true;
     }
 
   vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(SELECTION_INPUT_MODEL_REFERENCE_ROLE));
