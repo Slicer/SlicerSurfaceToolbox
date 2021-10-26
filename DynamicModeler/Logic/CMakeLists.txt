@@ -4,7 +4,6 @@ set(KIT ${PROJECT_NAME})
 
 set(${KIT}_EXPORT_DIRECTIVE "VTK_SLICER_${MODULE_NAME_UPPER}_MODULE_LOGIC_EXPORT")
 
-add_subdirectory(Source)
 add_subdirectory(FastMarching)
 
 #
@@ -16,11 +15,18 @@ endif()
 
 set(${KIT}_INCLUDE_DIRECTORIES
   ${vtkAddon_INCLUDE_DIRS}
-  Source
-  FastMarching
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching
   )
 
 set(${KIT}_SRCS
+  vtkFastMarchingGeodesicDistance.cxx
+  vtkFastMarchingGeodesicDistance.h
+  vtkFastMarchingGeodesicPath.cxx
+  vtkFastMarchingGeodesicPath.h
+  vtkPolyDataGeodesicDistance.cxx
+  vtkPolyDataGeodesicDistance.h
+  vtkPolygonalSurfaceContourLineInterpolator2.cxx
+  vtkPolygonalSurfaceContourLineInterpolator2.h
   vtkImplicitPolyDataPointDistance.cxx
   vtkImplicitPolyDataPointDistance.h
   vtkSlicer${MODULE_NAME}AppendTool.cxx
@@ -52,6 +58,7 @@ set(${KIT}_SRCS
 set(${KIT}_TARGET_LIBRARIES
   vtkSlicer${MODULE_NAME}ModuleMRML
   vtkAddon
+  FastMarching
   )
 
 #-----------------------------------------------------------------------------
