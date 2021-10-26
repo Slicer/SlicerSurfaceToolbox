@@ -193,9 +193,10 @@ int vtkPolygonalSurfaceContourLineInterpolator2::InterpolateLine(
   vtkPolyData *pd = this->GeodesicPath->GetOutput();
 
   // We assume there's only one cell of course
-  vtkIdType npts = 0, *pts = NULL;
+  const vtkIdType* pts = nullptr;
+  vtkIdType npts = 0;
   pd->GetLines()->InitTraversal();
-  pd->GetLines()->GetNextCell( npts, pts );
+  pd->GetLines()->GetNextCell( npts, pts);
 
   // Get the vertex normals if there is a height offset. The offset at
   // each node of the graph is in the direction of the vertex normal.

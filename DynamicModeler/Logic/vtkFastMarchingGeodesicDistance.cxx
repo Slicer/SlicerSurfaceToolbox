@@ -225,7 +225,8 @@ void vtkFastMarchingGeodesicDistance::SetupGeodesicMesh( vtkPolyData *in )
       mesh->SetVertex( i, &point );
       }
 
-    vtkIdType *ptIds = 0, npts;
+    const vtkIdType* ptIds = nullptr;
+    vtkIdType npts = 0;
     const int nCells = in->GetNumberOfPolys();
     vtkCellArray *cells = in->GetPolys();
     if (!cells)

@@ -16,6 +16,8 @@ endif()
 set(${KIT}_INCLUDE_DIRECTORIES
   ${vtkAddon_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/gw_geodesic
+  ${CMAKE_CURRENT_SOURCE_DIR}/FastMarching/gw_core
   )
 
 set(${KIT}_SRCS

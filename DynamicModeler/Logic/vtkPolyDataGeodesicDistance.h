@@ -46,7 +46,7 @@ public:
   vtkGetStringMacro(FieldDataName);
 
   // Overload GetMTime() because we depend on seeds
-  unsigned long GetMTime();
+  vtkMTimeType GetMTime();
 
 protected:
   vtkPolyDataGeodesicDistance();

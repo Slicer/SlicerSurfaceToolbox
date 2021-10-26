@@ -37,12 +37,12 @@ class vtkDistancePolyDataFilter;
 /// \brief Dynamic modelling tool to select model's faces near fiducials 
 ///
 /// Has two node inputs (Fiducials and Surface), and two outputs (surface with selectionScalars or cropped surface according to selection)
-class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerSelectionCutTool : public vtkSlicerDynamicModelerTool
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerSelectionTool : public vtkSlicerDynamicModelerTool
 {
 public:
-  static vtkSlicerDynamicModelerSelectionCutTool* New();
+  static vtkSlicerDynamicModelerSelectionTool* New();
   vtkSlicerDynamicModelerTool* CreateToolInstance() override;
-  vtkTypeMacro(vtkSlicerDynamicModelerSelectionCutTool, vtkSlicerDynamicModelerTool);
+  vtkTypeMacro(vtkSlicerDynamicModelerSelectionTool, vtkSlicerDynamicModelerTool);
 
   /// Human-readable name of the mesh modification tool
   const char* GetName() override;
@@ -51,9 +51,9 @@ public:
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
   
 protected:
-  vtkSlicerDynamicModelerSelectionCutTool();
-  ~vtkSlicerDynamicModelerSelectionCutTool() override;
-  void operator=(const vtkSlicerDynamicModelerSelectionCutTool&);
+  vtkSlicerDynamicModelerSelectionTool();
+  ~vtkSlicerDynamicModelerSelectionTool() override;
+  void operator=(const vtkSlicerDynamicModelerSelectionTool&);
 
 protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
@@ -66,7 +66,7 @@ protected:
   vtkSmartPointer<vtkGeneralTransform>        OutputSelectedFacesModelTransform;
 
 private:
-  vtkSlicerDynamicModelerSelectionCutTool(const vtkSlicerDynamicModelerSelectionCutTool&) = delete;
+  vtkSlicerDynamicModelerSelectionTool(const vtkSlicerDynamicModelerSelectionTool&) = delete;
 };
 
-#endif // __vtkSlicerDynamicModelerSelectionCutTool_h
+#endif // __vtkSlicerDynamicModelerSelectionTool_h
