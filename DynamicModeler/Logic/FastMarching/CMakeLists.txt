@@ -53,6 +53,6 @@ INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/gw_core
                      ${CMAKE_CURRENT_SOURCE_DIR}/gw_geodesic
                      ${CMAKE_CURRENT_BINARY_DIR}/gw_maths )
 
-ADD_LIBRARY( ${PROJECT_NAME}
+ADD_LIBRARY( ${PROJECT_NAME} STATIC 
              ${${PROJECT_NAME}_SRCS}
              ${${PROJECT_NAME}_HDRS} )

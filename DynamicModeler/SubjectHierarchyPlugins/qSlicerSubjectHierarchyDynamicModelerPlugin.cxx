@@ -261,7 +261,7 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
   vtkNew<vtkSlicerDynamicModelerSelectionTool> selectionTool;
   if (strcmp(associatedNode->GetToolName(), selectionTool->GetName()) == 0)
     {
-    return QIcon(":Icons/Selection.png");
+      return QIcon(":Icons/Selection.png");
     }
 
   return QIcon();

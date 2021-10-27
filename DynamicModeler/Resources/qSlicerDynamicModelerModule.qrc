@@ -8,5 +8,6 @@
     <file>Icons/Margin.png</file>
     <file>Icons/Mirror.png</file>
     <file>Icons/ROICut.png</file>
+	<file>Icons/Selection.png</file>
   </qresource>
 </RCC>
