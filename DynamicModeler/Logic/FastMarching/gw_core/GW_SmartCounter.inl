@@ -38,6 +38,7 @@ GW_INLINE
 GW_SmartCounter::GW_SmartCounter( const GW_SmartCounter& Dup )
 :	nReferenceCounter_(0)
 {
+  (void)Dup; // unused
 	/* NOTHING */
 }
 
@@ -54,6 +55,7 @@ GW_SmartCounter::GW_SmartCounter( const GW_SmartCounter& Dup )
 GW_INLINE
 GW_SmartCounter& GW_SmartCounter::operator=( const GW_SmartCounter& Dup )
 {
+  (void)Dup; // unused
 	nReferenceCounter_ = 0;
 	return (*this);
 }

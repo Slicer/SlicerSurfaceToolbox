@@ -297,6 +297,10 @@ public:
 														GW_Float a1, GW_Float b1, GW_Float c1, 
 														GW_Float a2, GW_Float b2, GW_Float c2 )
 	{
+    (void)c; // unused
+    (void)c0; // unused
+    (void)c1; // unused
+    (void)c2; // unused
 		/* the system to solve is :
 			[a0 a1 a2] [x]   [a]
 			[b0 b1 b2]*[y] = [b]
@@ -440,6 +444,8 @@ GW_Float **matrix(long nrl, long nrh, long ncl, long nch)
 inline 
 void free_matrix(GW_Float **m, long nrl, long nrh, long ncl, long nch)
 {
+  (void)nrh; // unused
+  (void)nch; // unused
 	free((FREE_ARG) (m[nrl]+ncl-NR_END));
 	free((FREE_ARG) (m+nrl-NR_END));
 }
@@ -448,6 +454,7 @@ void free_matrix(GW_Float **m, long nrl, long nrh, long ncl, long nch)
 inline 
 GW_Float *fvector(long nl, long nh)
 {
+  (void)nh; // unused
 	GW_Float *v;
 	v=(GW_Float*) malloc((size_t) ((nh-nl+1+NR_END)*sizeof(GW_Float)));
 	GW_ASSERT( v!=NULL ); 
@@ -458,6 +465,7 @@ GW_Float *fvector(long nl, long nh)
 inline 
 void free_vector(GW_Float *v, long nl, long nh)
 {
+  (void)nh; // unused
 	free((FREE_ARG) (v+nl-NR_END));
 }
 
