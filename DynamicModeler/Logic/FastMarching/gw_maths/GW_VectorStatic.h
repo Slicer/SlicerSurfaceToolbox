@@ -375,7 +375,7 @@ public:
 	/*------------------------------------------------------------------------------*/
 	v_type GetData(GW_I32 i) const
 	{
-		GW_ASSERT( i<v_size );
+    GW_ASSERT( static_cast<GW_U32>(i)<v_size );
 		return aCoords_[i];
 	}
 	/*------------------------------------------------------------------------------*/
@@ -389,7 +389,7 @@ public:
 	/*------------------------------------------------------------------------------*/
 	void SetData(GW_I32 i, v_type rVal)
 	{
-		GW_ASSERT( i<v_size );
+    GW_ASSERT( static_cast<GW_U32>(i)<v_size );
 		aCoords_[i] = rVal;
 	}
 
