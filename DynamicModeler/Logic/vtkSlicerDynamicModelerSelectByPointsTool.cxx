@@ -334,7 +334,7 @@ void vtkSlicerDynamicModelerSelectByPointsTool::CreateOutputDisplayNodes(vtkMRML
 
 //----------------------------------------------------------------------------
 bool vtkSlicerDynamicModelerSelectByPointsTool::UpdateUsingSphereRadius(vtkPolyData* inputMesh_World, vtkMRMLMarkupsFiducialNode* fiducialNode,
-  double selectionDistance, bool computeSelectionScalarsModel, bool computeSelectedFacesModel,
+  double selectionDistance, bool vtkNotUsed(computeSelectionScalarsModel), bool computeSelectedFacesModel,
   vtkUnsignedCharArray* outputSelectionArray, vtkSmartPointer<vtkPolyData>& selectedFacesMesh_World)
 {
   // Update outputSelectionArray

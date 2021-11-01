@@ -119,6 +119,7 @@ void GW_GeodesicMesh::AddStartVertex( GW_GeodesicVertex& StartVert )
 GW_INLINE
 GW_Float GW_GeodesicMesh::BasicWeightCallback(GW_GeodesicVertex& Vert, void *)
 {
+  (void)Vert; // unused
 	return 1;
 }
 

@@ -86,7 +86,7 @@ public:
 
   // This callback is invoked prior to adding new vertices to the front
   static GW::GW_Bool FastMarchingVertexInsertionCallback(
-      GW::GW_GeodesicVertex& v, GW::GW_Float distance, void *callbackData )
+      GW::GW_GeodesicVertex& v, GW::GW_Float vtkNotUsed(distance), void *callbackData )
     {
     vtkFastMarchingGeodesicDistance *filter =
       static_cast< vtkFastMarchingGeodesicDistance* >(callbackData);
