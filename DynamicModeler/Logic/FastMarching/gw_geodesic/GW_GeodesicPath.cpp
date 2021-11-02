@@ -246,7 +246,7 @@ GW_I32 GW_GeodesicPath::AddNewPoint()
 		}
 
 		/* no intersection: we can advance */
-		GW_Float xprev = x, yprev = y;
+		GW_Float xprev = x;
 		x = x - rStepSize_*dx/l1;
 		y = y - rStepSize_*dy/l2;
 
