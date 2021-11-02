@@ -54,8 +54,8 @@ public:
 	/** \name Class factory methods. */
 	//-------------------------------------------------------------------------
 	//@{
-	virtual GW_Vertex& CreateNewVertex();
-	virtual GW_Face& CreateNewFace();
+	GW_Vertex& CreateNewVertex() override;
+	GW_Face& CreateNewFace() override;
 	//@}
 
     //-------------------------------------------------------------------------

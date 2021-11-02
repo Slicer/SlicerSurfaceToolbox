@@ -26,7 +26,7 @@ public:
   // Description:
   // Standard methids for printing and determining type information.
   vtkTypeMacro(vtkPolyDataGeodesicDistance,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // A list of points (seeds) on the input mesh from which to perform fast
@@ -46,7 +46,7 @@ public:
   vtkGetStringMacro(FieldDataName);
 
   // Overload GetMTime() because we depend on seeds
-  vtkMTimeType GetMTime();
+  vtkMTimeType GetMTime() override;
 
 protected:
   vtkPolyDataGeodesicDistance();

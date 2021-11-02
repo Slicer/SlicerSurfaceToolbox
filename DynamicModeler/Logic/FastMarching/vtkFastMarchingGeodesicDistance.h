@@ -73,7 +73,7 @@ public:
   // Description:
   // Standard methids for printing and determining type information.
   vtkTypeMacro(vtkFastMarchingGeodesicDistance,vtkPolyDataGeodesicDistance);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // The maximum distance this filter has marched from the seeds.
@@ -133,8 +133,7 @@ protected:
   vtkFastMarchingGeodesicDistance();
   ~vtkFastMarchingGeodesicDistance();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **,
-                          vtkInformationVector *);
+  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   // Create GW_GeodesicMesh given an instance of a vtkPolyData
   void SetupGeodesicMesh( vtkPolyData *in );
@@ -143,7 +142,7 @@ protected:
   void SetupCallbacks();
 
   // Do the fast marching
-  virtual int Compute();
+  int Compute() override;
 
   // Add the seeds
   virtual void AddSeeds();
