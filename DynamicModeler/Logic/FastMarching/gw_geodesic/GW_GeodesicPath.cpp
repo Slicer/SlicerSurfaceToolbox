@@ -158,7 +158,7 @@ GW_I32 GW_GeodesicPath::AddNewPoint()
 				return 0;
 			}
 		}
-		if( GW_ABS(dy)>GW_EPSILON!=0 )
+		if( GW_ABS(dy)>GW_EPSILON )
 		{
 			l = l2*y/dy;	  // position along the line
 			a = x-l*dx/l1;	  // coordonate with respect to v1
