@@ -127,8 +127,9 @@ GW_Bool GW_GeodesicMesh::IsFastMarchingFinished()
 *  Get Return a vertex at random.
 */
 /*------------------------------------------------------------------------------*/
-GW_Vertex* GW_GeodesicMesh::GetRandomVertex(GW_Bool bForceFar)
+GW_Vertex* GW_GeodesicMesh::GetRandomVertex()
 {
+  GW_Bool bForceFar = GW_True;
 	GW_U32 nNumber = 0;
 	GW_GeodesicVertex* pStartVertex = NULL;
 	while( pStartVertex==NULL )
