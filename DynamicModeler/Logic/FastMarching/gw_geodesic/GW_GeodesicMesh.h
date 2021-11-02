@@ -91,6 +91,9 @@ public:
 	void RegisterHeuristicToGoalCallbackFunction( T_HeuristicToGoalCallbackFunction pFunc );
 	//@}
 
+  GW_Vertex* GetRandomVertex(GW_Bool);
+
+  // Calls GetRandomVertex(GW_Bool) with \a bForceFar set to \a true
   GW_Vertex* GetRandomVertex() override;
 
 	static GW_Float BasicWeightCallback(GW_GeodesicVertex& Vert, void *calldata);
