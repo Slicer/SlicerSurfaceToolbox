@@ -35,6 +35,8 @@ class GW_TriangularInterpolation_ABC
 
 public:
 
+  virtual ~GW_TriangularInterpolation_ABC(){}
+
 	enum T_TriangulationInterpolationType
 	{
 		kLinearTriangulationInterpolation,
