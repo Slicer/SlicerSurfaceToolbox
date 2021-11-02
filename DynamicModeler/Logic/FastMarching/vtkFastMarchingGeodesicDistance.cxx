@@ -205,8 +205,6 @@ void vtkFastMarchingGeodesicDistance::SetupGeodesicMesh( vtkPolyData *in )
       this->Internals->Mesh->SetCallbackData(this);
       }
 
-    typedef GW::GW_GeodesicVertex Vertex;
-
     // Setup the GW_GeodesicMesh mesh
     GW::GW_GeodesicMesh *mesh = this->Internals->Mesh;
 
