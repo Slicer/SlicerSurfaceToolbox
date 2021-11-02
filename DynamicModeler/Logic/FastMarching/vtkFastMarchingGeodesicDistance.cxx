@@ -384,7 +384,7 @@ void vtkFastMarchingGeodesicDistance::SetupCallbacks()
   // Setup callback to get the propagation weights
   if (this->PropagationWeights &&
         this->PropagationWeights->GetNumberOfTuples() ==
-            this->Internals->Mesh->GetNbrVertex())
+            static_cast<vtkIdType>(this->Internals->Mesh->GetNbrVertex()))
     {
     this->Internals->Mesh->RegisterWeightCallbackFunction(
       vtkGeodesicMeshInternals::FastMarchingPropagationWeightCallback);
