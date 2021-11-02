@@ -23,6 +23,8 @@ public:
 		kDead
 	};
 
+  using GW_Vertex::operator=;
+
     GW_GeodesicVertex();
     virtual ~GW_GeodesicVertex();
 	GW_Float GetDistance();
