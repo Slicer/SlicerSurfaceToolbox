@@ -57,7 +57,7 @@ public:
   // Standard methods for instances of this class.
   vtkTypeMacro(vtkPolygonalSurfaceContourLineInterpolator2,
                vtkPolyDataContourLineInterpolator);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkPolygonalSurfaceContourLineInterpolator2 *New();
 
@@ -91,9 +91,8 @@ public:
   // Subclasses that wish to interpolate a line segment must implement this.
   // For instance vtkBezierContourLineInterpolator adds nodes between idx1
   // and idx2, that allow the contour to adhere to a bezier curve.
-  virtual int InterpolateLine( vtkRenderer *ren,
-                               vtkContourRepresentation *rep,
-                               int idx1, int idx2 );
+  int InterpolateLine( vtkRenderer *ren, vtkContourRepresentation *rep,
+                       int idx1, int idx2 ) override;
 
   // Description:
   // The interpolator is given a chance to update the node.
@@ -101,9 +100,8 @@ public:
   // so it automatically sticks to edges in the vicinity as the user
   // constructs the contour.
   // Returns 0 if the node (world position) is unchanged.
-  virtual int UpdateNode( vtkRenderer *,
-                          vtkContourRepresentation *,
-                          double * vtkNotUsed(node), int vtkNotUsed(idx) );
+  int UpdateNode( vtkRenderer *, vtkContourRepresentation *,
+                  double * vtkNotUsed(node), int vtkNotUsed(idx) ) override;
 
   // Description:
   // Height offset at which points may be placed on the polygonal surface.
