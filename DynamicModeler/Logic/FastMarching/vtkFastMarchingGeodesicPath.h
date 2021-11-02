@@ -101,6 +101,8 @@ public:
   // Get the length of the traced path
   vtkGetMacro( GeodesicLength, double );
 
+  using vtkPolyDataAlgorithm::SetInputConnection;
+
   // Descrition:
   // Pass on the input to the internal geodesic filter.
   virtual void SetInputConnection(int port, vtkAlgorithmOutput* input);

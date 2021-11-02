@@ -64,6 +64,8 @@ public:
     virtual ~GW_VoronoiVertex();
     //@}
 
+  using GW_Vertex::operator=;
+
 	GW_GeodesicVertex* GetBaseVertex();
 	const GW_GeodesicVertex* GetBaseVertex() const;
 	void SetBaseVertex( GW_GeodesicVertex& BaseVertex );
