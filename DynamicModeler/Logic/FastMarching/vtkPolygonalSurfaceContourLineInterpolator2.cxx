@@ -22,6 +22,7 @@
 #include "vtkFastMarchingGeodesicPath.h"
 #include "vtkSmartPointer.h"
 #include "vtkNew.h"
+#include "vtkVersion.h"
 
 vtkStandardNewMacro(vtkPolygonalSurfaceContourLineInterpolator2);
 
@@ -143,12 +144,7 @@ int vtkPolygonalSurfaceContourLineInterpolator2::InterpolateLine(
     {
     // Compute the shortest path through the surface mesh along its edges
     // using Dijkstra.
-
-#if (VTK_MAJOR_VERSION < 6)
-    dggp->SetInput( nodeBegin->PolyData );
-#else
     dggp->SetInputData( nodeBegin->PolyData );
-#endif
     dggp->SetStartVertex( endVertId );
     dggp->SetEndVertex( beginVertId );
     dggp->Update();
@@ -157,12 +153,7 @@ int vtkPolygonalSurfaceContourLineInterpolator2::InterpolateLine(
   else // fast marching
     {
     // Compute the shortest path through the surface mesh using fast marching
-
-#if (VTK_MAJOR_VERSION < 6)
-    fmgp->SetInput( nodeBegin->PolyData );
-#else
     fmgp->SetInputData( nodeBegin->PolyData );
-#endif
     fmgp->SetBeginPointId( beginVertId );
     vtkNew< vtkIdList > destinationSeeds;
     destinationSeeds->InsertNextId( endVertId );
@@ -193,7 +184,11 @@ int vtkPolygonalSurfaceContourLineInterpolator2::InterpolateLine(
   vtkPolyData *pd = this->GeodesicPath->GetOutput();
 
   // We assume there's only one cell of course
+#if VTK_MAJOR_VERSION >= 9 || (VTK_MAJOR_VERSION >= 8 && VTK_MINOR_VERSION >= 90)
   const vtkIdType* pts = nullptr;
+#else
+  vtkIdType* pts = nullptr;
+#endif
   vtkIdType npts = 0;
   pd->GetLines()->InitTraversal();
   pd->GetLines()->GetNextCell( npts, pts);
