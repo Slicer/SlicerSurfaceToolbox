@@ -222,8 +222,11 @@ void vtkFastMarchingGeodesicDistance::SetupGeodesicMesh( vtkPolyData *in )
       point.SetPosition( GW::GW_Vector3D( pt[0], pt[1], pt[2] ) );
       mesh->SetVertex( i, &point );
       }
-
+#if VTK_MAJOR_VERSION >= 9 || (VTK_MAJOR_VERSION >= 8 && VTK_MINOR_VERSION >= 90)
     const vtkIdType* ptIds = nullptr;
+#else
+    vtkIdType *ptIds = nullptr;
+#endif
     vtkIdType npts = 0;
     const int nCells = in->GetNumberOfPolys();
     vtkCellArray *cells = in->GetPolys();
