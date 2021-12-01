@@ -169,7 +169,7 @@ vtkSlicerDynamicModelerBoundaryCutTool::~vtkSlicerDynamicModelerBoundaryCutTool(
 //----------------------------------------------------------------------------
 const char* vtkSlicerDynamicModelerBoundaryCutTool::GetName()
 {
-  return "BoundaryCut";
+  return "Boundary cut";
 }
 
 //----------------------------------------------------------------------------
