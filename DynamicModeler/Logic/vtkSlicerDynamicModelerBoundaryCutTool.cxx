@@ -222,7 +222,7 @@ bool vtkSlicerDynamicModelerBoundaryCutTool::RunInternal(vtkMRMLDynamicModelerNo
     vtkMRMLMarkupsPlaneNode* planeNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(inputNode);
     if (planeNode)
       {
-      if (planeNode->GetNumberOfControlPoints() < 3)
+      if (!planeNode->GetIsPlaneValid())
         {
         continue;
         }
