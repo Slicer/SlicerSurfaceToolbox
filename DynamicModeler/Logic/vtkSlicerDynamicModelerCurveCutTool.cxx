@@ -25,6 +25,7 @@
 
 // MRML includes
 #include <vtkMRMLMarkupsClosedCurveNode.h>
+#include <vtkMRMLMarkupsFiducialNode.h>
 #include <vtkMRMLModelNode.h>
 #include <vtkMRMLSliceNode.h>
 #include <vtkMRMLTransformNode.h>
@@ -47,10 +48,15 @@
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerCurveCutTool);
 
-const char* CURVE_CUT_INPUT_MODEL_REFERENCE_ROLE = "CurveCut.InputModel";
-const char* CURVE_CUT_INPUT_CURVE_REFERENCE_ROLE = "CurveCut.InputCurve";
-const char* CURVE_CUT_OUTPUT_INSIDE_MODEL_REFERENCE_ROLE = "CurveCut.OutputInside";
-const char* CURVE_CUT_OUTPUT_OUTSIDE_MODEL_REFERENCE_ROLE = "CurveCut.OutputOutside";
+namespace
+{
+  const char* CURVE_CUT_INPUT_MODEL_REFERENCE_ROLE = "CurveCut.InputModel";
+  const char* CURVE_CUT_INPUT_CURVE_REFERENCE_ROLE = "CurveCut.InputCurve";
+  const char* CURVE_CUT_INPUT_INSIDE_POINT_REFERENCE_ROLE = "CurveCut.InsidePoint";
+  const char* CURVE_CUT_STRAIGHT_CUT = "CurveCut.StraightCut";
+  const char* CURVE_CUT_OUTPUT_INSIDE_MODEL_REFERENCE_ROLE = "CurveCut.OutputInside";
+  const char* CURVE_CUT_OUTPUT_OUTSIDE_MODEL_REFERENCE_ROLE = "CurveCut.OutputOutside";
+}
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerCurveCutTool::vtkSlicerDynamicModelerCurveCutTool()
@@ -91,6 +97,26 @@ vtkSlicerDynamicModelerCurveCutTool::vtkSlicerDynamicModelerCurveCutTool()
     );
   this->InputNodeInfo.push_back(inputCurve);
 
+  vtkNew<vtkStringArray> insidePointListClassNames;
+  insidePointListClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
+  NodeInfo insidePoint(
+    "Inside point",
+    "Closest region to the first point of this point list will be used as 'inside'. If not specified then the smallest region is used as 'inside'.",
+    insidePointListClassNames,
+    CURVE_CUT_INPUT_INSIDE_POINT_REFERENCE_ROLE,
+    false,
+    false,
+    inputCurveEvents
+  );
+  this->InputNodeInfo.push_back(insidePoint);
+
+  ParameterInfo parameterStraightCut(
+    "Straight cut",
+    "If enabled then the surface will be cut as close as possible to the curve, otherwise edges of the original mesh are preserved",
+    CURVE_CUT_STRAIGHT_CUT,
+    PARAMETER_BOOL,
+    true);
+  this->InputParameterInfo.push_back(parameterStraightCut); 
 
   /////////
   // Outputs
@@ -123,11 +149,10 @@ vtkSlicerDynamicModelerCurveCutTool::vtkSlicerDynamicModelerCurveCutTool()
 
   this->SelectionFilter = vtkSmartPointer<vtkSelectPolyData>::New();
   this->SelectionFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-  this->SelectionFilter->GenerateSelectionScalarsOn();
-  this->SelectionFilter->SetSelectionModeToSmallestRegion();
+  this->SelectionFilter->SetEdgeSearchModeToDijkstra();
 
+  // Further connections depend on cut mode (straight or whole cells)
   this->ClipFilter = vtkSmartPointer<vtkClipPolyData>::New();
-  this->ClipFilter->SetInputConnection(this->SelectionFilter->GetOutputPort());
   this->ClipFilter->InsideOutOn();
 
   this->ConnectivityFilter = vtkSmartPointer<vtkConnectivityFilter>::New();
@@ -135,7 +160,6 @@ vtkSlicerDynamicModelerCurveCutTool::vtkSlicerDynamicModelerCurveCutTool()
 
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->OutputWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->OutputWorldToModelTransformFilter->SetInputConnection(this->ConnectivityFilter->GetOutputPort());
   this->OutputWorldToModelTransformFilter->SetTransform(this->OutputWorldToModelTransform);
 }
 
@@ -196,14 +220,35 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
 
   this->SelectionFilter->SetLoop(curveNode->GetCurvePointsWorld());
 
-  if (outputOutsideModelNode)
+  vtkMRMLMarkupsFiducialNode* insidePointNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(
+    surfaceEditorNode->GetNthNodeReference(CURVE_CUT_INPUT_INSIDE_POINT_REFERENCE_ROLE, 0));
+  if (insidePointNode && insidePointNode->GetNumberOfControlPoints() > 0)
     {
-    this->ClipFilter->GenerateClippedOutputOn();
+    double insidePointPositionWorld[3] = { 0.0, 0.0, 0.0 };
+    insidePointNode->GetNthControlPointPositionWorld(0, insidePointPositionWorld);
+    this->SelectionFilter->SetSelectionModeToClosestPointRegion();
+    this->SelectionFilter->SetClosestPoint(insidePointPositionWorld);
     }
   else
     {
-    this->ClipFilter->GenerateClippedOutputOff();
+    this->SelectionFilter->SetSelectionModeToSmallestRegion();
     }
+
+  bool straightCut = vtkVariant(surfaceEditorNode->GetAttribute(CURVE_CUT_STRAIGHT_CUT)).ToInt() != 0;
+  this->SelectionFilter->SetGenerateSelectionScalars(straightCut);
+
+  // Straight cut:
+  //
+  //   InputModelToWorldTransformFilter -> SelectionFilter
+  //   -> ClipFilter -> ConnectivityFilter -> OutputWorldToModelTransform
+  //
+  // Whole cell cut:
+  //
+  //   InputModelToWorldTransformFilter -> SelectionFilter
+  //   -> OutputWorldToModelTransform
+
+  vtkSmartPointer<vtkPolyData> outputInsideMesh;
+  vtkSmartPointer<vtkPolyData> outputOutsideMesh;
 
   if (outputInsideModelNode)
     {
@@ -215,17 +260,7 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
       {
       this->OutputWorldToModelTransform->Identity();
       }
-    this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetOutputPort());
-    this->OutputWorldToModelTransformFilter->Update();
-
-    vtkNew<vtkPolyData> outputMesh;
-    outputMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
-
-    MRMLNodeModifyBlocker blocker(outputInsideModelNode);
-    outputInsideModelNode->SetAndObserveMesh(outputMesh);
-    outputInsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
     }
-
   if (outputOutsideModelNode)
     {
     if (outputOutsideModelNode->GetParentTransformNode())
@@ -236,16 +271,61 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
       {
       this->OutputWorldToModelTransform->Identity();
       }
-    this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetClippedOutputPort());
-    this->OutputWorldToModelTransformFilter->Update();
-
-    vtkNew<vtkPolyData> outputMesh;
-    outputMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
-
-    MRMLNodeModifyBlocker blocker(outputOutsideModelNode);
-    outputOutsideModelNode->SetAndObserveMesh(outputMesh);
-    outputOutsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
     }
 
+  if (straightCut)
+    {
+    // straight cut
+    this->ClipFilter->SetInputConnection(this->SelectionFilter->GetOutputPort());
+    this->OutputWorldToModelTransformFilter->SetInputConnection(this->ConnectivityFilter->GetOutputPort());
+    this->ClipFilter->SetGenerateClippedOutput(outputOutsideModelNode != nullptr);
+    if (outputInsideModelNode)
+      {
+      this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetOutputPort());
+      this->OutputWorldToModelTransformFilter->Update();
+      outputInsideMesh = vtkSmartPointer<vtkPolyData>::New();
+      outputInsideMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
+      }
+    if (outputOutsideModelNode)
+      {
+      this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetClippedOutputPort());
+      this->OutputWorldToModelTransformFilter->Update();
+      outputOutsideMesh = vtkSmartPointer<vtkPolyData>::New();
+      outputOutsideMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
+      }
+    }
+  else
+    {
+    // whole cells
+    this->SelectionFilter->SetGenerateUnselectedOutput(outputOutsideModelNode != nullptr);
+    if (outputInsideModelNode)
+      {
+      this->OutputWorldToModelTransformFilter->SetInputConnection(this->SelectionFilter->GetOutputPort());
+      this->OutputWorldToModelTransformFilter->Update();
+      outputInsideMesh = vtkSmartPointer<vtkPolyData>::New();
+      outputInsideMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
+      }
+    if (outputOutsideModelNode)
+      {
+      this->OutputWorldToModelTransformFilter->SetInputConnection(this->SelectionFilter->GetUnselectedOutputPort());
+      this->OutputWorldToModelTransformFilter->Update();
+      outputOutsideMesh = vtkSmartPointer<vtkPolyData>::New();
+      outputOutsideMesh->DeepCopy(this->OutputWorldToModelTransformFilter->GetOutput());
+      }
+    }
+
+  // Write polydata to output nodes
+  if (outputInsideModelNode)
+    {
+    MRMLNodeModifyBlocker blocker(outputInsideModelNode);
+    outputInsideModelNode->SetAndObserveMesh(outputInsideMesh);
+    outputInsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+    }
+  if (outputOutsideModelNode)
+    {
+    MRMLNodeModifyBlocker blocker(outputOutsideModelNode);
+    outputOutsideModelNode->SetAndObserveMesh(outputOutsideMesh);
+    outputOutsideModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+    }
   return true;
 }

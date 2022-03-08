@@ -106,8 +106,8 @@ vtkSlicerDynamicModelerBoundaryCutTool::vtkSlicerDynamicModelerBoundaryCutTool()
   vtkNew<vtkStringArray> inputSeedFiducialClassNames;
   inputSeedFiducialClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
   NodeInfo inputSeed(
-    "Seed fiducial node",
-    "Markup fiducial node that designates the region from the surface that should be preserved.",
+    "Seed point node",
+    "Markup point list node that designates the region from the surface that should be preserved.",
     inputSeedFiducialClassNames,
     INPUT_SEED_REFERENCE_ROLE,
     false,
