@@ -364,7 +364,8 @@ bool vtkSlicerDynamicModelerSelectByPointsTool::UpdateUsingSphereRadius(vtkPolyD
 
     vtkNew<vtkThreshold> thresholdFilter;
     thresholdFilter->SetInputData(inputMesh_WorldWithSelection);
-    thresholdFilter->ThresholdByUpper(0.5);
+    thresholdFilter->SetUpperThreshold(0.5);
+    thresholdFilter->SetThresholdFunction(vtkThreshold::THRESHOLD_UPPER);
     thresholdFilter->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, SELECTION_ARRAY_NAME);
     thresholdFilter->Update();
     vtkNew<vtkGeometryFilter> geometryFilter;
