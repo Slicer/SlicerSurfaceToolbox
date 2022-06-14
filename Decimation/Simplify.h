@@ -45,6 +45,9 @@ struct vec3f
     inline vec3f( vector3 a )
      { x = a.x; y = a.y; z = a.z; }
 
+    inline vec3f( const vec3f & a )
+    { x = a.x; y = a.y; z = a.z; }
+
     inline vec3f( const double X, const double Y, const double Z )
     { x = X; y = Y; z = Z; }
 
