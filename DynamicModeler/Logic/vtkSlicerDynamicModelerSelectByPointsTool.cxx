@@ -420,7 +420,9 @@ bool vtkSlicerDynamicModelerSelectByPointsTool::UpdateUsingGeodesicDistance(vtkP
     {
     vtkNew<vtkThreshold> thresholdFilter;
     thresholdFilter->SetInputData(this->GeodesicDistance->GetOutput());
-    thresholdFilter->ThresholdBetween(-1e-5, selectionDistance);
+    thresholdFilter->SetLowerThreshold(-1e-5);
+    thresholdFilter->SetUpperThreshold(selectionDistance);
+    thresholdFilter->SetThresholdFunction(vtkThreshold::THRESHOLD_BETWEEN);
     thresholdFilter->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, DISTANCE_ARRAY_NAME);
 
     vtkNew<vtkGeometryFilter> geometryFilter;
