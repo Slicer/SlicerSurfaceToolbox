@@ -108,6 +108,98 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="remeshButton">
+     <property name="toolTip">
+      <string>Uniform remesh using ACVD algorithm</string>
+     </property>
+     <property name="text">
+      <string>Uniform remesh</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frame_8">
+     <layout class="QFormLayout" name="formLayout_10">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>6</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_12">
+        <property name="text">
+         <string>Output cells:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="ctkSliderWidget" name="remeshClustersSlider">
+        <property name="toolTip">
+         <string>Desired number of cells in the output mesh. Use higher number to preserve more details. &quot;k&quot; means thousand (i.e., 10k means 10000 output cells).</string>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="singleStep">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="pageStep">
+         <double>10.000000000000000</double>
+        </property>
+        <property name="minimum">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>100.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>10.000000000000000</double>
+        </property>
+        <property name="suffix">
+         <string>k</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_11">
+        <property name="text">
+         <string>Subdivide:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="ctkSliderWidget" name="remeshSubdivideSlider">
+        <property name="toolTip">
+         <string>Subdivide each cells this number of times before remesh. Each subdivision creates 4 triangles for each input triangle. This is needed if the required number of clusters are higher than the number of cells in the input mesh.</string>
+        </property>
+        <property name="decimals">
+         <number>0</number>
+        </property>
+        <property name="singleStep">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="pageStep">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>8.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>0.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="decimationButton">
      <property name="text">
       <string>Decimate</string>
@@ -1083,12 +1175,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>103</x>
-     <y>162</y>
+     <x>112</x>
+     <y>244</y>
     </hint>
     <hint type="destinationlabel">
-     <x>24</x>
-     <y>214</y>
+     <x>33</x>
+     <y>296</y>
     </hint>
    </hints>
   </connection>
@@ -1115,12 +1207,12 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>103</x>
-     <y>244</y>
+     <x>112</x>
+     <y>326</y>
     </hint>
     <hint type="destinationlabel">
-     <x>13</x>
-     <y>270</y>
+     <x>22</x>
+     <y>472</y>
     </hint>
    </hints>
   </connection>
@@ -1195,8 +1287,8 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>39</x>
-     <y>916</y>
+     <x>48</x>
+     <y>896</y>
     </hint>
     <hint type="destinationlabel">
      <x>23</x>
@@ -1233,6 +1325,22 @@
     <hint type="destinationlabel">
      <x>268</x>
      <y>1055</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remeshButton</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>frame_8</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>42</x>
+     <y>147</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>13</x>
+     <y>191</y>
     </hint>
    </hints>
   </connection>

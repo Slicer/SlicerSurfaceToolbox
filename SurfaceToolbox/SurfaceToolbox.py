@@ -86,6 +86,9 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.parameterEditWidgets = [
       (self.ui.inputModelSelector, "inputModel"),
       (self.ui.outputModelSelector, "outputModel"),
+      (self.ui.remeshButton, "remesh"),
+      (self.ui.remeshSubdivideSlider, "remeshSubdivide"),
+      (self.ui.remeshClustersSlider, "remeshClustersK"),
       (self.ui.decimationButton, "decimation"),
       (self.ui.reductionSlider, "decimationReduction"),
       (self.ui.boundaryDeletionCheckBox, "decimationBoundaryDeletion"),
@@ -326,6 +329,9 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     Initialize parameter node with default settings.
     """
     defaultValues = [
+      ("remesh", "false"),
+      ("remeshSubdivide", "0"),
+      ("remeshClustersK", "10"),
       ("decimation", "false"),
       ("decimationReduction", "0.8"),
       ("decimationBoundaryDeletion", "true"),
@@ -373,6 +379,41 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     if not self.updateProcessCallback:
       return
     self.updateProcessCallback(message)
+
+  @staticmethod
+  def installRemeshPrerequisites(force=False):
+      # install required pyacvd package
+      try:
+          import pyacvd
+      except ModuleNotFoundError as e:
+          if force or slicer.util.confirmOkCancelDisplay("This function requires 'pyacvd' Python package. Click OK to install it now."):
+              slicer.util.pip_install("pyacvd")
+          else:
+              return False
+      return True
+
+  @staticmethod
+  def remesh(inputModel, outputModel, subdivide=0, clusters=10000):
+    """Uniformly remesh the surface using ACVD algorithm (https://github.com/pyvista/pyacvd). It requires pyacvd Python package.
+
+    :param subdivide: Subdivide each cells this number of times before remesh. Each subdivision creates 4 triangles for each input triangle.
+      This is needed if the required number of clusters are higher than the number of cells in the input mesh.
+    :param clusters: Number of desired cells in the output mesh. Use higher number to preserve more details.
+    """
+
+    if not SurfaceToolboxLogic.installRemeshPrerequisites():
+      return
+
+    import pyacvd
+    import pyvista as pv
+    inputMesh = pv.wrap(inputModel.GetPolyData())
+    clus = pyacvd.Clustering(inputMesh)
+    if subdivide > -1:
+        clus.subdivide(subdivide)
+    clus.cluster(clusters)
+    outputMesh = vtk.vtkPolyData()
+    outputMesh.DeepCopy(clus.create_mesh())
+    outputModel.SetAndObservePolyData(outputMesh)
 
   @staticmethod
   def decimate(inputModel, outputModel, reductionFactor=0.8, decimateBoundary=True, lossless=False, aggressiveness=7.0):
@@ -530,6 +571,12 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.updateProcess("Clean...")
       SurfaceToolboxLogic.clean(outputModel, outputModel)
 
+    if parameterNode.GetParameter("remesh") == "true":
+      self.updateProcess("Remeshing...")
+      SurfaceToolboxLogic.remesh(outputModel, outputModel,
+        subdivide=int(float(parameterNode.GetParameter("remeshSubdivide"))),
+        clusters=int(1000 * float(parameterNode.GetParameter("remeshClustersK"))))
+
     if parameterNode.GetParameter("decimation") == "true":
       self.updateProcess("Decimation...")
       SurfaceToolboxLogic.decimate(outputModel, outputModel,
@@ -658,6 +705,7 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "output")
     parameterNode.SetNodeReferenceID("outputModel", outputModelNode.GetID())
 
+    parameterNode.SetParameter("decimation", "false")  # do not install pyacvd
     parameterNode.SetParameter("decimation", "true")
     parameterNode.SetParameter("smoothing", "true")
     parameterNode.SetParameter("normals", "true")
