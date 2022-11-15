@@ -397,8 +397,8 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     """Uniformly remesh the surface using ACVD algorithm (https://github.com/pyvista/pyacvd). It requires pyacvd Python package.
 
     :param subdivide: Subdivide each cells this number of times before remesh. Each subdivision creates 4 triangles for each input triangle.
-      This is needed if the required number of clusters are higher than the number of cells in the input mesh.
-    :param clusters: Number of desired cells in the output mesh. Use higher number to preserve more details.
+      This is needed if the required number of desired points is higher than the number of points in the input mesh, or there are some too large cells in the input mesh.
+    :param clusters: Number of desired points in the output mesh. Use higher number to preserve more details.
     """
 
     if not SurfaceToolboxLogic.installRemeshPrerequisites():
@@ -705,7 +705,7 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "output")
     parameterNode.SetNodeReferenceID("outputModel", outputModelNode.GetID())
 
-    parameterNode.SetParameter("decimation", "false")  # do not install pyacvd
+    parameterNode.SetParameter("remesh", "false")  # do not install pyacvd
     parameterNode.SetParameter("decimation", "true")
     parameterNode.SetParameter("smoothing", "true")
     parameterNode.SetParameter("normals", "true")

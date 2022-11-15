@@ -135,14 +135,14 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label_12">
         <property name="text">
-         <string>Output cells:</string>
+         <string>Number of points:</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
        <widget class="ctkSliderWidget" name="remeshClustersSlider">
         <property name="toolTip">
-         <string>Desired number of cells in the output mesh. Use higher number to preserve more details. &quot;k&quot; means thousand (i.e., 10k means 10000 output cells).</string>
+         <string>Desired number of points in the output mesh. Use higher number to preserve more details. &quot;k&quot; means thousand (i.e., 10k means 10000 output points).</string>
         </property>
         <property name="decimals">
          <number>1</number>
@@ -177,7 +177,7 @@
       <item row="1" column="1">
        <widget class="ctkSliderWidget" name="remeshSubdivideSlider">
         <property name="toolTip">
-         <string>Subdivide each cells this number of times before remesh. Each subdivision creates 4 triangles for each input triangle. This is needed if the required number of clusters are higher than the number of cells in the input mesh.</string>
+         <string>Subdivide each cells this number of times before remesh. Each subdivision creates 4 triangles for each input triangle. This is needed if the required number of desired points is higher than the number of points in the input mesh, or there are some too large cells in the input mesh.</string>
         </property>
         <property name="decimals">
          <number>0</number>
