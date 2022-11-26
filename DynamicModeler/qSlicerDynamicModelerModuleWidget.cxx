@@ -112,31 +112,40 @@ void qSlicerDynamicModelerModuleWidget::setup()
   const int columns = 5;
 
   vtkNew<vtkSlicerDynamicModelerPlaneCutTool> planeCutTool;
-  this->addToolButton(QIcon(":/Icons/PlaneCut.png"), planeCutTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/PlaneCut.png"), planeCutTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerCurveCutTool> curveCutTool;
-  this->addToolButton(QIcon(":/Icons/CurveCut.png"), curveCutTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/CurveCut.png"), curveCutTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerBoundaryCutTool> boundaryCutTool;
-  this->addToolButton(QIcon(":/Icons/BoundaryCut.png"), boundaryCutTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/BoundaryCut.png"), boundaryCutTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerHollowTool> hollowTool;
-  this->addToolButton(QIcon(":/Icons/Hollow.png"), hollowTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/Hollow.png"), hollowTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerMarginTool> marginTool;
-  this->addToolButton(QIcon(":/Icons/Margin.png"), marginTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/Margin.png"), marginTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerMirrorTool> mirrorTool;
-  this->addToolButton(QIcon(":/Icons/Mirror.png"), mirrorTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/Mirror.png"), mirrorTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerAppendTool> appendTool;
-  this->addToolButton(QIcon(":/Icons/Append.png"), appendTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/Append.png"), appendTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerROICutTool> roiTool;
-  this->addToolButton(QIcon(":/Icons/ROICut.png"), roiTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/ROICut.png"), roiTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerSelectByPointsTool> selectByPointsTool;
-  this->addToolButton(QIcon(":/Icons/SelectByPoints.png"), selectByPointsTool, buttonPosition / columns, (buttonPosition++) % columns);
+  this->addToolButton(QIcon(":/Icons/SelectByPoints.png"), selectByPointsTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
 
   connect(d->SubjectHierarchyTreeView, SIGNAL(currentItemChanged(vtkIdType)),
     this, SLOT(onParameterNodeChanged()));
