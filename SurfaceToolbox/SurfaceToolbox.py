@@ -406,7 +406,10 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
     import pyacvd
     import pyvista as pv
-    inputMesh = pv.wrap(inputModel.GetPolyData())
+    tri_filter = pv._vtk.vtkTriangleFilter()
+    tri_filter.SetInputData(inputModel.GetPolyData())
+    tri_filter.Update()
+    inputMesh = pv.wrap(tri_filter.GetOutput())
     clus = pyacvd.Clustering(inputMesh)
     if subdivide > -1:
         clus.subdivide(subdivide)
