@@ -406,7 +406,8 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
 
     import pyacvd
     import pyvista as pv
-    tri_filter = pv._vtk.vtkTriangleFilter()
+    tri_filter = vtk.vtkTriangleFilter()
+
     tri_filter.SetInputData(inputModel.GetPolyData())
     tri_filter.Update()
     inputMesh = pv.wrap(tri_filter.GetOutput())
