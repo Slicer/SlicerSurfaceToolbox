@@ -774,7 +774,7 @@ void qSlicerDynamicModelerModuleWidget::updateMRMLFromWidget()
     std::string attributeName = parameterSelector->property("AttributeName").toString().toStdString();
     if (attributeName != "")
       {
-      d->DynamicModelerNode->SetAttribute(attributeName.c_str(), value.ToString());
+      d->DynamicModelerNode->SetAttribute(attributeName.c_str(), value.ToString().c_str());
       }
     }
 }
