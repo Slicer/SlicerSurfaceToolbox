@@ -30,6 +30,7 @@
 
 // VTK includes
 #include <vtkAppendPolyData.h>
+#include <vtkCleanPolyData.h>
 #include <vtkClipClosedSurface.h>
 #include <vtkClipPolyData.h>
 #include <vtkCollection.h>
@@ -390,8 +391,11 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
 
   if (outputPositiveModelNode)
     {
+    vtkNew<vtkCleanPolyData> cleanFilter;
+    cleanFilter->SetInputConnection(this->PlaneClipper->GetOutputPort());
+    cleanFilter->Update();
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->ShallowCopy(this->PlaneClipper->GetOutput());
+    outputMesh->ShallowCopy(cleanFilter->GetOutput());
     if (capSurface)
       {
       vtkNew<vtkAppendPolyData> appendEndCap;
@@ -412,8 +416,11 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
 
   if (outputNegativeModelNode)
     {
+    vtkNew<vtkCleanPolyData> cleanFilter;
+    cleanFilter->SetInputConnection(this->PlaneClipper->GetClippedOutputPort());
+    cleanFilter->Update();
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->ShallowCopy(this->PlaneClipper->GetClippedOutput());
+    outputMesh->ShallowCopy(cleanFilter->GetOutput());
     if (capSurface)
       {
       vtkNew<vtkReverseSense> reverseSense;
