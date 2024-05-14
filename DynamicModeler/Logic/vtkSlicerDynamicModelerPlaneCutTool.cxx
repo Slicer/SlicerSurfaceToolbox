@@ -105,18 +105,8 @@ vtkSlicerDynamicModelerPlaneCutTool::vtkSlicerDynamicModelerPlaneCutTool()
 
   /////////
   // Outputs
-  NodeInfo outputPositiveModel(
-    "Clipped output model (positive side)",
-    "Portion of the cut model that is on the same side of the plane as the normal.",
-    inputModelClassNames,
-    PLANE_CUT_OUTPUT_POSITIVE_MODEL_REFERENCE_ROLE,
-    false,
-    false
-    );
-  this->OutputNodeInfo.push_back(outputPositiveModel);
-
   NodeInfo outputNegativeModel(
-    "Clipped output model (negative side)",
+    "Output model (negative side)",
     "Portion of the cut model that is on the opposite side of the plane as the normal.",
     inputModelClassNames,
     PLANE_CUT_OUTPUT_NEGATIVE_MODEL_REFERENCE_ROLE,
@@ -124,6 +114,16 @@ vtkSlicerDynamicModelerPlaneCutTool::vtkSlicerDynamicModelerPlaneCutTool()
     false
     );
   this->OutputNodeInfo.push_back(outputNegativeModel);
+
+  NodeInfo outputPositiveModel(
+    "Complement output model (positive side)",
+    "Portion of the cut model that is on the same side of the plane as the normal.",
+    inputModelClassNames,
+    PLANE_CUT_OUTPUT_POSITIVE_MODEL_REFERENCE_ROLE,
+    false,
+    false
+    );
+  this->OutputNodeInfo.push_back(outputPositiveModel);
 
   /////////
   // Parameters
@@ -137,7 +137,7 @@ vtkSlicerDynamicModelerPlaneCutTool::vtkSlicerDynamicModelerPlaneCutTool()
 
   ParameterInfo parameterOperationType(
     "Operation type",
-    "Method used for combining the planes",
+    "Method used for combining the negative sides of the planes. This setting has no effect if only a single clipping plane is selected.",
     "OperationType",
     PARAMETER_STRING_ENUM,
     "Union");
@@ -192,7 +192,7 @@ void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPlaneCollection* plane
     contourTriangulator->SetInputConnection(cutter->GetOutputPort());
     contourTriangulator->Update();
 
-    // Create a seam along the intersection of each plane with the triangulated contour
+    // Create a seam along the intersection of each plane with the triangulated contour.
     // This allows the contour to be split correctly later.
     vtkNew<vtkPolyData> endCapPolyData;
     endCapPolyData->ShallowCopy(contourTriangulator->GetOutput());
@@ -215,7 +215,7 @@ void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPlaneCollection* plane
       endCapPolyData->ShallowCopy(appendCut->GetOutput());
       }
 
-    // Remove all triangles that do not lie at 0.0
+    // Remove all triangles that do not lie at 0.0.
     double epsilon = 1e-4;
     vtkNew<vtkClipPolyData> clipper;
     clipper->SetInputData(endCapPolyData);
@@ -286,12 +286,13 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   vtkMRMLModelNode* outputNegativeModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(PLANE_CUT_OUTPUT_NEGATIVE_MODEL_REFERENCE_ROLE));
   if (!outputPositiveModelNode && !outputNegativeModelNode)
     {
-    // Nothing to output
+    // Nothing to output.
     return true;
     }
 
   vtkNew<vtkImplicitBoolean> planes;
   std::string operationType = this->GetNthInputParameterValue(1, surfaceEditorNode).ToString();
+  // Following the convention of VTK, the boolean operation is applied to the negative sides of the inputs to produce the negative side of the output.
   if (operationType == "Intersection")
     {
     planes->SetOperationTypeToIntersection();
