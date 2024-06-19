@@ -18,11 +18,14 @@
 
 ==============================================================================*/
 
-#include "vtkSlicerDynamicModelerHollowTool.h"
+#include "vtkSlicerDynamicModelerExtrudeTool.h"
 
 #include "vtkMRMLDynamicModelerNode.h"
 
 // MRML includes
+#include <vtkMRMLMarkupsFiducialNode.h>
+#include <vtkMRMLMarkupsLineNode.h>
+#include <vtkMRMLMarkupsPlaneNode.h>
 #include <vtkMRMLModelNode.h>
 #include <vtkMRMLTransformNode.h>
 
@@ -39,13 +42,14 @@
 #include <vtkTriangleFilter.h>
 
 //----------------------------------------------------------------------------
-vtkToolNewMacro(vtkSlicerDynamicModelerHollowTool);
+vtkToolNewMacro(vtkSlicerDynamicModelerExtrudeTool);
 
-const char* HOLLOW_INPUT_MODEL_REFERENCE_ROLE = "Hollow.InputModel";
-const char* HOLLOW_OUTPUT_MODEL_REFERENCE_ROLE = "Hollow.OutputModel";
+const char* EXTRUDE_INPUT_MODEL_REFERENCE_ROLE = "Extrude.InputModel";
+const char* EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE = "Extrude.InputMarkups";
+const char* EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE = "Extrude.OutputModel";
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerHollowTool::vtkSlicerDynamicModelerHollowTool()
+vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
 {
   /////////
   // Inputs
@@ -57,48 +61,66 @@ vtkSlicerDynamicModelerHollowTool::vtkSlicerDynamicModelerHollowTool()
   inputModelClassNames->InsertNextValue("vtkMRMLModelNode");
   NodeInfo inputModel(
     "Model",
-    "Model to be hollowed.",
+    "Model to be extruded.",
     inputModelClassNames,
-    HOLLOW_INPUT_MODEL_REFERENCE_ROLE,
+    EXTRUDE_INPUT_MODEL_REFERENCE_ROLE,
     true,
     false,
     inputModelEvents
   );
   this->InputNodeInfo.push_back(inputModel);
 
+  vtkNew<vtkIntArray> inputMarkupEvents;
+  inputMarkupEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
+  inputMarkupEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
+  inputMarkupEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
+  vtkNew<vtkStringArray> inputMarkupClassNames;
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
+  NodeInfo inputMarkups(
+    "Markups",
+    "Markups to specify extrusion direction. Not used if mode is set to surface normal.",
+    inputMarkupClassNames,
+    EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE,
+    /*required*/ false,
+    /*repeatable*/ false,
+    inputMarkupEvents
+  );
+  this->InputNodeInfo.push_back(inputMarkups);
+
   /////////
   // Outputs
   NodeInfo outputModel(
-    "Hollowed model",
-    "Input model with its boundary surface converted to a shell. Surface normals must be computed for the model, for example using Surface Toolbox module.",
+    "Extruded model",
+    "Result of the extrusion operation.",
     inputModelClassNames,
-    HOLLOW_OUTPUT_MODEL_REFERENCE_ROLE,
+    EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE,
     false,
     false
-    );
+  );
   this->OutputNodeInfo.push_back(outputModel);
 
   /////////
   // Parameters
-  ParameterInfo parameterShellThickness(
-    "Shell thickness",
-    "Shell thickness of the generated hollow model. Keep the value low to avoid self-intersection.",
-    "ShellThickness",
+
+  ParameterInfo parameterExtrusionScale(
+    "Extrusion scale",
+    "Length of normals, line or point distance is scaled by this value to get the offset surface position. Use negative value for reversing extrusion direction.",
+    "ExtrusionScale",
     PARAMETER_DOUBLE,
     1.0);
-  this->InputParameterInfo.push_back(parameterShellThickness);
+  this->InputParameterInfo.push_back(parameterExtrusionScale);
 
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
 
-  this->HollowFilter = vtkSmartPointer<vtkLinearExtrusionFilter>::New();
-  this->HollowFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-  this->HollowFilter->SetExtrusionTypeToNormalExtrusion();
-  this->HollowFilter->SetScaleFactor(1.0);
+  this->ExtrudeFilter = vtkSmartPointer<vtkLinearExtrusionFilter>::New();
+  this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
 
   this->TriangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
-  this->TriangleFilter->SetInputConnection(this->HollowFilter->GetOutputPort());
+  this->TriangleFilter->SetInputConnection(this->ExtrudeFilter->GetOutputPort());
 
   this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
   this->NormalsFilter->SetInputConnection(this->TriangleFilter->GetOutputPort());
@@ -111,64 +133,105 @@ vtkSlicerDynamicModelerHollowTool::vtkSlicerDynamicModelerHollowTool()
 }
 
 //----------------------------------------------------------------------------
-vtkSlicerDynamicModelerHollowTool::~vtkSlicerDynamicModelerHollowTool()
+vtkSlicerDynamicModelerExtrudeTool::~vtkSlicerDynamicModelerExtrudeTool()
 = default;
 
 //----------------------------------------------------------------------------
-const char* vtkSlicerDynamicModelerHollowTool::GetName()
+const char* vtkSlicerDynamicModelerExtrudeTool::GetName()
 {
-  return "Hollow";
+  return "Extrude";
 }
 
 //----------------------------------------------------------------------------
-bool vtkSlicerDynamicModelerHollowTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
+bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
 {
   if (!this->HasRequiredInputs(surfaceEditorNode))
-    {
+  {
     vtkErrorMacro("Invalid number of inputs");
     return false;
-    }
+  }
 
-  vtkMRMLModelNode* outputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(HOLLOW_OUTPUT_MODEL_REFERENCE_ROLE));
+  vtkMRMLModelNode* outputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE));
   if (!outputModelNode)
-    {
+  {
     // Nothing to output
     return true;
-    }
+  }
 
-  vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(HOLLOW_INPUT_MODEL_REFERENCE_ROLE));
+  vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
   if (!inputModelNode)
-    {
+  {
     vtkErrorMacro("Invalid input model node!");
     return false;
-    }
+  }
 
   if (!inputModelNode->GetMesh() || inputModelNode->GetMesh()->GetNumberOfPoints() == 0)
-    {
+  {
     vtkNew<vtkPolyData> outputPolyData;
     outputModelNode->SetAndObservePolyData(outputPolyData);
     return true;
-    }
+  }
 
   if (inputModelNode->GetParentTransformNode())
-    {
+  {
     inputModelNode->GetParentTransformNode()->GetTransformToWorld(this->InputModelNodeToWorldTransform);
-    }
+  }
   else
-    {
+  {
     this->InputModelNodeToWorldTransform->Identity();
-    }
+  }
   if (outputModelNode && outputModelNode->GetParentTransformNode())
-    {
+  {
     outputModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputWorldToModelTransform);
-    }
+  }
   else
-    {
+  {
     this->OutputWorldToModelTransform->Identity();
-    }
+  }
 
-  double shellThickness = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
-  this->HollowFilter->SetScaleFactor(shellThickness);
+  vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE));
+
+  vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+
+  if (markupsFiducialNode)
+  {
+    double center[3] = { 0,0,0 };
+    int controlPointIndex = markupsFiducialNode->GetNthControlPointIndexByPositionStatus(0, vtkMRMLMarkupsNode::PositionDefined);
+    if (markupsFiducialNode >= 0)
+    {
+      markupsFiducialNode->GetNthControlPointPosition(0, center);
+    }
+    this->ExtrudeFilter->SetExtrusionPoint(center);
+    this->ExtrudeFilter->SetExtrusionTypeToPointExtrusion();
+  }
+  else if (markupsLineNode || markupsPlaneNode)
+  {
+    double startToEndVector[3] = { 1.0, 0.0, 0.0 };
+    if (markupsLineNode)
+    {
+      double startPos[3] = { 0,0,0 };
+      double endPos[3] = { 1,0,0 };
+      markupsLineNode->GetLineStartPositionWorld(startPos);
+      markupsLineNode->GetLineEndPositionWorld(endPos);
+      // startToEndVector = endPos - startPos
+      vtkMath::Subtract(endPos, startPos, startToEndVector);
+    }
+    else if (markupsPlaneNode)
+    {
+      markupsPlaneNode->GetNormalWorld(startToEndVector);
+    }
+    this->ExtrudeFilter->SetVector(startToEndVector);
+    this->ExtrudeFilter->SetExtrusionTypeToVectorExtrusion();
+  }
+  else
+  {
+    this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
+  }
+  
+  double extrusionScale = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
+  this->ExtrudeFilter->SetScaleFactor(extrusionScale);
 
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
 

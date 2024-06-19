@@ -12,25 +12,17 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-  This file was originally developed by Kyle Sunderland, PerkLab, Queen's University
-  and was supported through CANARIE's Research Software Program, Cancer
-  Care Ontario, OpenAnatomy, and Brigham and Women's Hospital through NIH grant R01MH112748.
+  This file was originally developed by Mauro I. Dominguez.
 
 ==============================================================================*/
 
-#ifndef __vtkSlicerDynamicModelerHollowTool_h
-#define __vtkSlicerDynamicModelerHollowTool_h
+#ifndef __vtkSlicerDynamicModelerExtrudeTool_h
+#define __vtkSlicerDynamicModelerExtrudeTool_h
 
 #include "vtkSlicerDynamicModelerModuleLogicExport.h"
 
 // VTK includes
-#include <vtkObject.h>
 #include <vtkSmartPointer.h>
-
-// STD includes
-#include <map>
-#include <string>
-#include <vector>
 
 class vtkGeneralTransform;
 class vtkLinearExtrusionFilter;
@@ -39,34 +31,50 @@ class vtkPolyDataNormals;
 class vtkTransformPolyDataFilter;
 class vtkTriangleFilter;
 
+// MRML includes
+#include <vtkMRMLModelNode.h>
+#include <vtkMRMLTransformNode.h>
+
+// VTK includes
+#include <vtkCommand.h>
+#include <vtkGeneralTransform.h>
+#include <vtkIntArray.h>
+#include <vtkLinearExtrusionFilter.h>
+#include <vtkPolyDataNormals.h>
+#include <vtkSmartPointer.h>
+#include <vtkStringArray.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
+#include <vtkTriangleFilter.h>
+
 #include "vtkSlicerDynamicModelerTool.h"
 
-/// \brief Dynamic modeler tool for creating a shell model (closed surface) from an open surface.
+/// \brief Dynamic modelling tool to extrude an open surface to create a closed surface.
 ///
-/// The shell is created by offsetting the input surface along the surface normal in both directions.
-class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerHollowTool : public vtkSlicerDynamicModelerTool
+class VTK_SLICER_DYNAMICMODELER_MODULE_LOGIC_EXPORT vtkSlicerDynamicModelerExtrudeTool : public vtkSlicerDynamicModelerTool
 {
 public:
-  static vtkSlicerDynamicModelerHollowTool* New();
+  static vtkSlicerDynamicModelerExtrudeTool* New();
   vtkSlicerDynamicModelerTool* CreateToolInstance() override;
-  vtkTypeMacro(vtkSlicerDynamicModelerHollowTool, vtkSlicerDynamicModelerTool);
+  vtkTypeMacro(vtkSlicerDynamicModelerExtrudeTool, vtkSlicerDynamicModelerTool);
 
   /// Human-readable name of the mesh modification tool
   const char* GetName() override;
 
-  /// Run the plane cut on the input model node
+  /// Run the faces selection on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
 
 protected:
-  vtkSlicerDynamicModelerHollowTool();
-  ~vtkSlicerDynamicModelerHollowTool() override;
-  void operator=(const vtkSlicerDynamicModelerHollowTool&);
+
+  vtkSlicerDynamicModelerExtrudeTool();
+  ~vtkSlicerDynamicModelerExtrudeTool() override;
+  void operator=(const vtkSlicerDynamicModelerExtrudeTool&);
 
 protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform> InputModelNodeToWorldTransform;
 
-  vtkSmartPointer<vtkLinearExtrusionFilter> HollowFilter;
+  vtkSmartPointer<vtkLinearExtrusionFilter> ExtrudeFilter;
   vtkSmartPointer<vtkTriangleFilter> TriangleFilter;
   vtkSmartPointer<vtkPolyDataNormals> NormalsFilter;
 
@@ -74,7 +82,7 @@ protected:
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
 
 private:
-  vtkSlicerDynamicModelerHollowTool(const vtkSlicerDynamicModelerHollowTool&) = delete;
+  vtkSlicerDynamicModelerExtrudeTool(const vtkSlicerDynamicModelerExtrudeTool&) = delete;
 };
 
-#endif // __vtkSlicerDynamicModelerHollowTool_h
+#endif // __vtkSlicerDynamicModelerExtrudeTool_h
