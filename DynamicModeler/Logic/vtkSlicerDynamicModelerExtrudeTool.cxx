@@ -248,6 +248,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     {
       if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
       {
+        // overwrite normals array with directions of (center-pointAt) array
         double center[3] = { 0,0,0 };
         markupsFiducialNode->GetNthControlPointPosition(0, center);
         vtkFloatArray* normalsArray = dynamic_cast<vtkFloatArray*>(
