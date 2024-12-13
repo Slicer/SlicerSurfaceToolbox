@@ -33,6 +33,8 @@
 #include <vtkCommand.h>
 #include <vtkGeneralTransform.h>
 #include <vtkIntArray.h>
+#include <vtkFloatArray.h>
+#include <vtkPointData.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkSmartPointer.h>
@@ -47,6 +49,8 @@ vtkToolNewMacro(vtkSlicerDynamicModelerExtrudeTool);
 const char* EXTRUDE_INPUT_MODEL_REFERENCE_ROLE = "Extrude.InputModel";
 const char* EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE = "Extrude.InputMarkups";
 const char* EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE = "Extrude.OutputModel";
+const char* EXTRUDE_LENGTH_MODE = "Extrude.LengthMode";
+const char* EXTRUDE_VALUE = "Extrude.ExtrusionValue";
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
@@ -104,32 +108,45 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   /////////
   // Parameters
 
-  ParameterInfo parameterExtrusionScale(
-    "Extrusion scale",
-    "Length of normals, line or point distance is scaled by this value to get the offset surface position. Use negative value for reversing extrusion direction.",
-    "ExtrusionScale",
+  ParameterInfo parameterLengthMode(
+    "Length mode",
+    "Can be fixed length or scaled length. Scaled mode is ignored for planes",
+    EXTRUDE_LENGTH_MODE,
+    PARAMETER_STRING_ENUM,
+    "Fixed");
+
+  vtkNew<vtkStringArray> possibleValues;
+  parameterLengthMode.PossibleValues = possibleValues;
+  parameterLengthMode.PossibleValues->InsertNextValue("Fixed");
+  parameterLengthMode.PossibleValues->InsertNextValue("Scaled");
+  this->InputParameterInfo.push_back(parameterLengthMode);
+
+  ParameterInfo parameterExtrusionValue(
+    "Extrusion value",
+    "Value used for fixed length or multiplied by point position. Use negative value for reversing extrusion direction.",
+    EXTRUDE_VALUE,
     PARAMETER_DOUBLE,
     1.0);
-  this->InputParameterInfo.push_back(parameterExtrusionScale);
+  this->InputParameterInfo.push_back(parameterExtrusionValue);
 
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
 
+  this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
+  this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+  this->NormalsFilter->AutoOrientNormalsOn();
+  
   this->ExtrudeFilter = vtkSmartPointer<vtkLinearExtrusionFilter>::New();
-  this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+  this->ExtrudeFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
 
   this->TriangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
   this->TriangleFilter->SetInputConnection(this->ExtrudeFilter->GetOutputPort());
 
-  this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
-  this->NormalsFilter->SetInputConnection(this->TriangleFilter->GetOutputPort());
-  this->NormalsFilter->AutoOrientNormalsOn();
-
   this->OutputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->OutputModelToWorldTransformFilter->SetTransform(this->OutputWorldToModelTransform);
-  this->OutputModelToWorldTransformFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
+  this->OutputModelToWorldTransformFilter->SetInputConnection(this->TriangleFilter->GetOutputPort());
 }
 
 //----------------------------------------------------------------------------
@@ -189,51 +206,102 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     this->OutputWorldToModelTransform->Identity();
   }
 
+  this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
+  this->NormalsFilter->Update();
+
   vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE));
 
-  vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
-  vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
-  vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+  double extrusionValue = this->GetNthInputParameterValue(1, surfaceEditorNode).ToDouble();
 
-  if (markupsFiducialNode)
+  if (markupsNode == nullptr)
   {
-    double center[3] = { 0,0,0 };
-    int controlPointIndex = markupsFiducialNode->GetNthControlPointIndexByPositionStatus(0, vtkMRMLMarkupsNode::PositionDefined);
-    if (markupsFiducialNode >= 0)
-    {
-      markupsFiducialNode->GetNthControlPointPosition(0, center);
-    }
-    this->ExtrudeFilter->SetExtrusionPoint(center);
-    this->ExtrudeFilter->SetExtrusionTypeToPointExtrusion();
-  }
-  else if (markupsLineNode || markupsPlaneNode)
-  {
-    double startToEndVector[3] = { 1.0, 0.0, 0.0 };
-    if (markupsLineNode)
-    {
-      double startPos[3] = { 0,0,0 };
-      double endPos[3] = { 1,0,0 };
-      markupsLineNode->GetLineStartPositionWorld(startPos);
-      markupsLineNode->GetLineEndPositionWorld(endPos);
-      // startToEndVector = endPos - startPos
-      vtkMath::Subtract(endPos, startPos, startToEndVector);
-    }
-    else if (markupsPlaneNode)
-    {
-      markupsPlaneNode->GetNormalWorld(startToEndVector);
-    }
-    this->ExtrudeFilter->SetVector(startToEndVector);
-    this->ExtrudeFilter->SetExtrusionTypeToVectorExtrusion();
+    this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
+    this->ExtrudeFilter->SetScaleFactor(extrusionValue);
   }
   else
   {
-    this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
-  }
-  
-  double extrusionScale = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
-  this->ExtrudeFilter->SetScaleFactor(extrusionScale);
+    std::string selectionAlgorithm = this->GetNthInputParameterValue(0, surfaceEditorNode).ToString();
 
-  this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
+    vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+    int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
+    
+    if (markupsPlaneNode)
+    {
+      this->ExtrudeFilter->SetScaleFactor(extrusionValue);
+      int planeType = markupsPlaneNode->GetPlaneType();
+      if (
+        ((numberOfControlPoints == 1) && (planeType == vtkMRMLMarkupsPlaneNode::PlaneTypePointNormal)) or
+        ((numberOfControlPoints == 3) && (planeType == vtkMRMLMarkupsPlaneNode::PlaneType3Points)) or
+        ((numberOfControlPoints >= 3) && (planeType == vtkMRMLMarkupsPlaneNode::PlaneTypePlaneFit))
+      )
+      {
+        double startToEndVector[3] = { 1.0, 0.0, 0.0 };
+        markupsPlaneNode->GetNormalWorld(startToEndVector);
+        this->ExtrudeFilter->SetVector(startToEndVector);
+        this->ExtrudeFilter->SetExtrusionTypeToVectorExtrusion();
+      }
+    }
+    
+    if (selectionAlgorithm == "Fixed")
+    {
+      if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
+      {
+        double center[3] = { 0,0,0 };
+        markupsFiducialNode->GetNthControlPointPosition(0, center);
+        vtkFloatArray* normalsArray = dynamic_cast<vtkFloatArray*>(
+          this->NormalsFilter->GetOutput()->GetPointData()->GetArray("Normals"));
+        for (int i = 0; i < normalsArray->GetNumberOfTuples(); ++i)
+          {
+            double pointAt[3] = { 0,0,0 };
+            this->NormalsFilter->GetOutput()->GetPoint(i, pointAt);
+            double direction[3] = { 0,0,0 };
+            vtkMath::Subtract(center, pointAt, direction);
+            vtkMath::Normalize(direction);
+            normalsArray->SetTuple3(i,direction[0],direction[1],direction[2]);
+          }
+        this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
+        this->ExtrudeFilter->SetScaleFactor(extrusionValue);
+      }
+      else if ((markupsLineNode) && (numberOfControlPoints == 2))
+      {
+        double startToEndVector[3] = { 1.0, 0.0, 0.0 };
+        double startPos[3] = { 0,0,0 };
+        double endPos[3] = { 1,0,0 };
+        markupsLineNode->GetLineStartPositionWorld(startPos);
+        markupsLineNode->GetLineEndPositionWorld(endPos);
+        vtkMath::Subtract(endPos, startPos, startToEndVector);
+        vtkMath::Normalize(startToEndVector);
+        this->ExtrudeFilter->SetVector(startToEndVector);
+        this->ExtrudeFilter->SetExtrusionTypeToVectorExtrusion();
+        this->ExtrudeFilter->SetScaleFactor(extrusionValue);
+      }
+    }
+    else if (selectionAlgorithm == "Scaled")
+    {
+      if ((markupsFiducialNode) && (markupsFiducialNode->GetNumberOfControlPoints() >= 1))
+      {
+        double center[3] = { 0,0,0 };
+        markupsFiducialNode->GetNthControlPointPosition(0, center);
+        this->ExtrudeFilter->SetExtrusionPoint(center);
+        this->ExtrudeFilter->SetExtrusionTypeToPointExtrusion();
+        this->ExtrudeFilter->SetScaleFactor(-extrusionValue);
+      }
+      else if ((markupsLineNode) && (numberOfControlPoints == 2))
+      {
+        double startToEndVector[3] = { 1.0, 0.0, 0.0 };
+        double startPos[3] = { 0,0,0 };
+        double endPos[3] = { 1,0,0 };
+        markupsLineNode->GetLineStartPositionWorld(startPos);
+        markupsLineNode->GetLineEndPositionWorld(endPos);
+        vtkMath::Subtract(endPos, startPos, startToEndVector);
+        this->ExtrudeFilter->SetVector(startToEndVector);
+        this->ExtrudeFilter->SetExtrusionTypeToVectorExtrusion();
+        this->ExtrudeFilter->SetScaleFactor(extrusionValue);
+      }
+    }
+  }
 
   this->OutputModelToWorldTransformFilter->Update();
   vtkNew<vtkPolyData> outputMesh;
