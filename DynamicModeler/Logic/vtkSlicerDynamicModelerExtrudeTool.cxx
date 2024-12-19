@@ -113,11 +113,11 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
     "Can be fixed length or scaled length. Scaled mode is ignored for planes",
     EXTRUDE_LENGTH_MODE,
     PARAMETER_STRING_ENUM,
-    "Fixed");
+    "Absolute");
 
   vtkNew<vtkStringArray> possibleValues;
   parameterLengthMode.PossibleValues = possibleValues;
-  parameterLengthMode.PossibleValues->InsertNextValue("Fixed");
+  parameterLengthMode.PossibleValues->InsertNextValue("Absolute");
   parameterLengthMode.PossibleValues->InsertNextValue("Scaled");
   this->InputParameterInfo.push_back(parameterLengthMode);
 
@@ -220,7 +220,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
   else
   {
-    std::string selectionAlgorithm = this->GetNthInputParameterValue(0, surfaceEditorNode).ToString();
+    std::string lengthMode = this->GetNthInputParameterValue(0, surfaceEditorNode).ToString();
 
     vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
     vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
@@ -244,7 +244,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
       }
     }
     
-    if (selectionAlgorithm == "Fixed")
+    if (lengthMode == "Absolute")
     {
       if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
       {
@@ -279,7 +279,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
         this->ExtrudeFilter->SetScaleFactor(extrusionValue);
       }
     }
-    else if (selectionAlgorithm == "Scaled")
+    else if (lengthMode == "Scaled")
     {
       if ((markupsFiducialNode) && (markupsFiducialNode->GetNumberOfControlPoints() >= 1))
       {
