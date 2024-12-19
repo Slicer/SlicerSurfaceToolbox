@@ -49,8 +49,8 @@ vtkToolNewMacro(vtkSlicerDynamicModelerExtrudeTool);
 const char* EXTRUDE_INPUT_MODEL_REFERENCE_ROLE = "Extrude.InputModel";
 const char* EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE = "Extrude.InputMarkups";
 const char* EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE = "Extrude.OutputModel";
-const char* EXTRUDE_LENGTH_MODE = "Extrude.LengthMode";
-const char* EXTRUDE_VALUE = "Extrude.ExtrusionValue";
+const char* EXTRUDE_LENGTH_MODE = "Extrude.ExtrusionLengthMode";
+const char* EXTRUDE_VALUE = "Extrude.ExtrusionLength";
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
@@ -109,8 +109,8 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   // Parameters
 
   ParameterInfo parameterLengthMode(
-    "Length mode",
-    "Can be fixed length or scaled length. Scaled mode is ignored for planes",
+    "Extrusion length mode",
+    "If absolute then the extrusion length is set to 'Extrusion length' parameter value. If relative then the length defined by the input markup will be multiplied by the 'Extrusion length' parameter value to compute the extrusion length.",
     EXTRUDE_LENGTH_MODE,
     PARAMETER_STRING_ENUM,
     "Absolute");
@@ -122,8 +122,8 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   this->InputParameterInfo.push_back(parameterLengthMode);
 
   ParameterInfo parameterExtrusionValue(
-    "Extrusion value",
-    "Value used for fixed length or multiplied by point position. Use negative value for reversing extrusion direction.",
+    "Extrusion length",
+    "Absolute length value or relative scaling value (depending on 'Extrusion length mode' parameter) that is used for computing the extrusion length.",
     EXTRUDE_VALUE,
     PARAMETER_DOUBLE,
     1.0);
