@@ -49,7 +49,7 @@ vtkToolNewMacro(vtkSlicerDynamicModelerExtrudeTool);
 const char* EXTRUDE_INPUT_MODEL_REFERENCE_ROLE = "Extrude.InputModel";
 const char* EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE = "Extrude.InputMarkups";
 const char* EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE = "Extrude.OutputModel";
-const char* EXTRUDE_LENGTH_MODE = "Extrude.ExtrusionLengthMode";
+const char* EXTRUDE_LENGTH_MODE_ABSOLUTE = "Extrude.ExtrusionLengthModeAbsolute";
 const char* EXTRUDE_VALUE = "Extrude.ExtrusionLength";
 
 //----------------------------------------------------------------------------
@@ -109,16 +109,11 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   // Parameters
 
   ParameterInfo parameterLengthMode(
-    "Extrusion length mode",
+    "Extrusion length mode absolute",
     "If absolute then the extrusion length is set to 'Extrusion length' parameter value. If relative then the length defined by the input markup will be multiplied by the 'Extrusion length' parameter value to compute the extrusion length.",
-    EXTRUDE_LENGTH_MODE,
-    PARAMETER_STRING_ENUM,
-    "Absolute");
-
-  vtkNew<vtkStringArray> possibleValues;
-  parameterLengthMode.PossibleValues = possibleValues;
-  parameterLengthMode.PossibleValues->InsertNextValue("Absolute");
-  parameterLengthMode.PossibleValues->InsertNextValue("Relative");
+    EXTRUDE_LENGTH_MODE_ABSOLUTE,
+    PARAMETER_BOOL,
+    true);
   this->InputParameterInfo.push_back(parameterLengthMode);
 
   ParameterInfo parameterExtrusionValue(
@@ -237,7 +232,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
   else
   {
-    std::string lengthMode = this->GetNthInputParameterValue(0, surfaceEditorNode).ToString();
+    bool lengthModeAbsolute = vtkVariant(surfaceEditorNode->GetAttribute(EXTRUDE_LENGTH_MODE_ABSOLUTE)).ToInt() != 0;
 
     vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
     vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
@@ -261,7 +256,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
       }
     }
     
-    if (lengthMode == "Absolute")
+    if (lengthModeAbsolute)
     {
       if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
       {
@@ -308,7 +303,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
         this->ExtrudeFilter->SetScaleFactor(extrusionValue);
       }
     }
-    else if (lengthMode == "Relative")
+    else // lengthMode is relative
     {
       if ((markupsFiducialNode) && (markupsFiducialNode->GetNumberOfControlPoints() >= 1))
       {
