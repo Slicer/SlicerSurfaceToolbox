@@ -134,11 +134,12 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
 
   this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
-  this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   this->NormalsFilter->AutoOrientNormalsOn();
+  //this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   
   this->ExtrudeFilter = vtkSmartPointer<vtkLinearExtrusionFilter>::New();
-  this->ExtrudeFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
+  //this->ExtrudeFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
+  this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
 
   this->TriangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
   this->TriangleFilter->SetInputConnection(this->ExtrudeFilter->GetOutputPort());
@@ -207,7 +208,18 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
 
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
-  this->NormalsFilter->Update();
+  this->InputModelToWorldTransformFilter->Update();
+  // with filter input below we'll never create normals unless they don't exist
+  this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+
+  // backup current normals
+  vtkFloatArray* normalsArray = dynamic_cast<vtkFloatArray*>(
+    this->InputModelToWorldTransformFilter->GetOutput()->GetPointData()->GetArray("Normals"));
+  vtkFloatArray* normalsArrayBackup;
+  if (normalsArray)
+  {
+    normalsArrayBackup->DeepCopy(normalsArray);
+  }
 
   vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE));
 
@@ -215,6 +227,11 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
   if (markupsNode == nullptr)
   {
+    if (normalsArray == nullptr) // then create the normals
+    {
+      this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+      this->ExtrudeFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
+    }
     this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
     this->ExtrudeFilter->SetScaleFactor(extrusionValue);
   }
@@ -248,22 +265,34 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     {
       if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
       {
+        vtkFloatArray* auxNormalsArray;
+        if (normalsArray == nullptr)
+        {
+          this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+          this->NormalsFilter->Update();
+          auxNormalsArray = dynamic_cast<vtkFloatArray*>(
+            this->NormalsFilter->GetOutput()->GetPointData()->GetArray("Normals"));
+        }
         // overwrite normals array with directions of (center-pointAt) array
         double center[3] = { 0,0,0 };
         markupsFiducialNode->GetNthControlPointPosition(0, center);
-        vtkFloatArray* normalsArray = dynamic_cast<vtkFloatArray*>(
-          this->NormalsFilter->GetOutput()->GetPointData()->GetArray("Normals"));
-        for (int i = 0; i < normalsArray->GetNumberOfTuples(); ++i)
+        for (int i = 0; i < auxNormalsArray->GetNumberOfTuples(); ++i)
           {
             double pointAt[3] = { 0,0,0 };
             this->NormalsFilter->GetOutput()->GetPoint(i, pointAt);
             double direction[3] = { 0,0,0 };
             vtkMath::Subtract(center, pointAt, direction);
             vtkMath::Normalize(direction);
-            normalsArray->SetTuple3(i,direction[0],direction[1],direction[2]);
+            auxNormalsArray->SetTuple3(i,direction[0],direction[1],direction[2]);
           }
+        this->ExtrudeFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
         this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
         this->ExtrudeFilter->SetScaleFactor(extrusionValue);
+        this->ExtrudeFilter->Update();
+        if (normalsArray)
+        {
+          this->ExtrudeFilter->GetOutput()->GetPointData()->SetNormals(normalsArrayBackup);
+        }
       }
       else if ((markupsLineNode) && (numberOfControlPoints == 2))
       {
