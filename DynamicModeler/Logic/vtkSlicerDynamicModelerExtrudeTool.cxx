@@ -118,7 +118,7 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   vtkNew<vtkStringArray> possibleValues;
   parameterLengthMode.PossibleValues = possibleValues;
   parameterLengthMode.PossibleValues->InsertNextValue("Absolute");
-  parameterLengthMode.PossibleValues->InsertNextValue("Scaled");
+  parameterLengthMode.PossibleValues->InsertNextValue("Relative");
   this->InputParameterInfo.push_back(parameterLengthMode);
 
   ParameterInfo parameterExtrusionValue(
@@ -308,7 +308,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
         this->ExtrudeFilter->SetScaleFactor(extrusionValue);
       }
     }
-    else if (lengthMode == "Scaled")
+    else if (lengthMode == "Relative")
     {
       if ((markupsFiducialNode) && (markupsFiducialNode->GetNumberOfControlPoints() >= 1))
       {
