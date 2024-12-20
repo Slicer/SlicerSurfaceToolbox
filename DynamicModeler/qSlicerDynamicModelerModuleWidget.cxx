@@ -49,6 +49,7 @@
 #include <vtkSlicerDynamicModelerBoundaryCutTool.h>
 #include <vtkSlicerDynamicModelerCurveCutTool.h>
 #include <vtkSlicerDynamicModelerExtrudeTool.h>
+#include <vtkSlicerDynamicModelerRevolveTool.h>
 #include <vtkSlicerDynamicModelerHollowTool.h>
 #include <vtkSlicerDynamicModelerMarginTool.h>
 #include <vtkSlicerDynamicModelerLogic.h>
@@ -126,6 +127,10 @@ void qSlicerDynamicModelerModuleWidget::setup()
 
   vtkNew<vtkSlicerDynamicModelerExtrudeTool> extrudeTool;
   this->addToolButton(QIcon(":/Icons/Extrude.png"), extrudeTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
+
+  vtkNew<vtkSlicerDynamicModelerRevolveTool> revolveTool;
+  this->addToolButton(QIcon(":/Icons/Revolve.png"), revolveTool, buttonPosition / columns, buttonPosition % columns);
   buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerHollowTool> hollowTool;
