@@ -35,13 +35,15 @@
 #include <vtkIntArray.h>
 #include <vtkFloatArray.h>
 #include <vtkPointData.h>
-#include <vtkLinearExtrusionFilter.h>
+#include <vtkRotationalExtrusionFilter.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkSmartPointer.h>
 #include <vtkStringArray.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
+#include <vtkFeatureEdges.h>
+#include <vtkAppendPolyData.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerRevolveTool);
@@ -49,8 +51,9 @@ vtkToolNewMacro(vtkSlicerDynamicModelerRevolveTool);
 const char* REVOLVE_INPUT_MODEL_REFERENCE_ROLE = "Revolve.InputModel";
 const char* REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE = "Revolve.InputMarkups";
 const char* REVOLVE_OUTPUT_MODEL_REFERENCE_ROLE = "Revolve.OutputModel";
-const char* REVOLVE_LENGTH_MODE_ABSOLUTE = "Revolve.ExtrusionLengthModeAbsolute";
-const char* REVOLVE_VALUE = "Revolve.ExtrusionLength";
+const char* REVOLVE_ANGLE_DEGREES = "Revolve.AngleDegrees";
+const char* REVOLVE_AXIS_AT_ORIGIN = "Revolve.AxisAtOrigin";
+const char* REVOLVE_TRANSLATE_ALONG_AXIS_DISTANCE = "Revolve.TranslateDistanceAlongAxis";
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
@@ -84,10 +87,10 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
   NodeInfo inputMarkups(
     "Markups",
-    "Markups to specify extrusion direction. Not used if mode is set to surface normal.",
+    "Markups to specify spatial revolution axis. Normal for plane, superior axis for a point.",
     inputMarkupClassNames,
     REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE,
-    /*required*/ false,
+    /*required*/ true,
     /*repeatable*/ false,
     inputMarkupEvents
   );
@@ -97,7 +100,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   // Outputs
   NodeInfo outputModel(
     "Revolved model",
-    "Result of the extrusion operation.",
+    "Result of the revolving operation.",
     inputModelClassNames,
     REVOLVE_OUTPUT_MODEL_REFERENCE_ROLE,
     false,
@@ -108,36 +111,68 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   /////////
   // Parameters
 
-  ParameterInfo parameterLengthMode(
-    "Extrusion length mode absolute",
-    "If absolute then the extrusion length is set to 'Extrusion length' parameter value. If relative then the length defined by the input markup will be multiplied by the 'Extrusion length' parameter value to compute the extrusion length.",
-    REVOLVE_LENGTH_MODE_ABSOLUTE,
-    PARAMETER_BOOL,
-    true);
-  this->InputParameterInfo.push_back(parameterLengthMode);
-
-  ParameterInfo parameterExtrusionValue(
-    "Extrusion length",
-    "Absolute length value or relative scaling value (depending on 'Extrusion length mode' parameter) that is used for computing the extrusion length.",
-    REVOLVE_VALUE,
+  ParameterInfo parameterRotationAngleDegress(
+    "Rotation degrees",
+    "Rotation angle in degrees.",
+    REVOLVE_ANGLE_DEGREES,
     PARAMETER_DOUBLE,
-    1.0);
-  this->InputParameterInfo.push_back(parameterExtrusionValue);
+    90.0);
+  this->InputParameterInfo.push_back(parameterRotationAngleDegress);
+
+  ParameterInfo parameterRotationAxisAtOrigin(
+    "Rotation axis at origin",
+    "If true, the revolution will be done around the origin.",
+    REVOLVE_AXIS_AT_ORIGIN,
+    PARAMETER_BOOL,
+    false);
+  this->InputParameterInfo.push_back(parameterRotationAxisAtOrigin);
+
+  ParameterInfo parameterTranslationAlongAxisDistance(
+    "Translate along axis",
+    "Translation distance during the swept.",
+    REVOLVE_TRANSLATE_ALONG_AXIS_DISTANCE,
+    PARAMETER_DOUBLE,
+    0.0);
+  this->InputParameterInfo.push_back(parameterTranslationAlongAxisDistance);
 
   this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
 
-  this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
-  this->NormalsFilter->AutoOrientNormalsOn();
-  //this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-  
-  this->RevolveFilter = vtkSmartPointer<vtkLinearExtrusionFilter>::New();
-  //this->RevolveFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
+  this->ModelingTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->ModelingTransform = vtkSmartPointer<vtkTransform>::New();
+  this->ModelingTransformFilter->SetTransform(this->ModelingTransform);
+
+  this->CapTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->CapTransform = vtkSmartPointer<vtkTransform>::New();
+  this->CapTransformFilter->SetTransform(this->CapTransform);
+
+  this->BoundaryEdgesFilter = vtkSmartPointer<vtkFeatureEdges>::New();
+  //this->BoundaryEdgesFilter->SetInputConnection();
+  this->BoundaryEdgesFilter->BoundaryEdgesOn();
+  this->BoundaryEdgesFilter->FeatureEdgesOff();
+  this->BoundaryEdgesFilter->NonManifoldEdgesOff();
+  this->BoundaryEdgesFilter->ManifoldEdgesOff();
+  this->BoundaryEdgesFilter->PassLinesOn();
+
+  this->RevolveFilter = vtkSmartPointer<vtkRotationalExtrusionFilter>::New();
   this->RevolveFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+
+  this->AppendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+  //this->AppendFilter->AddInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+  this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
+  //this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
+
+  this->ResamplingTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->ResamplingTransform = vtkSmartPointer<vtkTransform>::New();
+  this->ResamplingTransformFilter->SetTransform(this->ResamplingTransform);
 
   this->TriangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
   this->TriangleFilter->SetInputConnection(this->RevolveFilter->GetOutputPort());
+
+  this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
+  //this->NormalsFilter->AutoOrientNormalsOn();
+  //this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
 
   this->OutputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -203,129 +238,44 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
 
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
-  this->InputModelToWorldTransformFilter->Update();
-  // with filter input below we'll never create normals unless they don't exist
-  this->RevolveFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-
-  // backup current normals
-  vtkFloatArray* normalsArray = dynamic_cast<vtkFloatArray*>(
-    this->InputModelToWorldTransformFilter->GetOutput()->GetPointData()->GetArray("Normals"));
-  vtkFloatArray* normalsArrayBackup;
-  if (normalsArray)
-  {
-    normalsArrayBackup->DeepCopy(normalsArray);
-  }
 
   vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE));
 
-  double extrusionValue = this->GetNthInputParameterValue(1, surfaceEditorNode).ToDouble();
-
   if (markupsNode == nullptr)
   {
-    if (normalsArray == nullptr) // then create the normals
-    {
-      this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-      this->RevolveFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
-    }
-    this->RevolveFilter->SetExtrusionTypeToNormalExtrusion();
-    this->RevolveFilter->SetScaleFactor(extrusionValue);
+    return true;
   }
-  else
-  {
-    bool lengthModeAbsolute = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_LENGTH_MODE_ABSOLUTE)).ToInt() != 0;
 
-    vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
-    vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
-    vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
-    int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
-    
-    if (markupsPlaneNode)
-    {
-      this->RevolveFilter->SetScaleFactor(extrusionValue);
-      int planeType = markupsPlaneNode->GetPlaneType();
-      if (
-        ((numberOfControlPoints == 1) && (planeType == vtkMRMLMarkupsPlaneNode::PlaneTypePointNormal)) or
-        ((numberOfControlPoints == 3) && (planeType == vtkMRMLMarkupsPlaneNode::PlaneType3Points)) or
-        ((numberOfControlPoints >= 3) && (planeType == vtkMRMLMarkupsPlaneNode::PlaneTypePlaneFit))
-      )
-      {
-        double startToEndVector[3] = { 1.0, 0.0, 0.0 };
-        markupsPlaneNode->GetNormalWorld(startToEndVector);
-        this->RevolveFilter->SetVector(startToEndVector);
-        this->RevolveFilter->SetExtrusionTypeToVectorExtrusion();
-      }
-    }
-    
-    if (lengthModeAbsolute)
-    {
-      if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
-      {
-        vtkFloatArray* auxNormalsArray;
-        if (normalsArray == nullptr)
-        {
-          this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-          this->NormalsFilter->Update();
-          auxNormalsArray = dynamic_cast<vtkFloatArray*>(
-            this->NormalsFilter->GetOutput()->GetPointData()->GetArray("Normals"));
-        }
-        // overwrite normals array with directions of (center-pointAt) array
-        double center[3] = { 0,0,0 };
-        markupsFiducialNode->GetNthControlPointPosition(0, center);
-        for (int i = 0; i < auxNormalsArray->GetNumberOfTuples(); ++i)
-          {
-            double pointAt[3] = { 0,0,0 };
-            this->NormalsFilter->GetOutput()->GetPoint(i, pointAt);
-            double direction[3] = { 0,0,0 };
-            vtkMath::Subtract(center, pointAt, direction);
-            vtkMath::Normalize(direction);
-            auxNormalsArray->SetTuple3(i,direction[0],direction[1],direction[2]);
-          }
-        this->RevolveFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
-        this->RevolveFilter->SetExtrusionTypeToNormalExtrusion();
-        this->RevolveFilter->SetScaleFactor(extrusionValue);
-        this->RevolveFilter->Update();
-        if (normalsArray)
-        {
-          this->RevolveFilter->GetOutput()->GetPointData()->SetNormals(normalsArrayBackup);
-        }
-      }
-      else if ((markupsLineNode) && (numberOfControlPoints == 2))
-      {
-        double startToEndVector[3] = { 1.0, 0.0, 0.0 };
-        double startPos[3] = { 0,0,0 };
-        double endPos[3] = { 1,0,0 };
-        markupsLineNode->GetLineStartPositionWorld(startPos);
-        markupsLineNode->GetLineEndPositionWorld(endPos);
-        vtkMath::Subtract(endPos, startPos, startToEndVector);
-        vtkMath::Normalize(startToEndVector);
-        this->RevolveFilter->SetVector(startToEndVector);
-        this->RevolveFilter->SetExtrusionTypeToVectorExtrusion();
-        this->RevolveFilter->SetScaleFactor(extrusionValue);
-      }
-    }
-    else // lengthMode is relative
-    {
-      if ((markupsFiducialNode) && (markupsFiducialNode->GetNumberOfControlPoints() >= 1))
-      {
-        double center[3] = { 0,0,0 };
-        markupsFiducialNode->GetNthControlPointPosition(0, center);
-        this->RevolveFilter->SetExtrusionPoint(center);
-        this->RevolveFilter->SetExtrusionTypeToPointExtrusion();
-        this->RevolveFilter->SetScaleFactor(-extrusionValue);
-      }
-      else if ((markupsLineNode) && (numberOfControlPoints == 2))
-      {
-        double startToEndVector[3] = { 1.0, 0.0, 0.0 };
-        double startPos[3] = { 0,0,0 };
-        double endPos[3] = { 1,0,0 };
-        markupsLineNode->GetLineStartPositionWorld(startPos);
-        markupsLineNode->GetLineEndPositionWorld(endPos);
-        vtkMath::Subtract(endPos, startPos, startToEndVector);
-        this->RevolveFilter->SetVector(startToEndVector);
-        this->RevolveFilter->SetExtrusionTypeToVectorExtrusion();
-        this->RevolveFilter->SetScaleFactor(extrusionValue);
-      }
-    }
+  int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
+  if (numberOfControlPoints == 0)
+  {
+    return true;
+  }
+
+  vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+  
+  if ((markupsLineNode) && (numberOfControlPoints != 2))
+  {
+    return true;
+  }
+
+  double rotationAngleDegress = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
+  bool axisAtOrigin = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_AXIS_AT_ORIGIN)).ToInt() != 0;
+  double translationAlongAxisDistance = this->GetNthInputParameterValue(2, surfaceEditorNode).ToDouble();
+
+  if (markupsFiducialNode)
+  {
+    double placeholder = 0.;
+  }
+  if (markupsLineNode)
+  {
+    double placeholder = 0.;
+  }
+  if (markupsPlaneNode)
+  {
+    double placeholder = 0.;
   }
 
   this->OutputModelToWorldTransformFilter->Update();
