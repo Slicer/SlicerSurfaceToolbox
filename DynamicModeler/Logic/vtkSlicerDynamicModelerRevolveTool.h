@@ -39,13 +39,15 @@ class vtkTriangleFilter;
 #include <vtkCommand.h>
 #include <vtkGeneralTransform.h>
 #include <vtkIntArray.h>
-#include <vtkLinearExtrusionFilter.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkSmartPointer.h>
 #include <vtkStringArray.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
+#include <vtkFeatureEdges.h>
+#include <vtkRotationalExtrusionFilter.h>
+#include <vtkAppendPolyData.h>
 
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -74,7 +76,20 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform> InputModelNodeToWorldTransform;
 
-  vtkSmartPointer<vtkLinearExtrusionFilter> RevolveFilter;
+  vtkSmartPointer<vtkTransformPolyDataFilter> ModelingTransformFilter;
+  vtkSmartPointer<vtkTransform> ModelingTransform;
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> ResamplingTransformFilter;
+  vtkSmartPointer<vtkTransform> ResamplingTransform;
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> CapTransformFilter;
+  vtkSmartPointer<vtkTransform> CapTransform;
+
+  vtkSmartPointer<vtkFeatureEdges> BoundaryEdgesFilter;
+
+  vtkSmartPointer<vtkRotationalExtrusionFilter> RevolveFilter;
+  vtkSmartPointer<vtkAppendPolyData> AppendFilter;
+
   vtkSmartPointer<vtkTriangleFilter> TriangleFilter;
   vtkSmartPointer<vtkPolyDataNormals> NormalsFilter;
 
