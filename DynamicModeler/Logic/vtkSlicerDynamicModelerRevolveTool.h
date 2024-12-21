@@ -79,16 +79,17 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> ModelingTransformFilter;
   vtkSmartPointer<vtkTransform> ModelingTransform;
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> ResamplingTransformFilter;
-  vtkSmartPointer<vtkTransform> ResamplingTransform;
+  vtkSmartPointer<vtkFeatureEdges> BoundaryEdgesFilter;
 
   vtkSmartPointer<vtkTransformPolyDataFilter> CapTransformFilter;
   vtkSmartPointer<vtkTransform> CapTransform;
 
-  vtkSmartPointer<vtkFeatureEdges> BoundaryEdgesFilter;
-
   vtkSmartPointer<vtkRotationalExtrusionFilter> RevolveFilter;
+
   vtkSmartPointer<vtkAppendPolyData> AppendFilter;
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> ResamplingTransformFilter;
+  vtkSmartPointer<vtkTransform> ResamplingTransform;
 
   vtkSmartPointer<vtkTriangleFilter> TriangleFilter;
   vtkSmartPointer<vtkPolyDataNormals> NormalsFilter;

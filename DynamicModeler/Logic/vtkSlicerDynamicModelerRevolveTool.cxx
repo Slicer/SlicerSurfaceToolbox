@@ -141,10 +141,12 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   this->ModelingTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->ModelingTransform = vtkSmartPointer<vtkTransform>::New();
+  this->ModelingTransform->PostMultiply();
   this->ModelingTransformFilter->SetTransform(this->ModelingTransform);
 
   this->CapTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->CapTransform = vtkSmartPointer<vtkTransform>::New();
+  this->CapTransform->PostMultiply();
   this->CapTransformFilter->SetTransform(this->CapTransform);
 
   this->BoundaryEdgesFilter = vtkSmartPointer<vtkFeatureEdges>::New();
@@ -156,15 +158,16 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   this->BoundaryEdgesFilter->PassLinesOn();
 
   this->RevolveFilter = vtkSmartPointer<vtkRotationalExtrusionFilter>::New();
-  this->RevolveFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+  this->RevolveFilter->SetInputConnection(this->BoundaryEdgesFilter->GetOutputPort());
 
   this->AppendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
   //this->AppendFilter->AddInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
-  this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
+  //this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
   //this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
 
   this->ResamplingTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->ResamplingTransform = vtkSmartPointer<vtkTransform>::New();
+  this->ResamplingTransform->PostMultiply();
   this->ResamplingTransformFilter->SetTransform(this->ResamplingTransform);
 
   this->TriangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
@@ -241,6 +244,7 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
   vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE));
 
+  // check if markups are valid
   if (markupsNode == nullptr)
   {
     return true;
@@ -261,23 +265,77 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
     return true;
   }
 
+  // get parameters
   double rotationAngleDegress = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
   bool axisAtOrigin = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_AXIS_AT_ORIGIN)).ToInt() != 0;
   double translationAlongAxisDistance = this->GetNthInputParameterValue(2, surfaceEditorNode).ToDouble();
 
+  this->RevolveFilter->SetResolution(
+    std::ceil(std::fabs(rotationAngleDegress))*2);
+  this->RevolveFilter->SetAngle(rotationAngleDegress);
+  //this->RevolveFilter->SetDeltaRadius(scale)
+  this->RevolveFilter->SetTranslation(translationAlongAxisDistance);
+
+  // calculate the origin, axis
+  double origin[3] = {0.,0.,0.};
+  double axis[3] = {0.,0.,0.};
   if (markupsFiducialNode)
   {
-    double placeholder = 0.;
+    markupsFiducialNode->GetNthControlPointPositionWorld(0, origin);
+    axis[2]= 1.0; // superior direction
   }
   if (markupsLineNode)
   {
-    double placeholder = 0.;
+    double endPoint[3] = {0.,0.,0.};
+    markupsLineNode->GetNthControlPointPositionWorld(1, endPoint);
+    markupsLineNode->GetNthControlPointPositionWorld(0, origin);
+    vtkMath::Subtract(endPoint, origin, axis);
+    vtkMath::Normalize(axis);
   }
   if (markupsPlaneNode)
   {
-    double placeholder = 0.;
+    markupsPlaneNode->GetNthControlPointPositionWorld(0, origin);
+    markupsPlaneNode->GetNormalWorld(axis);
   }
 
+  this->RevolveFilter->SetRotationAxis(axis);
+
+  // final position of the cap
+  this->CapTransform->Identity();
+  this->CapTransform->RotateWXYZ(rotationAngleDegress,axis[0],axis[1],axis[2]);
+  this->CapTransform->Translate(
+    translationAlongAxisDistance*axis[0],
+    translationAlongAxisDistance*axis[1],
+    translationAlongAxisDistance*axis[2]);
+
+  // translate to origin the mesh to revolve
+  if (axisAtOrigin == false)
+  {
+    this->ModelingTransform->Identity();
+    this->ModelingTransform->Translate(-origin[0],-origin[1],-origin[2]);
+    this->ModelingTransformFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+    this->BoundaryEdgesFilter->SetInputConnection(this->ModelingTransformFilter->GetOutputPort());
+    this->CapTransformFilter->SetInputConnection(this->ModelingTransformFilter->GetOutputPort());
+    this->AppendFilter->RemoveAllInputs();
+    this->AppendFilter->AddInputConnection(this->ModelingTransformFilter->GetOutputPort());
+    this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
+    this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
+    this->ResamplingTransform->Identity();
+    this->ResamplingTransform->Translate(origin[0],origin[1],origin[2]);
+    this->ResamplingTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->ResamplingTransformFilter->GetOutputPort());
+  }
+  else
+  {
+    this->BoundaryEdgesFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+    this->CapTransformFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+    this->AppendFilter->RemoveAllInputs();
+    this->AppendFilter->AddInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+    this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
+    this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
+  }
+  
   this->OutputModelToWorldTransformFilter->Update();
   vtkNew<vtkPolyData> outputMesh;
   outputMesh->DeepCopy(this->OutputModelToWorldTransformFilter->GetOutput());
