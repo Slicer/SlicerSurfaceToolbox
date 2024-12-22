@@ -26,6 +26,7 @@
 #include <vtkMRMLMarkupsFiducialNode.h>
 #include <vtkMRMLMarkupsLineNode.h>
 #include <vtkMRMLMarkupsPlaneNode.h>
+#include <vtkMRMLMarkupsAngleNode.h>
 #include <vtkMRMLModelNode.h>
 #include <vtkMRMLTransformNode.h>
 
@@ -85,9 +86,10 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
   NodeInfo inputMarkups(
     "Markups",
-    "Markups to specify spatial revolution axis. Normal for plane, superior axis for a point.",
+    "Markups to specify spatial revolution axis. Normal for plane and angle, superior axis for a point.",
     inputMarkupClassNames,
     REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE,
     /*required*/ true,
@@ -113,7 +115,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   ParameterInfo parameterRotationAngleDegress(
     "Rotation degrees",
-    "Rotation angle in degrees.",
+    "Rotation angle in degrees. Ignored for angle markup.",
     REVOLVE_ANGLE_DEGREES,
     PARAMETER_DOUBLE,
     90.0);
@@ -259,8 +261,13 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
   vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
   vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
   
   if ((markupsLineNode) && (numberOfControlPoints != 2))
+  {
+    return true;
+  }
+  if ((markupsAngleNode) && (numberOfControlPoints != 3))
   {
     return true;
   }
@@ -272,7 +279,7 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
   this->RevolveFilter->SetResolution(
     std::ceil(std::fabs(rotationAngleDegress))*2);
-  this->RevolveFilter->SetAngle(rotationAngleDegress);
+  this->RevolveFilter->SetAngle(rotationAngleDegress); // redefined below if angle markup
   //this->RevolveFilter->SetDeltaRadius(scale)
   this->RevolveFilter->SetTranslation(translationAlongAxisDistance);
 
@@ -296,6 +303,26 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   {
     markupsPlaneNode->GetNthControlPointPositionWorld(0, origin);
     markupsPlaneNode->GetNormalWorld(axis);
+  }
+  if (markupsAngleNode)
+  {
+    double firstPoint[3] = {0.,0.,0.};
+    double thirdPoint[3] = {0.,0.,0.};
+    markupsAngleNode->GetNthControlPointPositionWorld(0, firstPoint);
+    markupsAngleNode->GetNthControlPointPositionWorld(1, origin);
+    markupsAngleNode->GetNthControlPointPositionWorld(2, thirdPoint);
+    double vector1[3] = {0.,0.,0.};
+    double vector2[3] = {0.,0.,0.};
+    vtkMath::Subtract(firstPoint, origin, vector1);
+    vtkMath::Subtract(thirdPoint, origin, vector2);
+    vtkMath::Normalize(vector1);
+    vtkMath::Normalize(vector2);
+    vtkMath::Cross(vector1,vector2,axis);
+    vtkMath::Normalize(axis);
+
+    double rotationAngleRadians = vtkMath::AngleBetweenVectors(vector1,vector2);
+    rotationAngleDegress = vtkMath::DegreesFromRadians(rotationAngleRadians);
+    this->RevolveFilter->SetAngle(rotationAngleDegress);
   }
 
   this->RevolveFilter->SetRotationAxis(axis);
