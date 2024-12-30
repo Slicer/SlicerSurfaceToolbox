@@ -387,7 +387,8 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
           import pyacvd
       except ModuleNotFoundError as e:
           if force or slicer.util.confirmOkCancelDisplay("This function requires 'pyacvd' Python package. Click OK to install it now."):
-              slicer.util.pip_install("pyacvd")
+              # forcing this version is needed according to https://discourse.slicer.org/t/surface-toolbox-of-3d-slicer-do-not-work-in-windows/40717/4
+              slicer.util.pip_install("pyacvd==0.3.1")
           else:
               return False
       return True
