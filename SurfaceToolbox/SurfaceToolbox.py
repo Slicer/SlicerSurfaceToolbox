@@ -387,7 +387,11 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
           import pyacvd
       except ModuleNotFoundError as e:
           if force or slicer.util.confirmOkCancelDisplay("This function requires 'pyacvd' Python package. Click OK to install it now."):
-              slicer.util.pip_install("pyacvd")
+              # Some pyacvd versions before 0.3.1 relied on OpenCV, which did not work on computers where OpenCV binaries were not installed.
+              # (see https://discourse.slicer.org/t/surface-toolbox-of-3d-slicer-do-not-work-in-windows/40717/4).
+              # Therefore, if import fails (because pyacvd is not installed or OpenCV is not available) then we
+              # install a specific pyacvd version that is known to work well.
+              slicer.util.pip_install("pyacvd==0.3.1")
           else:
               return False
       return True
