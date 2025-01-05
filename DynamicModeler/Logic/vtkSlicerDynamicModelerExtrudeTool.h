@@ -36,6 +36,7 @@ class vtkTriangleFilter;
 #include <vtkMRMLTransformNode.h>
 
 // VTK includes
+#include <vtkAssignAttribute.h>
 #include <vtkCommand.h>
 #include <vtkGeneralTransform.h>
 #include <vtkIntArray.h>
@@ -77,6 +78,7 @@ protected:
   vtkSmartPointer<vtkLinearExtrusionFilter> ExtrudeFilter;
   vtkSmartPointer<vtkTriangleFilter> TriangleFilter;
   vtkSmartPointer<vtkPolyDataNormals> NormalsFilter;
+  vtkSmartPointer<vtkAssignAttribute> AssignAttributeFilter;
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
