@@ -89,7 +89,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
   NodeInfo inputMarkups(
     "Markups",
-    "Markups to specify spatial revolution axis. Normal for plane and angle, superior axis for a point.",
+    "Markups to specify spatial revolution axis. Normal for plane and angle, superior axis for a point. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
     inputMarkupClassNames,
     REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE,
     /*required*/ true,
@@ -122,8 +122,8 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   this->InputParameterInfo.push_back(parameterRotationAngleDegress);
 
   ParameterInfo parameterRotationAxisIsAtOrigin(
-    "Rotation axis at origin",
-    "If true, the revolution will be done around the origin.",
+    "Rotation axis is at origin",
+    "If true, the revolution will be done around the origin of the world coordinate system.",
     REVOLVE_AXIS_IS_AT_ORIGIN,
     PARAMETER_BOOL,
     false);
@@ -131,7 +131,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   ParameterInfo parameterTranslationAlongAxisDistance(
     "Translate along axis",
-    "Translation distance during the swept.",
+    "Amount of translation along the rotation axis during the entire rotational sweep.",
     REVOLVE_TRANSLATE_DISTANCE_ALONG_AXIS,
     PARAMETER_DOUBLE,
     0.0);
