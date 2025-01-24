@@ -42,6 +42,8 @@
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkFeatureEdges.h>
 #include <vtkAppendPolyData.h>
+#include <vtkMatrix3x3.h>
+#include <vtkMatrix4x4.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerRevolveTool);
@@ -52,6 +54,7 @@ const char* REVOLVE_OUTPUT_MODEL_REFERENCE_ROLE = "Revolve.OutputModel";
 const char* REVOLVE_ANGLE_DEGREES = "Revolve.AngleDegrees";
 const char* REVOLVE_AXIS_IS_AT_ORIGIN = "Revolve.AxisIsAtOrigin";
 const char* REVOLVE_TRANSLATE_DISTANCE_ALONG_AXIS = "Revolve.TranslateDistanceAlongAxis";
+const char* REVOLVE_DELTA_RADIUS = "Revolve.DeltRadius"; 
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
@@ -136,6 +139,14 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
     PARAMETER_DOUBLE,
     0.0);
   this->InputParameterInfo.push_back(parameterTranslationAlongAxisDistance);
+
+  ParameterInfo parameterDeltaRadius(
+    "Change in radius during revolve process",
+    "Difference factor between the rotation start and end radius after the rotational sweep.",
+    REVOLVE_DELTA_RADIUS,
+    PARAMETER_DOUBLE,
+    0.0);
+  this->InputParameterInfo.push_back(parameterDeltaRadius);
 
   this->InputProfileToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputProfileNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -303,11 +314,12 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   double rotationAngleDegress = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
   bool axisIsAtOrigin = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_AXIS_IS_AT_ORIGIN)).ToInt() != 0;
   double translationAlongAxisDistance = this->GetNthInputParameterValue(2, surfaceEditorNode).ToDouble();
+  double deltaRadius = this->GetNthInputParameterValue(3, surfaceEditorNode).ToDouble();
 
   this->RevolveFilter->SetResolution(
     std::ceil(std::fabs(rotationAngleDegress))*2);
   this->RevolveFilter->SetAngle(rotationAngleDegress); // redefined below if angle markup
-  //this->RevolveFilter->SetDeltaRadius(scale)
+  this->RevolveFilter->SetDeltaRadius(deltaRadius);
   this->RevolveFilter->SetTranslation(translationAlongAxisDistance);
 
   // calculate the origin, axis
@@ -354,6 +366,58 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
   this->RevolveFilter->SetRotationAxis(axis);
 
+
+  // some linear algebra is needed to calculate the final position of the cap when deltaRadius is not zero
+  double rightDir[3] = {1.,0.,0.};
+  double anteriorDir[3] = {0.,1.,0.};
+  double superiorDir[3] = {0.,0.,1.};
+  double projX[3] = {0.,0.,0.};
+  double projY[3] = {0.,0.,0.};
+  double projZ[3] = {0.,0.,0.};
+  vtkMath::ProjectVector(rightDir,axis,projX);
+  vtkMath::ProjectVector(anteriorDir,axis,projY);
+  vtkMath::ProjectVector(superiorDir,axis,projZ);
+
+  // create vtk matrix 3x3
+  vtkNew<vtkMatrix3x3> projectionMatrix;
+  projectionMatrix->SetElement(0,0,projX[0]);
+  projectionMatrix->SetElement(1,0,projX[1]);
+  projectionMatrix->SetElement(2,0,projX[2]);
+  projectionMatrix->SetElement(0,1,projY[0]);
+  projectionMatrix->SetElement(1,1,projY[1]);
+  projectionMatrix->SetElement(2,1,projY[2]);
+  projectionMatrix->SetElement(0,2,projZ[0]);
+  projectionMatrix->SetElement(1,2,projZ[1]);
+  projectionMatrix->SetElement(2,2,projZ[2]);
+
+  vtkNew<vtkMatrix3x3> identityMatrix;
+  identityMatrix->Identity();
+
+  vtkNew<vtkMatrix3x3> tempResultMatrix;
+  for (int i=0; i<3; i++)
+  {
+    for (int j=0; j<3; j++)
+    {
+      tempResultMatrix->SetElement(i,j,
+        identityMatrix->GetElement(i,j) +
+        deltaRadius*identityMatrix->GetElement(i,j) -
+        deltaRadius*projectionMatrix->GetElement(i,j)
+      );
+    }
+  }
+
+  vtkNew<vtkMatrix4x4> resultMatrix;
+  // identity matrix
+  resultMatrix->Identity();
+  // copy elements of the 3x3 matrix to the 4x4 matrix
+  for (int i=0; i<3; i++)
+  {
+    for (int j=0; j<3; j++)
+    {
+      resultMatrix->SetElement(i,j,tempResultMatrix->GetElement(i,j));
+    }
+  }
+
   // final position of the cap
   this->CapTransform->Identity();
   this->CapTransform->RotateWXYZ(rotationAngleDegress,axis[0],axis[1],axis[2]);
@@ -361,6 +425,8 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
     translationAlongAxisDistance*axis[0],
     translationAlongAxisDistance*axis[1],
     translationAlongAxisDistance*axis[2]);
+  this->CapTransform->Concatenate(resultMatrix);
+
 
   // translate to origin the mesh to revolve
   if (axisIsAtOrigin == false)
