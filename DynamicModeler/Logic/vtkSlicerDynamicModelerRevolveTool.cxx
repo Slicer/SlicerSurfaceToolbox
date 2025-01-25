@@ -116,12 +116,18 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   /////////
   // Parameters
 
+  vtkDoubleArray* anglesRange = vtkDoubleArray::New();
+  anglesRange->InsertNextTuple1(-3600.0);
+  anglesRange->InsertNextTuple1(3600.0);
   ParameterInfo parameterRotationAngleDegress(
     "Rotation degrees",
     "Rotation angle in degrees. Ignored for angle markup.",
     REVOLVE_ANGLE_DEGREES,
     PARAMETER_DOUBLE,
-    90.0);
+    90.0,
+    anglesRange,
+    2,
+    1);
   this->InputParameterInfo.push_back(parameterRotationAngleDegress);
 
   ParameterInfo parameterRotationAxisIsAtOrigin(
@@ -132,20 +138,32 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
     false);
   this->InputParameterInfo.push_back(parameterRotationAxisIsAtOrigin);
 
+  vtkDoubleArray* translationAlongAxisRange = vtkDoubleArray::New();
+  translationAlongAxisRange->InsertNextTuple1(-1000.0);
+  translationAlongAxisRange->InsertNextTuple1(1000.0);
   ParameterInfo parameterTranslationAlongAxisDistance(
     "Translate along axis",
     "Amount of translation along the rotation axis during the entire rotational sweep.",
     REVOLVE_TRANSLATE_DISTANCE_ALONG_AXIS,
     PARAMETER_DOUBLE,
-    0.0);
+    0.0,
+    translationAlongAxisRange,
+    2,
+    10);
   this->InputParameterInfo.push_back(parameterTranslationAlongAxisDistance);
 
+  vtkDoubleArray* deltaRadiusRange = vtkDoubleArray::New();
+  deltaRadiusRange->InsertNextTuple1(0.0);
+  deltaRadiusRange->InsertNextTuple1(10.0);
   ParameterInfo parameterDeltaRadius(
     "Change in radius during revolve process",
     "Difference factor between the rotation start and end radius after the rotational sweep.",
     REVOLVE_DELTA_RADIUS,
     PARAMETER_DOUBLE,
-    0.0);
+    0.0,
+    deltaRadiusRange,
+    2,
+    0.1);
   this->InputParameterInfo.push_back(parameterDeltaRadius);
 
   this->InputProfileToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
