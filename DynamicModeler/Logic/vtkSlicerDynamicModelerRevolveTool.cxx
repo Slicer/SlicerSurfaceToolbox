@@ -116,7 +116,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   /////////
   // Parameters
 
-  vtkDoubleArray* anglesRange = vtkDoubleArray::New();
+  vtkDoubleArray* anglesRange = vtkSmartPointer<vtkDoubleArray>::New();
   anglesRange->InsertNextTuple1(-3600.0);
   anglesRange->InsertNextTuple1(3600.0);
   ParameterInfo parameterRotationAngleDegress(
@@ -138,7 +138,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
     false);
   this->InputParameterInfo.push_back(parameterRotationAxisIsAtOrigin);
 
-  vtkDoubleArray* translationAlongAxisRange = vtkDoubleArray::New();
+  vtkDoubleArray* translationAlongAxisRange = vtkSmartPointer<vtkDoubleArray>::New();
   translationAlongAxisRange->InsertNextTuple1(-1000.0);
   translationAlongAxisRange->InsertNextTuple1(1000.0);
   ParameterInfo parameterTranslationAlongAxisDistance(
@@ -152,7 +152,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
     10);
   this->InputParameterInfo.push_back(parameterTranslationAlongAxisDistance);
 
-  vtkDoubleArray* deltaRadiusRange = vtkDoubleArray::New();
+  vtkDoubleArray* deltaRadiusRange = vtkSmartPointer<vtkDoubleArray>::New();
   deltaRadiusRange->InsertNextTuple1(0.0);
   deltaRadiusRange->InsertNextTuple1(10.0);
   ParameterInfo parameterDeltaRadius(
