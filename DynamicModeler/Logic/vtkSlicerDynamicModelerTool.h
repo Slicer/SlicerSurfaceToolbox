@@ -228,7 +228,7 @@ protected:
         std::string attributeName, 
         int type, 
         vtkVariant defaultValue,
-        vtkDoubleArray* numbersRange = vtkDoubleArray::New(),
+        vtkDoubleArray* numbersRange,
         int numberDecimals = 2,
         double numberSingleStep = 1.0
       )
@@ -241,10 +241,27 @@ protected:
       , NumberDecimals(numberDecimals)
       , NumberSingleStep(numberSingleStep)
     {
-      if (NumbersRange->GetNumberOfTuples() == 0)
+      if (!NumbersRange)    
       {
+        NumbersRange = vtkSmartPointer<vtkDoubleArray>::New();
+        NumbersRange->SetNumberOfComponents(1);
+        NumbersRange->SetName("NumbersRange");
         NumbersRange->InsertNextTuple1(-99.99);
         NumbersRange->InsertNextTuple1(99.99);
+      }
+      else if (NumbersRange->GetNumberOfComponents() != 2)
+      {
+        vtkErrorMacro("NumbersRange must have exactly two components (min and max).");
+      }
+      if (NumberDecimals < 0)
+      {
+        vtkErrorMacro("NumberDecimals must be non-negative.");
+        NumberDecimals = 2; // Default value
+      }
+      if (NumberSingleStep <= 0.0)
+      {
+        vtkErrorMacro("NumberSingleStep must be positive.");
+        NumberSingleStep = 1.0; // Default value
       }
     }
     std::string Name;
