@@ -249,20 +249,6 @@ protected:
         NumbersRange->InsertNextTuple1(-99.99);
         NumbersRange->InsertNextTuple1(99.99);
       }
-      else if (NumbersRange->GetNumberOfComponents() != 2)
-      {
-        vtkErrorMacro("NumbersRange must have exactly two components (min and max).");
-      }
-      if (NumberDecimals < 0)
-      {
-        vtkErrorMacro("NumberDecimals must be non-negative.");
-        NumberDecimals = 2; // Default value
-      }
-      if (NumberSingleStep <= 0.0)
-      {
-        vtkErrorMacro("NumberSingleStep must be positive.");
-        NumberSingleStep = 1.0; // Default value
-      }
     }
     std::string Name;
     std::string Description;
