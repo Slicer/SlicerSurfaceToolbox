@@ -228,7 +228,6 @@ protected:
         std::string attributeName, 
         int type, 
         vtkVariant defaultValue,
-        vtkDoubleArray* numbersRange = nullptr,
         int numberDecimals = 2,
         double numberSingleStep = 1.0
       )
@@ -237,10 +236,14 @@ protected:
       , AttributeName(attributeName)
       , Type(type)
       , DefaultValue(defaultValue)
-      , NumbersRange(numbersRange)
       , NumberDecimals(numberDecimals)
       , NumberSingleStep(numberSingleStep)
     {
+      this->NumbersRange = vtkSmartPointer<vtkDoubleArray>::New();
+      this->NumbersRange->SetNumberOfComponents(1);
+      this->NumbersRange->SetNumberOfValues(2);
+      this->NumbersRange->SetValue(0, -99.99);
+      this->NumbersRange->SetValue(1, 99.99);
     }
     std::string Name;
     std::string Description;
