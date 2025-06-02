@@ -321,12 +321,16 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   // check if markups are valid
   if (!markupsNode)
   {
+    vtkNew<vtkPolyData> outputPolyData;
+    outputModelNode->SetAndObservePolyData(outputPolyData);
     return true;
   }
 
   int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
   if (numberOfControlPoints == 0)
   {
+    vtkNew<vtkPolyData> outputPolyData;
+    outputModelNode->SetAndObservePolyData(outputPolyData);
     return true;
   }
 
@@ -337,10 +341,14 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   
   if ((markupsLineNode) && (numberOfControlPoints != 2))
   {
+    vtkNew<vtkPolyData> outputPolyData;
+    outputModelNode->SetAndObservePolyData(outputPolyData);
     return true;
   }
   if ((markupsAngleNode) && (numberOfControlPoints != 3))
   {
+    vtkNew<vtkPolyData> outputPolyData;
+    outputModelNode->SetAndObservePolyData(outputPolyData);
     return true;
   }
 
