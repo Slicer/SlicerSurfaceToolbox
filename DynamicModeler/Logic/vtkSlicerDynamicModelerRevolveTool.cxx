@@ -116,7 +116,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   /////////
   // Parameters
 
-  ParameterInfo parameterRotationAngleDegress(
+  ParameterInfo parameterRotationAngleDegrees(
     "Rotation degrees",
     "Rotation angle in degrees. Ignored for angle markup.",
     REVOLVE_ANGLE_DEGREES,
@@ -126,13 +126,13 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
     1);
 
   vtkNew<vtkDoubleArray> anglesRange;
-  parameterRotationAngleDegress.NumbersRange = anglesRange;
-  parameterRotationAngleDegress.NumbersRange->SetNumberOfComponents(1);
-  parameterRotationAngleDegress.NumbersRange->SetNumberOfValues(2);
-  parameterRotationAngleDegress.NumbersRange->SetValue(0, -3600);
-  parameterRotationAngleDegress.NumbersRange->SetValue(1, 3600);
+  parameterRotationAngleDegrees.NumbersRange = anglesRange;
+  parameterRotationAngleDegrees.NumbersRange->SetNumberOfComponents(1);
+  parameterRotationAngleDegrees.NumbersRange->SetNumberOfValues(2);
+  parameterRotationAngleDegrees.NumbersRange->SetValue(0, -3600);
+  parameterRotationAngleDegrees.NumbersRange->SetValue(1, 3600);
 
-  this->InputParameterInfo.push_back(parameterRotationAngleDegress);
+  this->InputParameterInfo.push_back(parameterRotationAngleDegrees);
 
 
   ParameterInfo parameterRotationAxisIsAtOrigin(
@@ -353,14 +353,14 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
 
   // get parameters
-  double rotationAngleDegress = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
+  double rotationAngleDegrees = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
   bool axisIsAtOrigin = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_AXIS_IS_AT_ORIGIN)).ToInt() != 0;
   double translationAlongAxisDistance = this->GetNthInputParameterValue(2, surfaceEditorNode).ToDouble();
   double deltaRadius = this->GetNthInputParameterValue(3, surfaceEditorNode).ToDouble();
 
   this->RevolveFilter->SetResolution(
-    std::ceil(std::fabs(rotationAngleDegress))*2);
-  this->RevolveFilter->SetAngle(rotationAngleDegress); // redefined below if angle markup
+    std::ceil(std::fabs(rotationAngleDegrees))*2);
+  this->RevolveFilter->SetAngle(rotationAngleDegrees); // redefined below if angle markup
   this->RevolveFilter->SetDeltaRadius(deltaRadius);
   this->RevolveFilter->SetTranslation(translationAlongAxisDistance);
 
@@ -402,8 +402,8 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
     vtkMath::Normalize(axis);
 
     double rotationAngleRadians = vtkMath::AngleBetweenVectors(vector1,vector2);
-    rotationAngleDegress = vtkMath::DegreesFromRadians(rotationAngleRadians);
-    this->RevolveFilter->SetAngle(rotationAngleDegress);
+    rotationAngleDegrees = vtkMath::DegreesFromRadians(rotationAngleRadians);
+    this->RevolveFilter->SetAngle(rotationAngleDegrees);
   }
 
   this->RevolveFilter->SetRotationAxis(axis);
@@ -462,7 +462,7 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
   // final position of the cap
   this->CapTransform->Identity();
-  this->CapTransform->RotateWXYZ(rotationAngleDegress,axis[0],axis[1],axis[2]);
+  this->CapTransform->RotateWXYZ(rotationAngleDegrees,axis[0],axis[1],axis[2]);
   this->CapTransform->Translate(
     translationAlongAxisDistance*axis[0],
     translationAlongAxisDistance*axis[1],
