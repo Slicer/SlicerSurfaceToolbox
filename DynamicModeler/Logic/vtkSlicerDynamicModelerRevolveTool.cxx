@@ -186,10 +186,10 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   this->InputProfileNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputProfileToWorldTransformFilter->SetTransform(this->InputProfileNodeToWorldTransform);
 
-  this->ModelingTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->ModelingTransform = vtkSmartPointer<vtkTransform>::New();
-  this->ModelingTransform->PostMultiply();
-  this->ModelingTransformFilter->SetTransform(this->ModelingTransform);
+  this->WorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->WorldToModelTransform = vtkSmartPointer<vtkTransform>::New();
+  this->WorldToModelTransform->PostMultiply();
+  this->WorldToModelTransformFilter->SetTransform(this->WorldToModelTransform);
 
   this->CapTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->CapTransform = vtkSmartPointer<vtkTransform>::New();
@@ -208,10 +208,10 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   this->AppendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
-  this->ResamplingTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->ResamplingTransform = vtkSmartPointer<vtkTransform>::New();
-  this->ResamplingTransform->PostMultiply();
-  this->ResamplingTransformFilter->SetTransform(this->ResamplingTransform);
+  this->ModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->ModelToWorldTransform = vtkSmartPointer<vtkTransform>::New();
+  this->ModelToWorldTransform->PostMultiply();
+  this->ModelToWorldTransformFilter->SetTransform(this->ModelToWorldTransform);
 
   this->OutputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -473,19 +473,19 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   // translate to origin the mesh to revolve
   if (axisIsAtOrigin == false)
   {
-    this->ModelingTransform->Identity();
-    this->ModelingTransform->Translate(-origin[0],-origin[1],-origin[2]);
-    this->ModelingTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
-    this->BoundaryEdgesFilter->SetInputConnection(this->ModelingTransformFilter->GetOutputPort());
-    this->CapTransformFilter->SetInputConnection(this->ModelingTransformFilter->GetOutputPort());
+    this->WorldToModelTransform->Identity();
+    this->WorldToModelTransform->Translate(-origin[0],-origin[1],-origin[2]);
+    this->WorldToModelTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
+    this->BoundaryEdgesFilter->SetInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
+    this->CapTransformFilter->SetInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
     this->AppendFilter->RemoveAllInputs();
-    this->AppendFilter->AddInputConnection(this->ModelingTransformFilter->GetOutputPort());
+    this->AppendFilter->AddInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
     this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
     this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
-    this->ResamplingTransform->Identity();
-    this->ResamplingTransform->Translate(origin[0],origin[1],origin[2]);
-    this->ResamplingTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
-    this->OutputModelToWorldTransformFilter->SetInputConnection(this->ResamplingTransformFilter->GetOutputPort());
+    this->ModelToWorldTransform->Identity();
+    this->ModelToWorldTransform->Translate(origin[0],origin[1],origin[2]);
+    this->ModelToWorldTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->ModelToWorldTransformFilter->GetOutputPort());
   }
   else
   {
