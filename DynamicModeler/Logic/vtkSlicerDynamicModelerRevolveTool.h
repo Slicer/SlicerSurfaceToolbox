@@ -65,8 +65,8 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> InputProfileToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform> InputProfileNodeToWorldTransform;
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> ModelingTransformFilter;
-  vtkSmartPointer<vtkTransform> ModelingTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter> WorldToModelTransformFilter;
+  vtkSmartPointer<vtkTransform> WorldToModelTransform;
 
   vtkSmartPointer<vtkFeatureEdges> BoundaryEdgesFilter;
 
@@ -77,8 +77,8 @@ protected:
 
   vtkSmartPointer<vtkAppendPolyData> AppendFilter;
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> ResamplingTransformFilter;
-  vtkSmartPointer<vtkTransform> ResamplingTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter> ModelToWorldTransformFilter;
+  vtkSmartPointer<vtkTransform> ModelToWorldTransform;
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
