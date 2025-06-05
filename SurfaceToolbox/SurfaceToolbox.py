@@ -503,7 +503,7 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
   def translateCenterToOrigin(inputModel, outputModel):
     """Translate center of the mesh bounding box to the origin.
     """
-    bounds = inputModel.GetMesh().GetBounds()
+    bounds = inputModel.GetMesh().GetRASBounds()
     centerPosition = [(bounds[1]+bounds[0])/2.0, (bounds[3]+bounds[2])/2.0, (bounds[5]+bounds[4])/2.0]
     SurfaceToolboxLogic.transform(inputModel, outputModel, translateX=-centerPosition[0], translateY=-centerPosition[1], translateZ=-centerPosition[2])
 

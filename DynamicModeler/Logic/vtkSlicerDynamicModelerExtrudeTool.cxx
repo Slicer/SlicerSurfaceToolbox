@@ -282,7 +282,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
       {
         // Special case, only scaling
         double center[3] = { 0,0,0 };
-        markupsFiducialNode->GetNthControlPointPosition(0, center);
+        markupsFiducialNode->GetNthControlPointPositionWorld(0, center);
         this->ExtrudeFilter->SetExtrusionPoint(center);
         this->ExtrudeFilter->SetExtrusionTypeToPointExtrusion();
         this->ExtrudeFilter->SetScaleFactor(-extrusionScale);
