@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.13.4)
 
 project(SurfaceToolbox)
 
+list(APPEND CMAKE_AUTOUIC_SEARCH_PATHS
+  ${CMAKE_CURRENT_LIST_DIR}/DynamicModeler/Resources/UI
+  ${CMAKE_CURRENT_LIST_DIR}/SurfaceToolbox/Resources/UI
+)
+
 #-----------------------------------------------------------------------------
 # Extension dependencies
 find_package(Slicer REQUIRED)
