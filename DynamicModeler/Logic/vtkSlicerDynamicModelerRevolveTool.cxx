@@ -65,6 +65,8 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputModelEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
   inputModelEvents->InsertNextTuple1(vtkMRMLModelNode::MeshModifiedEvent);
   inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
+  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionDefinedEvent);
+  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionUndefinedEvent);
   inputModelEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
   vtkNew<vtkStringArray> inputModelClassNames;
   inputModelClassNames->InsertNextValue("vtkMRMLModelNode");
