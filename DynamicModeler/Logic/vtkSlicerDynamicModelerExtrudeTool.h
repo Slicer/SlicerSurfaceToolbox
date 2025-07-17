@@ -72,8 +72,8 @@ protected:
   void operator=(const vtkSlicerDynamicModelerExtrudeTool&);
 
 protected:
-  vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
-  vtkSmartPointer<vtkGeneralTransform> InputModelNodeToWorldTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter> InputProfileToWorldTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform> InputProfileNodeToWorldTransform;
 
   vtkSmartPointer<vtkLinearExtrusionFilter> ExtrudeFilter;
   vtkSmartPointer<vtkTriangleFilter> TriangleFilter;
@@ -82,6 +82,8 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
+
+  //void GeneratePolyDataFromMarkups(vtkMRMLMarkupsNode* markupsNode, vtkPolyData* outputPolyData);
 
 private:
   vtkSlicerDynamicModelerExtrudeTool(const vtkSlicerDynamicModelerExtrudeTool&) = delete;
