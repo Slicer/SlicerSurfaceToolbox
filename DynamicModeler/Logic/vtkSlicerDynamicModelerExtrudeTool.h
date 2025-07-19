@@ -47,6 +47,7 @@ class vtkTriangleFilter;
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
+#include <vtkPlaneSource.h>
 
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -75,6 +76,7 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> InputProfileToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform> InputProfileNodeToWorldTransform;
 
+  vtkSmartPointer<vtkPlaneSource> AuxiliarPlaneSource; // used to create a plane for the input profile when it is a markups plane
   vtkSmartPointer<vtkLinearExtrusionFilter> ExtrudeFilter;
   vtkSmartPointer<vtkTriangleFilter> TriangleFilter;
   vtkSmartPointer<vtkPolyDataNormals> NormalsFilter;

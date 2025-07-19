@@ -46,6 +46,7 @@
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
 #include <vtkPlane.h>
+#include <vtkPlaneSource.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerExtrudeTool);
@@ -77,7 +78,7 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   NodeInfo inputModel(
-    "Model or Curve",
+    "Model or Markup",
     "Profile to be extruded.",
     inputModelClassNames,
     EXTRUDE_INPUT_MODEL_REFERENCE_ROLE,
@@ -150,6 +151,9 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   this->InputProfileNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
   this->InputProfileToWorldTransformFilter->SetTransform(this->InputProfileNodeToWorldTransform);
 
+  // Auxiliar plane source is used to create a plane for the input profile when it is a markups plane
+  this->AuxiliarPlaneSource = vtkSmartPointer<vtkPlaneSource>::New();
+  
   // This is used when the input polydata does not have normals
   this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
   this->NormalsFilter->AutoOrientNormalsOn();
@@ -272,7 +276,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     }
     if (inputProfileMarkupsPlaneNode)
     {
-      if (!inputProfileMarkupsPlaneNode->GetCurveWorld() || inputProfileMarkupsPlaneNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      if (!inputProfileMarkupsPlaneNode->GetIsPlaneValid())
       {
         vtkNew<vtkPolyData> outputPolyData;
         outputModelNode->SetAndObservePolyData(outputPolyData);
@@ -280,8 +284,15 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
       }
       else
       {
-        // This may need to be improved
-        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsPlaneNode->GetCurveWorldConnection());
+        // Update the plane based on the corner points
+        vtkNew<vtkPoints> planeCornerPoints_World;
+        inputProfileMarkupsPlaneNode->GetPlaneCornerPointsWorld(planeCornerPoints_World);
+
+        // Update the plane fill
+        this->AuxiliarPlaneSource->SetOrigin(planeCornerPoints_World->GetPoint(0));
+        this->AuxiliarPlaneSource->SetPoint1(planeCornerPoints_World->GetPoint(1));
+        this->AuxiliarPlaneSource->SetPoint2(planeCornerPoints_World->GetPoint(3));
+        this->InputProfileToWorldTransformFilter->SetInputConnection(this->AuxiliarPlaneSource->GetOutputPort());
       }
     }
     else if (inputProfileMarkupsCurveNode)
