@@ -37,6 +37,7 @@ class vtkMRMLDynamicModelerNode;
 #include <vtkFeatureEdges.h>
 #include <vtkRotationalExtrusionFilter.h>
 #include <vtkAppendPolyData.h>
+#include <vtkPlaneSource.h>
 
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -72,6 +73,9 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> CapTransformFilter;
   vtkSmartPointer<vtkTransform> CapTransform;
+
+  // Auxiliar plane source is used to create a plane for the input profile when it is a markups plane
+  vtkSmartPointer<vtkPlaneSource> AuxiliarPlaneSource;
 
   vtkSmartPointer<vtkRotationalExtrusionFilter> RevolveFilter;
 

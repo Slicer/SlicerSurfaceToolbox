@@ -44,6 +44,8 @@
 #include <vtkAppendPolyData.h>
 #include <vtkMatrix3x3.h>
 #include <vtkMatrix4x4.h>
+#include <vtkPlane.h>
+#include <vtkPlaneSource.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerRevolveTool);
@@ -70,6 +72,10 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputModelEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
   vtkNew<vtkStringArray> inputModelClassNames;
   inputModelClassNames->InsertNextValue("vtkMRMLModelNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputProfile(
@@ -92,9 +98,11 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
+  //inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
+  //inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputMarkups(
     "Markups",
-    "Markups to specify spatial revolution axis. Normal for plane and angle, superior axis for a point. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
+    "Markups to specify spatial revolution axis. Normal for plane and angle, superior axis for a point. Best fitting plane normal for curve and closed curve. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
     inputMarkupClassNames,
     REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE,
     /*required*/ true,
@@ -183,6 +191,8 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   this->InputParameterInfo.push_back(parameterDeltaRadius);
 
+  // Auxiliar plane source is used to create a plane for the input profile when it is a markups plane
+  this->AuxiliarPlaneSource = vtkSmartPointer<vtkPlaneSource>::New();
   
   this->InputProfileToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputProfileNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -248,18 +258,20 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
 
   vtkMRMLModelNode* inputProfileModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsNode* inputProfileMarkupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
   vtkMRMLMarkupsCurveNode* inputProfileMarkupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
   vtkMRMLMarkupsClosedCurveNode* inputProfileMarkupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
-  bool profileIsModel = (inputProfileModelNode) && (!inputProfileMarkupsCurveNode) && (!inputProfileMarkupsClosedCurveNode);
-  bool profileIsCurve = (!inputProfileModelNode) && (inputProfileMarkupsCurveNode) && (!inputProfileMarkupsClosedCurveNode);
-  bool profileIsClosedCurve = (!inputProfileModelNode) && (inputProfileMarkupsCurveNode) && (inputProfileMarkupsClosedCurveNode);
-  if ((!profileIsModel) && (!profileIsCurve) && (!profileIsClosedCurve))
+  vtkMRMLMarkupsFiducialNode* inputProfileMarkupsPointsNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsLineNode* inputProfileMarkupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsPlaneNode* inputProfileMarkupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsAngleNode* inputProfileMarkupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  if ((!inputProfileModelNode) && (!inputProfileMarkupsNode))
   {
     vtkErrorMacro("Invalid input node!");
     return false;
   }
 
-  if (profileIsModel)
+  if (inputProfileModelNode)
   {
     if (!inputProfileModelNode->GetMesh() || inputProfileModelNode->GetMesh()->GetNumberOfPoints() == 0)
     {
@@ -276,10 +288,70 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
       this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileModelNode->GetMeshConnection());
     }
   }
-  else 
+  else // inputProfileMarkupsNode
   {
     this->InputProfileNodeToWorldTransform->Identity(); // this way the transformFilter is a pass-through
-    if (profileIsCurve)
+    if (inputProfileMarkupsPointsNode)
+    {
+      if (!inputProfileMarkupsPointsNode->GetCurveWorld() || inputProfileMarkupsPointsNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsPointsNode->GetCurveWorldConnection());
+      }
+    }
+    else if (inputProfileMarkupsLineNode)
+    {
+      if (!inputProfileMarkupsLineNode->GetCurveWorld() || inputProfileMarkupsLineNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsLineNode->GetCurveWorldConnection());
+      }
+    }
+    else if (inputProfileMarkupsAngleNode)
+    {
+      if (!inputProfileMarkupsAngleNode->GetCurveWorld() || inputProfileMarkupsAngleNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsAngleNode->GetCurveWorldConnection());
+      }
+    }
+    else if (inputProfileMarkupsPlaneNode)
+    {
+      if (!inputProfileMarkupsPlaneNode->GetIsPlaneValid())
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        // Update the plane based on the corner points
+        vtkNew<vtkPoints> planeCornerPoints_World;
+        inputProfileMarkupsPlaneNode->GetPlaneCornerPointsWorld(planeCornerPoints_World);
+
+        // Update the plane fill
+        this->AuxiliarPlaneSource->SetOrigin(planeCornerPoints_World->GetPoint(0));
+        this->AuxiliarPlaneSource->SetPoint1(planeCornerPoints_World->GetPoint(1));
+        this->AuxiliarPlaneSource->SetPoint2(planeCornerPoints_World->GetPoint(3));
+        this->InputProfileToWorldTransformFilter->SetInputConnection(this->AuxiliarPlaneSource->GetOutputPort());
+      }
+    }
+    else if (inputProfileMarkupsCurveNode)
     {
       if (!inputProfileMarkupsCurveNode->GetCurveWorld() || inputProfileMarkupsCurveNode->GetCurveWorld()->GetNumberOfPoints() == 0)
       {
@@ -292,7 +364,7 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
         this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsCurveNode->	GetCurveWorldConnection());
       }
     }
-    else if (profileIsClosedCurve)
+    else if (inputProfileMarkupsClosedCurveNode)
     {
       if (!inputProfileMarkupsClosedCurveNode->GetCurveWorld() || inputProfileMarkupsClosedCurveNode->GetCurveWorld()->GetNumberOfPoints() == 0)
       {
