@@ -79,7 +79,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputProfile(
-    "Model or Curve",
+    "Model or Markup",
     "Profile to be revolved.",
     inputModelClassNames,
     REVOLVE_INPUT_PROFILE_REFERENCE_ROLE,
@@ -98,11 +98,11 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
-  //inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
-  //inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputMarkups(
-    "Markups",
-    "Markups to specify spatial revolution axis. Normal for plane and angle, superior axis for a point. Best fitting plane normal for curve and closed curve. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
+    "Revolution axis",
+    "Markups to specify spatial revolution axis. Normal for plane and angle. Superior axis for a point. Best fitting plane normal for curve and closed curve. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
     inputMarkupClassNames,
     REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE,
     /*required*/ true,
@@ -412,7 +412,8 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
   vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
   vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
-  
+  vtkMRMLMarkupsCurveNode* markupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsClosedCurveNode* markupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(markupsNode);
   if ((markupsLineNode) && (numberOfControlPoints != 2))
   {
     vtkNew<vtkPolyData> outputPolyData;
@@ -420,6 +421,13 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
     return true;
   }
   if ((markupsAngleNode) && (numberOfControlPoints != 3))
+  {
+    vtkNew<vtkPolyData> outputPolyData;
+    outputModelNode->SetAndObservePolyData(outputPolyData);
+    return true;
+  }
+  if (((markupsCurveNode) && (numberOfControlPoints < 3)) ||
+      ((markupsClosedCurveNode) && (numberOfControlPoints < 3)))
   {
     vtkNew<vtkPolyData> outputPolyData;
     outputModelNode->SetAndObservePolyData(outputPolyData);
@@ -458,6 +466,18 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   {
     markupsPlaneNode->GetNthControlPointPositionWorld(0, origin);
     markupsPlaneNode->GetNormalWorld(axis);
+  }
+  if (markupsCurveNode || markupsClosedCurveNode)
+  {
+    // get control points in world coordinates
+    vtkNew<vtkPoints> controlPointsWorld;
+    for (int i = 0; i < numberOfControlPoints; ++i)
+    {
+      double controlPointWorld[3] = { 0, 0, 0 };
+      markupsNode->GetNthControlPointPositionWorld(i, controlPointWorld);
+      controlPointsWorld->InsertNextPoint(controlPointWorld);
+    }
+    vtkPlane::ComputeBestFittingPlane(controlPointsWorld, origin, axis);
   }
   if (markupsAngleNode)
   {
