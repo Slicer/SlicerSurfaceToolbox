@@ -248,7 +248,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
         this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsPointsNode->GetCurveWorldConnection());
       }
     }
-    if (inputProfileMarkupsLineNode)
+    else if (inputProfileMarkupsLineNode)
     {
       if (!inputProfileMarkupsLineNode->GetCurveWorld() || inputProfileMarkupsLineNode->GetCurveWorld()->GetNumberOfPoints() == 0)
       {
@@ -274,7 +274,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
         this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsAngleNode->GetCurveWorldConnection());
       }
     }
-    if (inputProfileMarkupsPlaneNode)
+    else if (inputProfileMarkupsPlaneNode)
     {
       if (!inputProfileMarkupsPlaneNode->GetIsPlaneValid())
       {
