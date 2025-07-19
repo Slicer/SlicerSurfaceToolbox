@@ -45,6 +45,7 @@
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
+#include <vtkPlane.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerExtrudeTool);
@@ -96,12 +97,16 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputMarkups(
     "Markups",
     "Markups to specify extrusion vector.\n"
-    "- Plane: extrusion vector is the plane normal.\n"
+    "- Plane or Angle: extrusion vector is the plane normal.\n"
     "- Line: extrusion vector is from the first to the second point of the line.\n"
     "- Point list: extrusion vector is from each model point to the first point of the markup.\n"
+    "- Curve or Closed Curve: extrusion vector is best-fitting plane normal.\n"
     "- No markup is selected: extrusion vector is the input model's surface normal.",
     inputMarkupClassNames,
     EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE,
@@ -173,34 +178,6 @@ const char* vtkSlicerDynamicModelerExtrudeTool::GetName()
 {
   return "Extrude";
 }
-
-//----------------------------------------------------------------------------
-/*
-void GeneratePolyDataFromMarkups(vtkMRMLMarkupsNode* markupsNode, vtkPolyData* outputPolyData)
-{
-  if (!markupsNode || !outputPolyData)
-  {
-    vtkErrorMacro("GeneratePolyDataFromMarkups failed: invalid input");
-    return;
-  }
-
-  // Clear output polydata
-  outputPolyData->Initialize();
-
-  // Save control points to a vtkPoints object
-  vtkPoints* points = vtkPoints::New();
-  vtkIdType numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
-  points->SetNumberOfPoints(numberOfControlPoints);
-  for (vtkIdType i = 0; i < numberOfControlPoints; ++i)
-  {
-    double pos[3];
-    markupsNode->GetControlPointPosition(i, pos);
-    points->SetPoint(i, pos);
-  }
-  outputPolyData->SetPoints(points);
-  
-
-}*/
 
 //----------------------------------------------------------------------------
 bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode)
@@ -388,9 +365,31 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
     vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
     vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsCurveNode* markupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsClosedCurveNode* markupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(markupsNode);
+    bool markupsToUseBestFittingPlane = (markupsAngleNode || markupsCurveNode || markupsClosedCurveNode);
     int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
 
-    if (markupsPlaneNode)
+    if (markupsToUseBestFittingPlane && (numberOfControlPoints >= 3))
+    {
+      const double magnitude = 1.0; // normal vector magnitude is always 1.0
+      this->ExtrudeFilter->SetScaleFactor(magnitude * extrusionScale + extrusionLength);
+      // get control points in world coordinates
+      vtkNew<vtkPoints> controlPointsWorld;
+      for (int i = 0; i < numberOfControlPoints; ++i)
+      {
+        double controlPointWorld[3] = { 0, 0, 0 };
+        markupsNode->GetNthControlPointPositionWorld(i, controlPointWorld);
+        controlPointsWorld->InsertNextPoint(controlPointWorld);
+      }
+      double bestFitOriginWorld[3] = { 0, 0, 0 };
+      double bestFitNormalWorld[3] = { 0, 0, 0 };
+      vtkPlane::ComputeBestFittingPlane(controlPointsWorld, bestFitOriginWorld, bestFitNormalWorld);
+      this->ExtrudeFilter->SetVector(bestFitNormalWorld);
+      this->ExtrudeFilter->SetExtrusionTypeToVectorExtrusion();
+    }
+    else if (markupsPlaneNode)
     {
       // Plane normal is used for extrusion
       markupsPlaneNode->GetRequiredNumberOfControlPoints();
