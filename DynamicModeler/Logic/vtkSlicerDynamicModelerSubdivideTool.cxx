@@ -117,6 +117,9 @@ vtkSlicerDynamicModelerSubdivideTool::vtkSlicerDynamicModelerSubdivideTool()
   this->ButterflySubdivisionFilter = vtkSmartPointer<vtkButterflySubdivisionFilter>::New();
   this->LinearSubdivisionFilter = vtkSmartPointer<vtkLinearSubdivisionFilter>::New();
   this->LoopSubdivisionFilter = vtkSmartPointer<vtkLoopSubdivisionFilter>::New();
+  this->ButterflySubdivisionFilter->SetInputConnection(this->AuxiliarTriangleFilter->GetOutputPort());
+  this->LinearSubdivisionFilter->SetInputConnection(this->AuxiliarTriangleFilter->GetOutputPort());
+  this->LoopSubdivisionFilter->SetInputConnection(this->AuxiliarTriangleFilter->GetOutputPort());
 
   this->OutputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -198,6 +201,10 @@ bool vtkSlicerDynamicModelerSubdivideTool::RunInternal(vtkMRMLDynamicModelerNode
   if (outputModelNode && outputModelNode->GetParentTransformNode())
     {
     outputModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputWorldToModelTransform);
+    }
+  else
+    {
+    this->OutputWorldToModelTransform->Identity();
     }
 
   this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
