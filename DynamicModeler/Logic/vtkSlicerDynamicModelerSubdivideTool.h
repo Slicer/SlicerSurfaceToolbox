@@ -35,6 +35,7 @@ class vtkLinearSubdivisionFilter;
 class vtkLoopSubdivisionFilter;
 class vtkTriangleFilter;
 class vtkPolyData;
+class vtkTransformPolyDataFilter;
 
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -69,8 +70,8 @@ protected:
   vtkSmartPointer<vtkLinearSubdivisionFilter>     LinearSubdivisionFilter;
   vtkSmartPointer<vtkLoopSubdivisionFilter>       LoopSubdivisionFilter;
 
-  vtkSmartPointer<vtkTransformPolyDataFilter>    OutputWorldToModelTransformFilter;
-  vtkSmartPointer<vtkGeneralTransform>           OutputWorldToModelTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter>     OutputModelToWorldTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform>            OutputWorldToModelTransform;
 
 private:
   vtkSlicerDynamicModelerSubdivideTool(const vtkSlicerDynamicModelerSubdivideTool&) = delete;

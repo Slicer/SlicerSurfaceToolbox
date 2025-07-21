@@ -31,6 +31,7 @@
 #include <vtkButterflySubdivisionFilter.h>
 #include <vtkLinearSubdivisionFilter.h>
 #include <vtkLoopSubdivisionFilter.h>
+#include <vtkTriangleFilter.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerSubdivideTool);
@@ -69,7 +70,7 @@ vtkSlicerDynamicModelerSubdivideTool::vtkSlicerDynamicModelerSubdivideTool()
     SUBDIVIDE_OUTPUT_MODEL_REFERENCE_ROLE,
     false,
     false
-    );
+  );
   this->OutputNodeInfo.push_back(outputModel);
 
   /////////
@@ -79,7 +80,8 @@ vtkSlicerDynamicModelerSubdivideTool::vtkSlicerDynamicModelerSubdivideTool()
     "Method used to calculate the new cells of the output mesh.",
     "SubdivisionAlgorithm",
     PARAMETER_STRING_ENUM,
-    "Butterfly",);
+    "Butterfly"
+  );
 
   vtkNew<vtkStringArray> possibleValues;
   parameterOperationType.PossibleValues = possibleValues;
@@ -90,10 +92,11 @@ vtkSlicerDynamicModelerSubdivideTool::vtkSlicerDynamicModelerSubdivideTool()
 
   ParameterInfo parameterNumberOfIterations(
     "Number of iterations",
-    "Number of times the subdivision algorithm is applied.",
+    "Number of times the subdivision algorithm is applied. If 0, the input mesh is only triangulated.",
     "NumberOfIterations",
     PARAMETER_INT,
-    1);
+    1
+  );
 
   vtkNew<vtkDoubleArray> numberOfIterationsRange;
   numberOfIterationsRange->SetNumberOfComponents(1);
@@ -115,9 +118,9 @@ vtkSlicerDynamicModelerSubdivideTool::vtkSlicerDynamicModelerSubdivideTool()
   this->LinearSubdivisionFilter = vtkSmartPointer<vtkLinearSubdivisionFilter>::New();
   this->LoopSubdivisionFilter = vtkSmartPointer<vtkLoopSubdivisionFilter>::New();
 
-  this->OutputWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->OutputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputWorldToModelTransformFilter->SetTransform(this->OutputWorldToModelTransform);
+  this->OutputModelToWorldTransformFilter->SetTransform(this->OutputWorldToModelTransform);
 }
 
 //----------------------------------------------------------------------------
@@ -149,10 +152,10 @@ bool vtkSlicerDynamicModelerSubdivideTool::RunInternal(vtkMRMLDynamicModelerNode
   int numberOfIterations = this->GetNthInputParameterValue(1, surfaceEditorNode).ToInt();
   if (numberOfIterations >= 1)
     {
-    this->ButterflySubdivisionFilter->SetNumberOfIterations(numberOfIterations);
-    this->LinearSubdivisionFilter->SetNumberOfIterations(numberOfIterations);
-    this->LoopSubdivisionFilter->SetNumberOfIterations(numberOfIterations);
-    
+    this->ButterflySubdivisionFilter->SetNumberOfSubdivisions(numberOfIterations);
+    this->LinearSubdivisionFilter->SetNumberOfSubdivisions(numberOfIterations);
+    this->LoopSubdivisionFilter->SetNumberOfSubdivisions(numberOfIterations);
+
     std::string subdivisionAlgorithm = this->GetNthInputParameterValue(0, surfaceEditorNode).ToString();
     if (subdivisionAlgorithm == "Butterfly")
       {
