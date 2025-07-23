@@ -113,10 +113,12 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   /////////
   // Outputs
+  vtkNew<vtkStringArray> outputModelClassNames;
+  outputModelClassNames->InsertNextValue("vtkMRMLModelNode");
   NodeInfo outputModel(
     "Revolved model",
     "Result of the revolving operation.",
-    inputModelClassNames,
+    outputModelClassNames,
     REVOLVE_OUTPUT_MODEL_REFERENCE_ROLE,
     false,
     false

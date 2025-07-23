@@ -119,10 +119,12 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
 
   /////////
   // Outputs
+  vtkNew<vtkStringArray> outputModelClassNames;
+  outputModelClassNames->InsertNextValue("vtkMRMLModelNode");
   NodeInfo outputModel(
     "Extruded model",
     "Result of the extrusion operation.",
-    inputModelClassNames,
+    outputModelClassNames,
     EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE,
     false,
     false
