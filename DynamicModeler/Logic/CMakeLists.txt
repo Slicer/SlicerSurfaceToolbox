@@ -47,6 +47,8 @@ set(${KIT}_SRCS
   vtkSlicer${MODULE_NAME}ROICutTool.h
   vtkSlicer${MODULE_NAME}SelectByPointsTool.cxx
   vtkSlicer${MODULE_NAME}SelectByPointsTool.h
+  vtkSlicer${MODULE_NAME}SubdivideTool.cxx
+  vtkSlicer${MODULE_NAME}SubdivideTool.h
   vtkSlicer${MODULE_NAME}Tool.cxx
   vtkSlicer${MODULE_NAME}Tool.h
   vtkSlicer${MODULE_NAME}ToolFactory.cxx

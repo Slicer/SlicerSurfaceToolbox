@@ -41,6 +41,7 @@
 #include "vtkSlicerDynamicModelerPlaneCutTool.h"
 #include "vtkSlicerDynamicModelerROICutTool.h"
 #include "vtkSlicerDynamicModelerSelectByPointsTool.h"
+#include "vtkSlicerDynamicModelerSubdivideTool.h"
 
 // DynamicModeler MRML includes
 #include <vtkMRMLDynamicModelerNode.h>
@@ -246,6 +247,12 @@ QIcon qSlicerSubjectHierarchyDynamicModelerPlugin::icon(vtkIdType itemID)
   if (strcmp(associatedNode->GetToolName(), revolveTool->GetName()) == 0)
     {
     return QIcon(":Icons/Revolve.png");
+    }
+
+  vtkNew<vtkSlicerDynamicModelerSubdivideTool> subdivideTool;
+  if (strcmp(associatedNode->GetToolName(), subdivideTool->GetName()) == 0)
+    {
+    return QIcon(":Icons/Subdivide.png");
     }
 
   vtkNew<vtkSlicerDynamicModelerHollowTool> hollowTool;

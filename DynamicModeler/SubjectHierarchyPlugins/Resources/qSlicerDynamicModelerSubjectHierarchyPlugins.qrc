@@ -11,5 +11,6 @@
     <file>Icons/Mirror.png</file>
     <file>Icons/ROICut.png</file>
     <file>Icons/SelectByPoints.png</file>
+    <file>Icons/Subdivide.png</file>
   </qresource>
 </RCC>

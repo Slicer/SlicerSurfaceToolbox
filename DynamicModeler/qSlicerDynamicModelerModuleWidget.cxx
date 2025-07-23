@@ -57,6 +57,7 @@
 #include <vtkSlicerDynamicModelerPlaneCutTool.h>
 #include <vtkSlicerDynamicModelerROICutTool.h>
 #include <vtkSlicerDynamicModelerSelectByPointsTool.h>
+#include <vtkSlicerDynamicModelerSubdivideTool.h>
 #include <vtkSlicerDynamicModelerToolFactory.h>
 
 // DynamicModeler MRML includes
@@ -131,6 +132,10 @@ void qSlicerDynamicModelerModuleWidget::setup()
 
   vtkNew<vtkSlicerDynamicModelerRevolveTool> revolveTool;
   this->addToolButton(QIcon(":/Icons/Revolve.png"), revolveTool, buttonPosition / columns, buttonPosition % columns);
+  buttonPosition++;
+
+  vtkNew<vtkSlicerDynamicModelerSubdivideTool> subdivideTool;
+  this->addToolButton(QIcon(":/Icons/Subdivide.png"), subdivideTool, buttonPosition / columns, buttonPosition % columns);
   buttonPosition++;
 
   vtkNew<vtkSlicerDynamicModelerHollowTool> hollowTool;
