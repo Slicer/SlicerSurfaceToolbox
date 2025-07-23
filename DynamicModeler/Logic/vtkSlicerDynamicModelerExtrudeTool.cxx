@@ -24,8 +24,11 @@
 
 // MRML includes
 #include <vtkMRMLMarkupsFiducialNode.h>
+#include <vtkMRMLMarkupsAngleNode.h>
 #include <vtkMRMLMarkupsLineNode.h>
 #include <vtkMRMLMarkupsPlaneNode.h>
+#include <vtkMRMLMarkupsCurveNode.h>
+#include <vtkMRMLMarkupsClosedCurveNode.h>
 #include <vtkMRMLModelNode.h>
 #include <vtkMRMLTransformNode.h>
 
@@ -42,6 +45,8 @@
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
+#include <vtkPlane.h>
+#include <vtkPlaneSource.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerExtrudeTool);
@@ -60,12 +65,21 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   vtkNew<vtkIntArray> inputModelEvents;
   inputModelEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
   inputModelEvents->InsertNextTuple1(vtkMRMLModelNode::MeshModifiedEvent);
+  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
+  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionDefinedEvent);
+  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionUndefinedEvent);
   inputModelEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
   vtkNew<vtkStringArray> inputModelClassNames;
   inputModelClassNames->InsertNextValue("vtkMRMLModelNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   NodeInfo inputModel(
-    "Model",
-    "Model to be extruded.",
+    "Model or Markup",
+    "Profile to be extruded.",
     inputModelClassNames,
     EXTRUDE_INPUT_MODEL_REFERENCE_ROLE,
     true,
@@ -77,17 +91,23 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   vtkNew<vtkIntArray> inputMarkupEvents;
   inputMarkupEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
   inputMarkupEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
+  inputMarkupEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionDefinedEvent);
+  inputMarkupEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionUndefinedEvent);
   inputMarkupEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
   vtkNew<vtkStringArray> inputMarkupClassNames;
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputMarkups(
     "Markups",
     "Markups to specify extrusion vector.\n"
-    "- Plane: extrusion vector is the plane normal.\n"
+    "- Plane or Angle: extrusion vector is the plane normal.\n"
     "- Line: extrusion vector is from the first to the second point of the line.\n"
     "- Point list: extrusion vector is from each model point to the first point of the markup.\n"
+    "- Curve or Closed Curve: extrusion vector is best-fitting plane normal.\n"
     "- No markup is selected: extrusion vector is the input model's surface normal.",
     inputMarkupClassNames,
     EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE,
@@ -99,10 +119,12 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
 
   /////////
   // Outputs
+  vtkNew<vtkStringArray> outputModelClassNames;
+  outputModelClassNames->InsertNextValue("vtkMRMLModelNode");
   NodeInfo outputModel(
     "Extruded model",
     "Result of the extrusion operation.",
-    inputModelClassNames,
+    outputModelClassNames,
     EXTRUDE_OUTPUT_MODEL_REFERENCE_ROLE,
     false,
     false
@@ -127,10 +149,13 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
     PARAMETER_DOUBLE,
     0.0);
   this->InputParameterInfo.push_back(parameterScale);
-  this->InputModelToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  this->InputModelNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->InputModelToWorldTransformFilter->SetTransform(this->InputModelNodeToWorldTransform);
+  this->InputProfileToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  this->InputProfileNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
+  this->InputProfileToWorldTransformFilter->SetTransform(this->InputProfileNodeToWorldTransform);
 
+  // Auxiliar plane source is used to create a plane for the input profile when it is a markups plane
+  this->AuxiliarPlaneSource = vtkSmartPointer<vtkPlaneSource>::New();
+  
   // This is used when the input polydata does not have normals
   this->NormalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
   this->NormalsFilter->AutoOrientNormalsOn();
@@ -139,7 +164,7 @@ vtkSlicerDynamicModelerExtrudeTool::vtkSlicerDynamicModelerExtrudeTool()
   this->AssignAttributeFilter = vtkSmartPointer<vtkAssignAttribute>::New();
 
   this->ExtrudeFilter = vtkSmartPointer<vtkLinearExtrusionFilter>::New();
-  this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+  this->ExtrudeFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
 
   this->TriangleFilter = vtkSmartPointer<vtkTriangleFilter>::New();
   this->TriangleFilter->SetInputConnection(this->ExtrudeFilter->GetOutputPort());
@@ -176,28 +201,132 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     return true;
   }
 
-  vtkMRMLModelNode* inputModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
-  if (!inputModelNode)
+  vtkMRMLModelNode* inputProfileModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+  vtkMRMLMarkupsNode* inputProfileMarkupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+  bool profileIsModel = (inputProfileModelNode) && (!inputProfileMarkupsNode);
+  bool profileIsMarkup = (!inputProfileModelNode) && (inputProfileMarkupsNode);
+  if ((!profileIsModel) && (!profileIsMarkup))
   {
-    vtkErrorMacro("Invalid input model node!");
+    vtkErrorMacro("Invalid input node!");
     return false;
   }
 
-  if (!inputModelNode->GetMesh() || inputModelNode->GetMesh()->GetNumberOfPoints() == 0)
+  if (profileIsModel)
   {
-    vtkNew<vtkPolyData> outputPolyData;
-    outputModelNode->SetAndObservePolyData(outputPolyData);
-    return true;
+    if (!inputProfileModelNode->GetMesh() || inputProfileModelNode->GetMesh()->GetNumberOfPoints() == 0)
+    {
+      vtkNew<vtkPolyData> outputPolyData;
+      outputModelNode->SetAndObservePolyData(outputPolyData);
+      return true;
+    } 
+    else
+    {
+      if (inputProfileModelNode->GetParentTransformNode())
+      {
+        inputProfileModelNode->GetParentTransformNode()->GetTransformToWorld(this->InputProfileNodeToWorldTransform);
+      }
+      this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileModelNode->GetMeshConnection());
+    }
+  }
+  else // profileIsMarkup
+  {
+    vtkMRMLMarkupsFiducialNode* inputProfileMarkupsPointsNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+    vtkMRMLMarkupsLineNode* inputProfileMarkupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+    vtkMRMLMarkupsAngleNode* inputProfileMarkupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+    vtkMRMLMarkupsPlaneNode* inputProfileMarkupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+    vtkMRMLMarkupsCurveNode* inputProfileMarkupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+    vtkMRMLMarkupsClosedCurveNode* inputProfileMarkupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MODEL_REFERENCE_ROLE));
+    this->InputProfileNodeToWorldTransform->Identity(); // this way the transformFilter is a pass-through
+    if (inputProfileMarkupsPointsNode)
+    {
+      if (!inputProfileMarkupsPointsNode->GetCurveWorld() || inputProfileMarkupsPointsNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsPointsNode->GetCurveWorldConnection());
+      }
+    }
+    else if (inputProfileMarkupsLineNode)
+    {
+      if (!inputProfileMarkupsLineNode->GetCurveWorld() || inputProfileMarkupsLineNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsLineNode->GetCurveWorldConnection());
+      }
+    }
+    else if (inputProfileMarkupsAngleNode)
+    {
+      if (!inputProfileMarkupsAngleNode->GetCurveWorld() || inputProfileMarkupsAngleNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsAngleNode->GetCurveWorldConnection());
+      }
+    }
+    else if (inputProfileMarkupsPlaneNode)
+    {
+      if (!inputProfileMarkupsPlaneNode->GetIsPlaneValid())
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        // Update the plane based on the corner points
+        vtkNew<vtkPoints> planeCornerPoints_World;
+        inputProfileMarkupsPlaneNode->GetPlaneCornerPointsWorld(planeCornerPoints_World);
+
+        // Update the plane fill
+        this->AuxiliarPlaneSource->SetOrigin(planeCornerPoints_World->GetPoint(0));
+        this->AuxiliarPlaneSource->SetPoint1(planeCornerPoints_World->GetPoint(1));
+        this->AuxiliarPlaneSource->SetPoint2(planeCornerPoints_World->GetPoint(3));
+        this->InputProfileToWorldTransformFilter->SetInputConnection(this->AuxiliarPlaneSource->GetOutputPort());
+      }
+    }
+    else if (inputProfileMarkupsCurveNode)
+    {
+      if (!inputProfileMarkupsCurveNode->GetCurveWorld() || inputProfileMarkupsCurveNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsCurveNode->GetCurveWorldConnection());
+      }
+    }
+    else if (inputProfileMarkupsClosedCurveNode)
+    {
+      this->InputProfileNodeToWorldTransform->Identity(); // this way the transformFilter is a pass-through
+      if (!inputProfileMarkupsClosedCurveNode->GetCurveWorld() || inputProfileMarkupsClosedCurveNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      {
+        vtkNew<vtkPolyData> outputPolyData;
+        outputModelNode->SetAndObservePolyData(outputPolyData);
+        return true;
+      }
+      else
+      {
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsClosedCurveNode->GetCurveWorldConnection());
+      }
+    }
   }
 
-  if (inputModelNode->GetParentTransformNode())
-  {
-    inputModelNode->GetParentTransformNode()->GetTransformToWorld(this->InputModelNodeToWorldTransform);
-  }
-  else
-  {
-    this->InputModelNodeToWorldTransform->Identity();
-  }
+
   if (outputModelNode && outputModelNode->GetParentTransformNode())
   {
     outputModelNode->GetParentTransformNode()->GetTransformFromWorld(this->OutputWorldToModelTransform);
@@ -207,16 +336,15 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     this->OutputWorldToModelTransform->Identity();
   }
 
-  this->InputModelToWorldTransformFilter->SetInputConnection(inputModelNode->GetMeshConnection());
-  this->InputModelToWorldTransformFilter->Update();
+  this->InputProfileToWorldTransformFilter->Update();
   // with filter input below we'll never create normals unless they don't exist
-  this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+  this->ExtrudeFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
 
   vtkDataArray* normalsArray = nullptr;
-  if (this->InputModelToWorldTransformFilter->GetOutput()
-    && this->InputModelToWorldTransformFilter->GetOutput()->GetPointData())
+  if (this->InputProfileToWorldTransformFilter->GetOutput()
+    && this->InputProfileToWorldTransformFilter->GetOutput()->GetPointData())
   {
-    normalsArray = this->InputModelToWorldTransformFilter->GetOutput()->GetPointData()->GetNormals();
+    normalsArray = this->InputProfileToWorldTransformFilter->GetOutput()->GetPointData()->GetNormals();
   }
 
   vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_MARKUPS_REFERENCE_ROLE));
@@ -232,12 +360,12 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     if (normalsArray)
     {
       // Normals is already available
-      this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+      this->ExtrudeFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
     }
     else
     {
       // Create the normals by inserting normals filter before extrusion filter
-      this->NormalsFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+      this->NormalsFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
       this->ExtrudeFilter->SetInputConnection(this->NormalsFilter->GetOutputPort());
     }
     this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
@@ -250,9 +378,31 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
     vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
     vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsCurveNode* markupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsClosedCurveNode* markupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(markupsNode);
+    bool markupsToUseBestFittingPlane = (markupsAngleNode || markupsCurveNode || markupsClosedCurveNode);
     int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
 
-    if (markupsPlaneNode)
+    if (markupsToUseBestFittingPlane && (numberOfControlPoints >= 3))
+    {
+      const double magnitude = 1.0; // normal vector magnitude is always 1.0
+      this->ExtrudeFilter->SetScaleFactor(magnitude * extrusionScale + extrusionLength);
+      // get control points in world coordinates
+      vtkNew<vtkPoints> controlPointsWorld;
+      for (int i = 0; i < numberOfControlPoints; ++i)
+      {
+        double controlPointWorld[3] = { 0, 0, 0 };
+        markupsNode->GetNthControlPointPositionWorld(i, controlPointWorld);
+        controlPointsWorld->InsertNextPoint(controlPointWorld);
+      }
+      double bestFitOriginWorld[3] = { 0, 0, 0 };
+      double bestFitNormalWorld[3] = { 0, 0, 0 };
+      vtkPlane::ComputeBestFittingPlane(controlPointsWorld, bestFitOriginWorld, bestFitNormalWorld);
+      this->ExtrudeFilter->SetVector(bestFitNormalWorld);
+      this->ExtrudeFilter->SetExtrusionTypeToVectorExtrusion();
+    }
+    else if (markupsPlaneNode)
     {
       // Plane normal is used for extrusion
       markupsPlaneNode->GetRequiredNumberOfControlPoints();
@@ -276,7 +426,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
       // Extrude towards a point
 
       // No need for normals, so we can always connect to the input model
-      this->ExtrudeFilter->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
+      this->ExtrudeFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
 
       if (extrusionLength == 0)
       {
@@ -291,8 +441,8 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
       {
         // Absolute length is specified, this is not supported directly by the extrusion filter
 
-        this->InputModelToWorldTransformFilter->Update();
-        vtkPolyData* inputPolyData = this->InputModelToWorldTransformFilter->GetOutput();
+        this->InputProfileToWorldTransformFilter->Update();
+        vtkPolyData* inputPolyData = this->InputProfileToWorldTransformFilter->GetOutput();
 
         // overwrite normals array with directions of (center-pointAt) array
         vtkNew<vtkFloatArray> extrusionVectorArray;
