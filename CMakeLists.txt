@@ -17,6 +17,7 @@ include(${Slicer_USE_FILE})
 add_subdirectory(Decimation)
 add_subdirectory(SurfaceToolbox)
 add_subdirectory(DynamicModeler)
+add_subdirectory(AverageMesh)
 
 ## NEXT_MODULE
 
