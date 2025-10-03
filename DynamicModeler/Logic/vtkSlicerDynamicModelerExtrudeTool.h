@@ -48,6 +48,9 @@ class vtkTriangleFilter;
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
 #include <vtkPlaneSource.h>
+#include <vtkMRMLMarkupsPlaneNode.h>
+#include <vtkMRMLMarkupsLineNode.h>
+#include <vtkMRMLMarkupsFiducialNode.h>
 
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -65,6 +68,9 @@ public:
 
   /// Run the faces selection on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
+
+  double extrusionLength = 0.0;
+  double extrusionScale = 1.0;
 
 protected:
 
@@ -84,6 +90,12 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
+
+  void setUseNormalsAsExtrusionVector();
+  void setUseBestFittingPlaneNormalAsExtrusionVector(vtkMRMLMarkupsNode* markupsNode);
+  void setUsePlaneNormalAsExtrusionVector(vtkMRMLMarkupsPlaneNode* markupsPlaneNode);
+  void setUseLineAsExtrusionVector(vtkMRMLMarkupsLineNode* markupsLineNode);
+  void setUseFiducialAsExtrusionVector(vtkMRMLMarkupsFiducialNode* markupsFiducialNode);
 
   //void GeneratePolyDataFromMarkups(vtkMRMLMarkupsNode* markupsNode, vtkPolyData* outputPolyData);
 
