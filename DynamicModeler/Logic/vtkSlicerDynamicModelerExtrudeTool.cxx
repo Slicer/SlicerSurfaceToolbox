@@ -300,37 +300,50 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
   this->extrusionLength = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
   this->extrusionScale = this->GetNthInputParameterValue(1, surfaceEditorNode).ToDouble();
 
-  if (!markupsNode)
+  if ((this->extrusionLength != 0.0) || (this->extrusionScale != 0.0))
   {
-    this->setUseNormalsAsExtrusionVector();
-  }
-  else // Markups are used for extrusion
-  {
-    vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
-    vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
-    vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
-    vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
-    vtkMRMLMarkupsCurveNode* markupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(markupsNode);
-    vtkMRMLMarkupsClosedCurveNode* markupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(markupsNode);
-    bool markupsToUseBestFittingPlane = (markupsAngleNode || markupsCurveNode || markupsClosedCurveNode);
-    int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
+    // length and scale are not both zero
 
-    if (markupsToUseBestFittingPlane && (numberOfControlPoints >= 3))
+    // restore default input of output transform filter
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->TriangleFilter->GetOutputPort());
+    
+    if (!markupsNode)
     {
-      this->setUseBestFittingPlaneNormalAsExtrusionVector(markupsNode);
+      this->setUseNormalsAsExtrusionVector();
     }
-    else if (markupsPlaneNode)
+    else // Markups are used for extrusion
     {
-      this->setUsePlaneNormalAsExtrusionVector(markupsPlaneNode);
+      vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
+      vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
+      vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+      vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
+      vtkMRMLMarkupsCurveNode* markupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(markupsNode);
+      vtkMRMLMarkupsClosedCurveNode* markupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(markupsNode);
+      bool markupsToUseBestFittingPlane = (markupsAngleNode || markupsCurveNode || markupsClosedCurveNode);
+      int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
+
+      if (markupsToUseBestFittingPlane && (numberOfControlPoints >= 3))
+      {
+        this->setUseBestFittingPlaneNormalAsExtrusionVector(markupsNode);
+      }
+      else if (markupsPlaneNode)
+      {
+        this->setUsePlaneNormalAsExtrusionVector(markupsPlaneNode);
+      }
+      else if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
+      {
+        this->setUseFiducialAsExtrusionVector(markupsFiducialNode);
+      }
+      else if ((markupsLineNode) && (numberOfControlPoints == 2))
+      {
+        this->setUseLineAsExtrusionVector(markupsLineNode);
+      }
     }
-    else if ((markupsFiducialNode) && (numberOfControlPoints >= 1))
-    {
-      this->setUseFiducialAsExtrusionVector(markupsFiducialNode);
-    }
-    else if ((markupsLineNode) && (numberOfControlPoints == 2))
-    {
-      this->setUseLineAsExtrusionVector(markupsLineNode);
-    }
+  }
+  else
+  {
+    // both length and scale are zero, so the output is the same as the input
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
   }
 
   this->OutputModelToWorldTransformFilter->Update();
