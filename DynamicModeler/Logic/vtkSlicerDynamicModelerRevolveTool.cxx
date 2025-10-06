@@ -108,7 +108,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
     "Markups to specify spatial revolution axis. Normal for plane and angle. Superior axis for a point. Best fitting plane normal for curve and closed curve. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
     inputMarkupClassNames,
     REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE,
-    /*required*/ true,
+    /*required*/ false,
     /*repeatable*/ false,
     inputMarkupEvents
   );
