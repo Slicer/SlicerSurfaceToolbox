@@ -101,6 +101,8 @@ protected:
   void setRevolveFilterParameters(vtkMRMLNode* markupsNode);
   void updateEndCapTransform();
   void configurePipeline();
+  bool areParametersZero();
+  void setPipilineToPassThrough();
 
 private:
   vtkSlicerDynamicModelerRevolveTool(const vtkSlicerDynamicModelerRevolveTool&) = delete;
