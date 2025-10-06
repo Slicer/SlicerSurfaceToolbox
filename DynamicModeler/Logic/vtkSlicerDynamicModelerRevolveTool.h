@@ -22,6 +22,7 @@ class vtkMRMLDynamicModelerNode;
 
 // MRML includes
 #include <vtkMRMLModelNode.h>
+#include <vtkMRMLMarkupsNode.h>
 #include <vtkMRMLTransformNode.h>
 
 // VTK includes
@@ -86,6 +87,8 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
+
+  bool inputMarkupIsValid(vtkMRMLMarkupsNode* markupsNode);
 
 private:
   vtkSlicerDynamicModelerRevolveTool(const vtkSlicerDynamicModelerRevolveTool&) = delete;
