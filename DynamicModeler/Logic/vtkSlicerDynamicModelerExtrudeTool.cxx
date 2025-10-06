@@ -239,7 +239,6 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
     vtkMRMLMarkupsPlaneNode* inputProfileMarkupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_PROFILE_REFERENCE_ROLE));
     vtkMRMLMarkupsCurveNode* inputProfileMarkupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_PROFILE_REFERENCE_ROLE));
     vtkMRMLMarkupsClosedCurveNode* inputProfileMarkupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_PROFILE_REFERENCE_ROLE));
-    vtkMRMLMarkupsNode* inputProfileMarkupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(EXTRUDE_INPUT_PROFILE_REFERENCE_ROLE));
     this->InputProfileNodeToWorldTransform->Identity(); // this way the transformFilter is a pass-through
     if (inputProfileMarkupsPlaneNode)
     {
@@ -306,10 +305,11 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
     // restore default input of output transform filter
     this->OutputModelToWorldTransformFilter->SetInputConnection(this->TriangleFilter->GetOutputPort());
-    
+
+    bool inputProfileIsMarkup = (inputProfileMarkupsNode != nullptr);
     if (!markupsNode)
     {
-      this->setUseNormalsAsExtrusionVector();
+      this->setUseNormalsAsExtrusionVector(inputProfileIsMarkup);
     }
     else // Markups are used for extrusion
     {
@@ -324,7 +324,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
       if (markupsToUseBestFittingPlane && (numberOfControlPoints >= 3))
       {
-        this->setUseBestFittingPlaneNormalAsExtrusionVector(markupsNode);
+        this->setUseBestFittingPlaneNormalAsExtrusionVector(markupsNode, inputProfileIsMarkup);
       }
       else if (markupsPlaneNode)
       {
@@ -360,7 +360,7 @@ bool vtkSlicerDynamicModelerExtrudeTool::RunInternal(vtkMRMLDynamicModelerNode* 
   return true;
 }
 
-void vtkSlicerDynamicModelerExtrudeTool::setUseNormalsAsExtrusionVector()
+void vtkSlicerDynamicModelerExtrudeTool::setUseNormalsAsExtrusionVector(bool signCorrectionIsNeeded)
 {
   vtkDataArray* normalsArray = nullptr;
   if (this->InputProfileToWorldTransformFilter->GetOutput()
@@ -382,14 +382,28 @@ void vtkSlicerDynamicModelerExtrudeTool::setUseNormalsAsExtrusionVector()
   }
   this->ExtrudeFilter->SetExtrusionTypeToNormalExtrusion();
   const double magnitude = 1.0; // normal vector magnitude is always 1.0
-  this->ExtrudeFilter->SetScaleFactor(magnitude * this->extrusionScale + this->extrusionLength);
+  double sign = 1.0;
+  if (signCorrectionIsNeeded)
+  {
+    sign = -1.0;
+  }
+  double totalLength = sign * (magnitude * this->extrusionScale + this->extrusionLength);  
+  this->ExtrudeFilter->SetScaleFactor(totalLength);
   return;
 }
 
-void vtkSlicerDynamicModelerExtrudeTool::setUseBestFittingPlaneNormalAsExtrusionVector(vtkMRMLMarkupsNode* markupsNode)
+void vtkSlicerDynamicModelerExtrudeTool::setUseBestFittingPlaneNormalAsExtrusionVector(
+  vtkMRMLMarkupsNode* markupsNode, bool signCorrectionIsNeeded
+)
 {
+  double sign = 1.0;
+  if (signCorrectionIsNeeded)
+  {
+    sign = -1.0;
+  }
   const double magnitude = 1.0; // normal vector magnitude is always 1.0
-  this->ExtrudeFilter->SetScaleFactor(magnitude * this->extrusionScale + this->extrusionLength);
+  double totalLength = sign * (magnitude * this->extrusionScale + this->extrusionLength);
+  this->ExtrudeFilter->SetScaleFactor(totalLength);
   // get control points in world coordinates
   vtkNew<vtkPoints> controlPointsWorld;
   int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();

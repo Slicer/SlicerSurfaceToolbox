@@ -91,8 +91,8 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
 
-  void setUseNormalsAsExtrusionVector();
-  void setUseBestFittingPlaneNormalAsExtrusionVector(vtkMRMLMarkupsNode* markupsNode);
+  void setUseNormalsAsExtrusionVector(bool signCorrectionIsNeeded);
+  void setUseBestFittingPlaneNormalAsExtrusionVector(vtkMRMLMarkupsNode* markupsNode, bool signCorrectionIsNeeded);
   void setUsePlaneNormalAsExtrusionVector(vtkMRMLMarkupsPlaneNode* markupsPlaneNode);
   void setUseLineAsExtrusionVector(vtkMRMLMarkupsLineNode* markupsLineNode);
   void setUseFiducialAsExtrusionVector(vtkMRMLMarkupsFiducialNode* markupsFiducialNode);
