@@ -57,6 +57,14 @@ public:
   /// Run the faces selection on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
 
+  double rotationAngleDegrees = 0.0;
+  bool axisIsAtOrigin = false;
+  bool capTips = true;
+  double translationDistanceAlongAxis = 0.0;
+  double deltaRadius = 0.0;
+  double origin[3] = {0.,0.,0.};
+  double axis[3] = {0.,0.,1.};
+
 protected:
 
   vtkSlicerDynamicModelerRevolveTool();
@@ -89,6 +97,10 @@ protected:
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
 
   bool inputMarkupIsValid(vtkMRMLMarkupsNode* markupsNode);
+  void updateOriginAndAxis(vtkMRMLMarkupsNode* markupsNode);
+  void setRevolveFilterParameters(vtkMRMLNode* markupsNode);
+  void updateEndCapTransform();
+  void configurePipeline();
 
 private:
   vtkSlicerDynamicModelerRevolveTool(const vtkSlicerDynamicModelerRevolveTool&) = delete;
