@@ -567,8 +567,8 @@ void vtkSlicerDynamicModelerRevolveTool::updateEndCapTransform()
     {
       tempResultMatrix->SetElement(i,j,
         identityMatrix->GetElement(i,j) +
-        deltaRadius*identityMatrix->GetElement(i,j) -
-        deltaRadius*projectionMatrix->GetElement(i,j)
+        this->deltaRadius*identityMatrix->GetElement(i,j) -
+        this->deltaRadius*projectionMatrix->GetElement(i,j)
       );
     }
   }
@@ -587,11 +587,11 @@ void vtkSlicerDynamicModelerRevolveTool::updateEndCapTransform()
 
   // final position of the cap
   this->CapTransform->Identity();
-  this->CapTransform->RotateWXYZ(rotationAngleDegrees,axis[0],axis[1],axis[2]);
+  this->CapTransform->RotateWXYZ(this->RevolveFilter->GetAngle(),axis[0],axis[1],axis[2]);
   this->CapTransform->Translate(
-    translationDistanceAlongAxis*axis[0],
-    translationDistanceAlongAxis*axis[1],
-    translationDistanceAlongAxis*axis[2]);
+    this->translationDistanceAlongAxis*axis[0],
+    this->translationDistanceAlongAxis*axis[1],
+    this->translationDistanceAlongAxis*axis[2]);
   this->CapTransform->Concatenate(resultMatrix);
 }
 
