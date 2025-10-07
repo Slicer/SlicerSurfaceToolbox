@@ -22,6 +22,7 @@ class vtkMRMLDynamicModelerNode;
 
 // MRML includes
 #include <vtkMRMLModelNode.h>
+#include <vtkMRMLMarkupsNode.h>
 #include <vtkMRMLTransformNode.h>
 
 // VTK includes
@@ -37,6 +38,7 @@ class vtkMRMLDynamicModelerNode;
 #include <vtkFeatureEdges.h>
 #include <vtkRotationalExtrusionFilter.h>
 #include <vtkAppendPolyData.h>
+#include <vtkPlaneSource.h>
 
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -54,6 +56,14 @@ public:
 
   /// Run the faces selection on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
+
+  double rotationAngleDegrees = 0.0;
+  bool axisIsAtOrigin = false;
+  bool capTips = true;
+  double translationDistanceAlongAxis = 0.0;
+  double deltaRadius = 0.0;
+  double origin[3] = {0.,0.,0.};
+  double axis[3] = {0.,0.,1.};
 
 protected:
 
@@ -73,6 +83,9 @@ protected:
   vtkSmartPointer<vtkTransformPolyDataFilter> CapTransformFilter;
   vtkSmartPointer<vtkTransform> CapTransform;
 
+  // Auxiliar plane source is used to create a plane for the input profile when it is a markups plane
+  vtkSmartPointer<vtkPlaneSource> AuxiliarPlaneSource;
+
   vtkSmartPointer<vtkRotationalExtrusionFilter> RevolveFilter;
 
   vtkSmartPointer<vtkAppendPolyData> AppendFilter;
@@ -82,6 +95,14 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
+
+  bool inputMarkupIsValid(vtkMRMLMarkupsNode* markupsNode);
+  void updateOriginAndAxis(vtkMRMLMarkupsNode* markupsNode);
+  void setRevolveFilterParameters(vtkMRMLNode* markupsNode);
+  void updateEndCapTransform();
+  void configurePipeline();
+  bool areParametersZero();
+  void setPipilineToPassThrough();
 
 private:
   vtkSlicerDynamicModelerRevolveTool(const vtkSlicerDynamicModelerRevolveTool&) = delete;
