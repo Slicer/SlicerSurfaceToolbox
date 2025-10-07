@@ -44,6 +44,8 @@
 #include <vtkAppendPolyData.h>
 #include <vtkMatrix3x3.h>
 #include <vtkMatrix4x4.h>
+#include <vtkPlane.h>
+#include <vtkPlaneSource.h>
 
 //----------------------------------------------------------------------------
 vtkToolNewMacro(vtkSlicerDynamicModelerRevolveTool);
@@ -53,51 +55,60 @@ const char* REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE = "Revolve.InputMarkups";
 const char* REVOLVE_OUTPUT_MODEL_REFERENCE_ROLE = "Revolve.OutputModel";
 const char* REVOLVE_ANGLE_DEGREES = "Revolve.AngleDegrees";
 const char* REVOLVE_AXIS_IS_AT_ORIGIN = "Revolve.AxisIsAtOrigin";
+const char* REVOLVE_CAP_TIPS = "Revolve.CapTips";
 const char* REVOLVE_TRANSLATE_DISTANCE_ALONG_AXIS = "Revolve.TranslateDistanceAlongAxis";
-const char* REVOLVE_DELTA_RADIUS = "Revolve.DeltRadius"; 
+const char* REVOLVE_DELTA_RADIUS = "Revolve.DeltaRadius"; 
 
 //----------------------------------------------------------------------------
 vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 {
   /////////
   // Inputs
-  vtkNew<vtkIntArray> inputModelEvents;
-  inputModelEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
-  inputModelEvents->InsertNextTuple1(vtkMRMLModelNode::MeshModifiedEvent);
-  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
-  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionDefinedEvent);
-  inputModelEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionUndefinedEvent);
-  inputModelEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
+  vtkNew<vtkIntArray> inputProfileEvents;
+  inputProfileEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
+  inputProfileEvents->InsertNextTuple1(vtkMRMLModelNode::MeshModifiedEvent);
+  inputProfileEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
+  inputProfileEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionDefinedEvent);
+  inputProfileEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionUndefinedEvent);
+  inputProfileEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
   vtkNew<vtkStringArray> inputModelClassNames;
   inputModelClassNames->InsertNextValue("vtkMRMLModelNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
+  inputModelClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
   inputModelClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputProfile(
-    "Model or Curve",
+    "Model or Markup",
     "Profile to be revolved.",
     inputModelClassNames,
     REVOLVE_INPUT_PROFILE_REFERENCE_ROLE,
     true,
     false,
-    inputModelEvents
+    inputProfileEvents
   );
   this->InputNodeInfo.push_back(inputProfile);
 
   vtkNew<vtkIntArray> inputMarkupEvents;
   inputMarkupEvents->InsertNextTuple1(vtkCommand::ModifiedEvent);
   inputMarkupEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointModifiedEvent);
+  inputMarkupEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionDefinedEvent);
+  inputMarkupEvents->InsertNextTuple1(vtkMRMLMarkupsNode::PointPositionUndefinedEvent);
   inputMarkupEvents->InsertNextTuple1(vtkMRMLTransformableNode::TransformModifiedEvent);
   vtkNew<vtkStringArray> inputMarkupClassNames;
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsFiducialNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsLineNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsPlaneNode");
   inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsAngleNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsCurveNode");
+  inputMarkupClassNames->InsertNextValue("vtkMRMLMarkupsClosedCurveNode");
   NodeInfo inputMarkups(
-    "Markups",
-    "Markups to specify spatial revolution axis. Normal for plane and angle, superior axis for a point. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
+    "Revolution axis",
+    "Markups to specify spatial revolution axis. Normal for plane and angle. Superior axis for a point. Best fitting plane normal for curve and closed curve. The direction of rotation is determined from the direction of the rotation axis by the right hand rule.",
     inputMarkupClassNames,
     REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE,
-    /*required*/ true,
+    /*required*/ false,
     /*repeatable*/ false,
     inputMarkupEvents
   );
@@ -105,10 +116,12 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   /////////
   // Outputs
+  vtkNew<vtkStringArray> outputModelClassNames;
+  outputModelClassNames->InsertNextValue("vtkMRMLModelNode");
   NodeInfo outputModel(
     "Revolved model",
     "Result of the revolving operation.",
-    inputModelClassNames,
+    outputModelClassNames,
     REVOLVE_OUTPUT_MODEL_REFERENCE_ROLE,
     false,
     false
@@ -136,6 +149,13 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   this->InputParameterInfo.push_back(parameterRotationAngleDegrees);
 
+  ParameterInfo parameterCapTips(
+    "Cap tips",
+    "Decide if the revolution will be capped at the tips.",
+    REVOLVE_CAP_TIPS,
+    PARAMETER_BOOL,
+    true);
+  this->InputParameterInfo.push_back(parameterCapTips);
 
   ParameterInfo parameterRotationAxisIsAtOrigin(
     "Rotation axis is at origin",
@@ -166,7 +186,7 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
 
   ParameterInfo parameterDeltaRadius(
-    "Change in radius during revolve process",
+    "Delta radius",
     "Difference factor between the rotation start and end radius after the rotational sweep.",
     REVOLVE_DELTA_RADIUS,
     PARAMETER_DOUBLE,
@@ -183,6 +203,8 @@ vtkSlicerDynamicModelerRevolveTool::vtkSlicerDynamicModelerRevolveTool()
 
   this->InputParameterInfo.push_back(parameterDeltaRadius);
 
+  // Auxiliar plane source is used to create a plane for the input profile when it is a markups plane
+  this->AuxiliarPlaneSource = vtkSmartPointer<vtkPlaneSource>::New();
   
   this->InputProfileToWorldTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->InputProfileNodeToWorldTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -248,18 +270,20 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
 
   vtkMRMLModelNode* inputProfileModelNode = vtkMRMLModelNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsNode* inputProfileMarkupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
   vtkMRMLMarkupsCurveNode* inputProfileMarkupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
   vtkMRMLMarkupsClosedCurveNode* inputProfileMarkupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
-  bool profileIsModel = (inputProfileModelNode) && (!inputProfileMarkupsCurveNode) && (!inputProfileMarkupsClosedCurveNode);
-  bool profileIsCurve = (!inputProfileModelNode) && (inputProfileMarkupsCurveNode) && (!inputProfileMarkupsClosedCurveNode);
-  bool profileIsClosedCurve = (!inputProfileModelNode) && (inputProfileMarkupsCurveNode) && (inputProfileMarkupsClosedCurveNode);
-  if ((!profileIsModel) && (!profileIsCurve) && (!profileIsClosedCurve))
+  vtkMRMLMarkupsFiducialNode* inputProfileMarkupsPointsNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsLineNode* inputProfileMarkupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsPlaneNode* inputProfileMarkupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  vtkMRMLMarkupsAngleNode* inputProfileMarkupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_PROFILE_REFERENCE_ROLE));
+  if ((!inputProfileModelNode) && (!inputProfileMarkupsNode))
   {
     vtkErrorMacro("Invalid input node!");
     return false;
   }
 
-  if (profileIsModel)
+  if (inputProfileModelNode)
   {
     if (!inputProfileModelNode->GetMesh() || inputProfileModelNode->GetMesh()->GetNumberOfPoints() == 0)
     {
@@ -276,12 +300,12 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
       this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileModelNode->GetMeshConnection());
     }
   }
-  else 
+  else // inputProfileMarkupsNode
   {
     this->InputProfileNodeToWorldTransform->Identity(); // this way the transformFilter is a pass-through
-    if (profileIsCurve)
+    if (inputProfileMarkupsPlaneNode)
     {
-      if (!inputProfileMarkupsCurveNode->GetCurveWorld() || inputProfileMarkupsCurveNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      if (!inputProfileMarkupsPlaneNode->GetIsPlaneValid())
       {
         vtkNew<vtkPolyData> outputPolyData;
         outputModelNode->SetAndObservePolyData(outputPolyData);
@@ -289,12 +313,26 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
       }
       else
       {
-        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsCurveNode->	GetCurveWorldConnection());
+        // Update the plane based on the corner points
+        vtkNew<vtkPoints> planeCornerPoints_World;
+        inputProfileMarkupsPlaneNode->GetPlaneCornerPointsWorld(planeCornerPoints_World);
+
+        // Update the plane fill
+        this->AuxiliarPlaneSource->SetOrigin(planeCornerPoints_World->GetPoint(0));
+        this->AuxiliarPlaneSource->SetPoint1(planeCornerPoints_World->GetPoint(1));
+        this->AuxiliarPlaneSource->SetPoint2(planeCornerPoints_World->GetPoint(3));
+        this->InputProfileToWorldTransformFilter->SetInputConnection(this->AuxiliarPlaneSource->GetOutputPort());
       }
     }
-    else if (profileIsClosedCurve)
+    else if (
+      inputProfileMarkupsPointsNode || 
+      inputProfileMarkupsLineNode || 
+      inputProfileMarkupsAngleNode ||
+      inputProfileMarkupsCurveNode ||
+      inputProfileMarkupsClosedCurveNode
+    )
     {
-      if (!inputProfileMarkupsClosedCurveNode->GetCurveWorld() || inputProfileMarkupsClosedCurveNode->GetCurveWorld()->GetNumberOfPoints() == 0)
+      if (!inputProfileMarkupsNode->GetCurveWorld() || inputProfileMarkupsNode->GetCurveWorld()->GetNumberOfPoints() == 0)
       {
         vtkNew<vtkPolyData> outputPolyData;
         outputModelNode->SetAndObservePolyData(outputPolyData);
@@ -302,7 +340,7 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
       }
       else
       {
-        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsClosedCurveNode->	GetCurveWorldConnection());
+        this->InputProfileToWorldTransformFilter->SetInputConnection(inputProfileMarkupsNode->GetCurveWorldConnection());
       }
     }
   }
@@ -319,35 +357,7 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
 
   vtkMRMLMarkupsNode* markupsNode = vtkMRMLMarkupsNode::SafeDownCast(surfaceEditorNode->GetNodeReference(REVOLVE_INPUT_MARKUPS_REFERENCE_ROLE));
-
-  // check if markups are valid
-  if (!markupsNode)
-  {
-    vtkNew<vtkPolyData> outputPolyData;
-    outputModelNode->SetAndObservePolyData(outputPolyData);
-    return true;
-  }
-
-  int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
-  if (numberOfControlPoints == 0)
-  {
-    vtkNew<vtkPolyData> outputPolyData;
-    outputModelNode->SetAndObservePolyData(outputPolyData);
-    return true;
-  }
-
-  vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
-  vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
-  vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
-  vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
-  
-  if ((markupsLineNode) && (numberOfControlPoints != 2))
-  {
-    vtkNew<vtkPolyData> outputPolyData;
-    outputModelNode->SetAndObservePolyData(outputPolyData);
-    return true;
-  }
-  if ((markupsAngleNode) && (numberOfControlPoints != 3))
+  if (!this->inputMarkupIsValid(markupsNode))
   {
     vtkNew<vtkPolyData> outputPolyData;
     outputModelNode->SetAndObservePolyData(outputPolyData);
@@ -355,72 +365,193 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
   }
 
   // get parameters
-  double rotationAngleDegrees = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
-  bool axisIsAtOrigin = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_AXIS_IS_AT_ORIGIN)).ToInt() != 0;
-  double translationDistanceAlongAxis = this->GetNthInputParameterValue(2, surfaceEditorNode).ToDouble();
-  double deltaRadius = this->GetNthInputParameterValue(3, surfaceEditorNode).ToDouble();
+  this->rotationAngleDegrees = this->GetNthInputParameterValue(0, surfaceEditorNode).ToDouble();
+  this->capTips = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_CAP_TIPS)).ToInt() != 0;
+  this->axisIsAtOrigin = vtkVariant(surfaceEditorNode->GetAttribute(REVOLVE_AXIS_IS_AT_ORIGIN)).ToInt() != 0;
+  this->translationDistanceAlongAxis = this->GetNthInputParameterValue(3, surfaceEditorNode).ToDouble();
+  this->deltaRadius = this->GetNthInputParameterValue(4, surfaceEditorNode).ToDouble();
 
-  this->RevolveFilter->SetResolution(
-    std::ceil(std::fabs(rotationAngleDegrees))*2);
-  this->RevolveFilter->SetAngle(rotationAngleDegrees); // redefined below if angle markup
-  this->RevolveFilter->SetDeltaRadius(deltaRadius);
-  this->RevolveFilter->SetTranslation(translationDistanceAlongAxis);
+  if (!this->areParametersZero())
+  {
+    // calculate the origin, axis
+    this->updateOriginAndAxis(markupsNode);
 
-  // calculate the origin, axis
-  double origin[3] = {0.,0.,0.};
-  double axis[3] = {0.,0.,0.};
-  if (markupsFiducialNode)
-  {
-    markupsFiducialNode->GetNthControlPointPositionWorld(0, origin);
-    axis[2]= 1.0; // superior direction
-  }
-  if (markupsLineNode)
-  {
-    double endPoint[3] = {0.,0.,0.};
-    markupsLineNode->GetNthControlPointPositionWorld(1, endPoint);
-    markupsLineNode->GetNthControlPointPositionWorld(0, origin);
-    vtkMath::Subtract(endPoint, origin, axis);
-    vtkMath::Normalize(axis);
-  }
-  if (markupsPlaneNode)
-  {
-    markupsPlaneNode->GetNthControlPointPositionWorld(0, origin);
-    markupsPlaneNode->GetNormalWorld(axis);
-  }
-  if (markupsAngleNode)
-  {
-    double firstPoint[3] = {0.,0.,0.};
-    double thirdPoint[3] = {0.,0.,0.};
-    markupsAngleNode->GetNthControlPointPositionWorld(0, firstPoint);
-    markupsAngleNode->GetNthControlPointPositionWorld(1, origin);
-    markupsAngleNode->GetNthControlPointPositionWorld(2, thirdPoint);
-    double vector1[3] = {0.,0.,0.};
-    double vector2[3] = {0.,0.,0.};
-    vtkMath::Subtract(firstPoint, origin, vector1);
-    vtkMath::Subtract(thirdPoint, origin, vector2);
-    vtkMath::Normalize(vector1);
-    vtkMath::Normalize(vector2);
-    vtkMath::Cross(vector1,vector2,axis);
-    vtkMath::Normalize(axis);
+    this->setRevolveFilterParameters(markupsNode);
 
-    double rotationAngleRadians = vtkMath::AngleBetweenVectors(vector1,vector2);
-    rotationAngleDegrees = vtkMath::DegreesFromRadians(rotationAngleRadians);
-    this->RevolveFilter->SetAngle(rotationAngleDegrees);
+    this->updateEndCapTransform();
+
+    this->configurePipeline();
+  }
+  else
+  {
+    this->setPipilineToPassThrough();
+  }
+  
+  this->OutputModelToWorldTransformFilter->Update();
+  vtkNew<vtkPolyData> outputMesh;
+  outputMesh->DeepCopy(this->OutputModelToWorldTransformFilter->GetOutput());
+
+  MRMLNodeModifyBlocker blocker(outputModelNode);
+  outputModelNode->SetAndObserveMesh(outputMesh);
+  outputModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
+
+  return true;
+}
+
+bool vtkSlicerDynamicModelerRevolveTool::inputMarkupIsValid(vtkMRMLMarkupsNode* markupsNode)
+{
+  bool validNoMarkup = (markupsNode == nullptr);
+  if (validNoMarkup)
+  {
+    return true;
   }
 
-  this->RevolveFilter->SetRotationAxis(axis);
+  vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsCurveNode* markupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(markupsNode);
+  vtkMRMLMarkupsClosedCurveNode* markupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(markupsNode);
+  int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
+  bool validFiducial = ((markupsFiducialNode) && (numberOfControlPoints >= 1));
+  bool validLine = ((markupsLineNode) && (numberOfControlPoints == 2));
+  bool validPlane = ((markupsPlaneNode) && (markupsPlaneNode->GetIsPlaneValid()));
+  bool validAngle = ((markupsAngleNode) && (numberOfControlPoints == 3));
+  bool validCurve = ((markupsCurveNode) && (numberOfControlPoints >= 3));
+  bool validClosedCurve = ((markupsClosedCurveNode) && (numberOfControlPoints >= 3));
 
+  if (validFiducial || validLine || validPlane || validAngle || validCurve || validClosedCurve)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
 
+void vtkSlicerDynamicModelerRevolveTool::updateOriginAndAxis(vtkMRMLMarkupsNode* markupsNode)
+{
+  // default values for when no markup is provided
+  double orig[3] = {0.,0.,0.};
+  double ax[3] = {0.,0.,1.};
+
+  if (markupsNode)
+  {
+    vtkMRMLMarkupsFiducialNode* markupsFiducialNode = vtkMRMLMarkupsFiducialNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsLineNode* markupsLineNode = vtkMRMLMarkupsLineNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsPlaneNode* markupsPlaneNode = vtkMRMLMarkupsPlaneNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsCurveNode* markupsCurveNode = vtkMRMLMarkupsCurveNode::SafeDownCast(markupsNode);
+    vtkMRMLMarkupsClosedCurveNode* markupsClosedCurveNode = vtkMRMLMarkupsClosedCurveNode::SafeDownCast(markupsNode);
+    int numberOfControlPoints = markupsNode->GetNumberOfControlPoints();
+
+    if (markupsFiducialNode)
+    {
+      markupsFiducialNode->GetNthControlPointPositionWorld(0, orig);
+      ax[2]= 1.0; // superior direction
+    }
+    if (markupsLineNode)
+    {
+      double endPoint[3] = {0.,0.,0.};
+      markupsLineNode->GetNthControlPointPositionWorld(1, endPoint);
+      markupsLineNode->GetNthControlPointPositionWorld(0, orig);
+      vtkMath::Subtract(endPoint, orig, ax);
+      vtkMath::Normalize(ax);
+    }
+    if (markupsPlaneNode)
+    {
+      markupsPlaneNode->GetNthControlPointPositionWorld(0, orig);
+      markupsPlaneNode->GetNormalWorld(ax);
+    }
+    if (markupsCurveNode || markupsClosedCurveNode)
+    {
+      // get control points in world coordinates
+      vtkNew<vtkPoints> controlPointsWorld;
+      for (int i = 0; i < numberOfControlPoints; ++i)
+      {
+        double controlPointWorld[3] = { 0, 0, 0 };
+        markupsNode->GetNthControlPointPositionWorld(i, controlPointWorld);
+        controlPointsWorld->InsertNextPoint(controlPointWorld);
+      }
+      vtkPlane::ComputeBestFittingPlane(controlPointsWorld, orig, ax);
+    }
+    if (markupsAngleNode)
+    {
+      double firstPoint[3] = {0.,0.,0.};
+      double thirdPoint[3] = {0.,0.,0.};
+      markupsAngleNode->GetNthControlPointPositionWorld(0, firstPoint);
+      markupsAngleNode->GetNthControlPointPositionWorld(1, orig);
+      markupsAngleNode->GetNthControlPointPositionWorld(2, thirdPoint);
+      double vector1[3] = {0.,0.,0.};
+      double vector2[3] = {0.,0.,0.};
+      vtkMath::Subtract(firstPoint, orig, vector1);
+      vtkMath::Subtract(thirdPoint, orig, vector2);
+      vtkMath::Normalize(vector1);
+      vtkMath::Normalize(vector2);
+      vtkMath::Cross(vector1,vector2,ax);
+      vtkMath::Normalize(ax);
+    }
+  }
+
+  for (int i=0; i<3; i++)
+  {
+    this->origin[i] = orig[i];
+    this->axis[i] = ax[i];
+  }
+}
+
+void vtkSlicerDynamicModelerRevolveTool::configurePipeline()
+{
+  double orig[3] = {this->origin[0], this->origin[1], this->origin[2]};
+  // translate to origin the mesh to revolve
+  if (this->axisIsAtOrigin == false)
+  {
+    this->WorldToModelTransform->Identity();
+    this->WorldToModelTransform->Translate(-orig[0],-orig[1],-orig[2]);
+    this->WorldToModelTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
+    this->BoundaryEdgesFilter->SetInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
+    this->CapTransformFilter->SetInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
+    this->AppendFilter->RemoveAllInputs();
+    this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
+    if (this->capTips)
+    {
+      this->AppendFilter->AddInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
+      this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
+    }
+    this->ModelToWorldTransform->Identity();
+    this->ModelToWorldTransform->Translate(orig[0],orig[1],orig[2]);
+    this->ModelToWorldTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->ModelToWorldTransformFilter->GetOutputPort());
+  }
+  else
+  {
+    this->BoundaryEdgesFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
+    this->CapTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
+    this->AppendFilter->RemoveAllInputs();
+    this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
+    if (this->capTips)
+    {
+      this->AppendFilter->AddInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
+      this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
+    }
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
+  }
+}
+
+void vtkSlicerDynamicModelerRevolveTool::updateEndCapTransform()
+{
   // some linear algebra is needed to calculate the final position of the cap when deltaRadius is not zero
+  double ax[3] = {this->axis[0],this->axis[1],this->axis[2]};
   double rightDir[3] = {1.,0.,0.};
   double anteriorDir[3] = {0.,1.,0.};
   double superiorDir[3] = {0.,0.,1.};
   double projX[3] = {0.,0.,0.};
   double projY[3] = {0.,0.,0.};
   double projZ[3] = {0.,0.,0.};
-  vtkMath::ProjectVector(rightDir,axis,projX);
-  vtkMath::ProjectVector(anteriorDir,axis,projY);
-  vtkMath::ProjectVector(superiorDir,axis,projZ);
+  vtkMath::ProjectVector(rightDir,ax,projX);
+  vtkMath::ProjectVector(anteriorDir,ax,projY);
+  vtkMath::ProjectVector(superiorDir,ax,projZ);
 
   // create vtk matrix 3x3
   vtkNew<vtkMatrix3x3> projectionMatrix;
@@ -444,8 +575,8 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
     {
       tempResultMatrix->SetElement(i,j,
         identityMatrix->GetElement(i,j) +
-        deltaRadius*identityMatrix->GetElement(i,j) -
-        deltaRadius*projectionMatrix->GetElement(i,j)
+        this->deltaRadius*identityMatrix->GetElement(i,j) -
+        this->deltaRadius*projectionMatrix->GetElement(i,j)
       );
     }
   }
@@ -464,49 +595,56 @@ bool vtkSlicerDynamicModelerRevolveTool::RunInternal(vtkMRMLDynamicModelerNode* 
 
   // final position of the cap
   this->CapTransform->Identity();
-  this->CapTransform->RotateWXYZ(rotationAngleDegrees,axis[0],axis[1],axis[2]);
+  this->CapTransform->RotateWXYZ(this->RevolveFilter->GetAngle(),ax[0],ax[1],ax[2]);
   this->CapTransform->Translate(
-    translationDistanceAlongAxis*axis[0],
-    translationDistanceAlongAxis*axis[1],
-    translationDistanceAlongAxis*axis[2]);
+    this->translationDistanceAlongAxis*ax[0],
+    this->translationDistanceAlongAxis*ax[1],
+    this->translationDistanceAlongAxis*ax[2]);
   this->CapTransform->Concatenate(resultMatrix);
+}
 
-
-  // translate to origin the mesh to revolve
-  if (axisIsAtOrigin == false)
+void vtkSlicerDynamicModelerRevolveTool::setRevolveFilterParameters(vtkMRMLNode* markupsNode)
+{
+  // configure revolve filter
+  double angleDegrees = this->rotationAngleDegrees; 
+  vtkMRMLMarkupsAngleNode* markupsAngleNode = vtkMRMLMarkupsAngleNode::SafeDownCast(markupsNode);
+  if (markupsAngleNode)
   {
-    this->WorldToModelTransform->Identity();
-    this->WorldToModelTransform->Translate(-origin[0],-origin[1],-origin[2]);
-    this->WorldToModelTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
-    this->BoundaryEdgesFilter->SetInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
-    this->CapTransformFilter->SetInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
-    this->AppendFilter->RemoveAllInputs();
-    this->AppendFilter->AddInputConnection(this->WorldToModelTransformFilter->GetOutputPort());
-    this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
-    this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
-    this->ModelToWorldTransform->Identity();
-    this->ModelToWorldTransform->Translate(origin[0],origin[1],origin[2]);
-    this->ModelToWorldTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
-    this->OutputModelToWorldTransformFilter->SetInputConnection(this->ModelToWorldTransformFilter->GetOutputPort());
+    angleDegrees = markupsAngleNode->GetAngleDegrees();
+  }
+  this->RevolveFilter->SetResolution(
+    std::ceil(std::fabs(angleDegrees))*2);
+  this->RevolveFilter->SetAngle(angleDegrees); // redefined below if angle markup
+  this->RevolveFilter->SetDeltaRadius(this->deltaRadius);
+  this->RevolveFilter->SetTranslation(this->translationDistanceAlongAxis);
+  this->RevolveFilter->SetRotationAxis(this->axis);
+}
+
+bool vtkSlicerDynamicModelerRevolveTool::areParametersZero()
+{
+  if (
+    (this->rotationAngleDegrees == 0.0) &&
+    (this->translationDistanceAlongAxis == 0.0) &&
+    (this->deltaRadius == 0.0)
+  )
+  {
+    return true;
   }
   else
   {
-    this->BoundaryEdgesFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
-    this->CapTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
-    this->AppendFilter->RemoveAllInputs();
-    this->AppendFilter->AddInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
-    this->AppendFilter->AddInputConnection(this->RevolveFilter->GetOutputPort());
-    this->AppendFilter->AddInputConnection(this->CapTransformFilter->GetOutputPort());
-    this->OutputModelToWorldTransformFilter->SetInputConnection(this->AppendFilter->GetOutputPort());
+    return false;
   }
-  
-  this->OutputModelToWorldTransformFilter->Update();
-  vtkNew<vtkPolyData> outputMesh;
-  outputMesh->DeepCopy(this->OutputModelToWorldTransformFilter->GetOutput());
+}
 
-  MRMLNodeModifyBlocker blocker(outputModelNode);
-  outputModelNode->SetAndObserveMesh(outputMesh);
-  outputModelNode->InvokeCustomModifiedEvent(vtkMRMLModelNode::MeshModifiedEvent);
-
-  return true;
+void vtkSlicerDynamicModelerRevolveTool::setPipilineToPassThrough()
+{
+  this->BoundaryEdgesFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
+  if (this->capTips)
+  {
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->InputProfileToWorldTransformFilter->GetOutputPort());
+  }
+  else
+  {
+    this->OutputModelToWorldTransformFilter->SetInputConnection(this->BoundaryEdgesFilter->GetOutputPort());
+  }
 }

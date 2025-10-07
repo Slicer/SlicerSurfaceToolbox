@@ -47,6 +47,10 @@ class vtkTriangleFilter;
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTriangleFilter.h>
+#include <vtkPlaneSource.h>
+#include <vtkMRMLMarkupsPlaneNode.h>
+#include <vtkMRMLMarkupsLineNode.h>
+#include <vtkMRMLMarkupsFiducialNode.h>
 
 #include "vtkSlicerDynamicModelerTool.h"
 
@@ -65,6 +69,9 @@ public:
   /// Run the faces selection on the input model node
   bool RunInternal(vtkMRMLDynamicModelerNode* surfaceEditorNode) override;
 
+  double extrusionLength = 0.0;
+  double extrusionScale = 1.0;
+
 protected:
 
   vtkSlicerDynamicModelerExtrudeTool();
@@ -72,9 +79,10 @@ protected:
   void operator=(const vtkSlicerDynamicModelerExtrudeTool&);
 
 protected:
-  vtkSmartPointer<vtkTransformPolyDataFilter> InputModelToWorldTransformFilter;
-  vtkSmartPointer<vtkGeneralTransform> InputModelNodeToWorldTransform;
+  vtkSmartPointer<vtkTransformPolyDataFilter> InputProfileToWorldTransformFilter;
+  vtkSmartPointer<vtkGeneralTransform> InputProfileNodeToWorldTransform;
 
+  vtkSmartPointer<vtkPlaneSource> AuxiliarPlaneSource; // used to create a plane for the input profile when it is a markups plane
   vtkSmartPointer<vtkLinearExtrusionFilter> ExtrudeFilter;
   vtkSmartPointer<vtkTriangleFilter> TriangleFilter;
   vtkSmartPointer<vtkPolyDataNormals> NormalsFilter;
@@ -82,6 +90,14 @@ protected:
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputModelToWorldTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputWorldToModelTransform;
+
+  void setUseNormalsAsExtrusionVector(bool signCorrectionIsNeeded);
+  void setUseBestFittingPlaneNormalAsExtrusionVector(vtkMRMLMarkupsNode* markupsNode, bool signCorrectionIsNeeded);
+  void setUsePlaneNormalAsExtrusionVector(vtkMRMLMarkupsPlaneNode* markupsPlaneNode);
+  void setUseLineAsExtrusionVector(vtkMRMLMarkupsLineNode* markupsLineNode);
+  void setUseFiducialAsExtrusionVector(vtkMRMLMarkupsFiducialNode* markupsFiducialNode);
+
+  //void GeneratePolyDataFromMarkups(vtkMRMLMarkupsNode* markupsNode, vtkPolyData* outputPolyData);
 
 private:
   vtkSlicerDynamicModelerExtrudeTool(const vtkSlicerDynamicModelerExtrudeTool&) = delete;
