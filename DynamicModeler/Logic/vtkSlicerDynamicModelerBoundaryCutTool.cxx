@@ -140,6 +140,8 @@ vtkSlicerDynamicModelerBoundaryCutTool::vtkSlicerDynamicModelerBoundaryCutTool()
   this->ClipPolyData->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   this->ClipPolyData->SetValue(epsilon);
   this->ClipPolyData->InsideOutOn();
+  // Enabling GenerateClippedOutputOn generates orphan points in the output, but we
+  // remove them later with OutputCleanFilter.
   this->ClipPolyData->GenerateClippedOutputOn();
 
   this->Connectivity = vtkSmartPointer<vtkPolyDataConnectivityFilter>::New();

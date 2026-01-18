@@ -32,6 +32,7 @@
 
 // VTK includes
 #include <vtkAppendPolyData.h>
+#include <vtkCleanPolyData.h>
 #include <vtkClipPolyData.h>
 #include <vtkCommand.h>
 #include <vtkGeneralTransform.h>
@@ -136,14 +137,31 @@ vtkSlicerDynamicModelerROICutTool::vtkSlicerDynamicModelerROICutTool()
   this->ROIClipper = vtkSmartPointer<vtkClipPolyData>::New();
   this->ROIClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
 
+  // vtkClipPolyData leaves points in the output that are not used in any cells.
+  // Set up cleaner filter to remove those (and do nothing else).
+
+  this->OutputInsideCleaner = vtkSmartPointer<vtkCleanPolyData>::New();
+  this->OutputInsideCleaner->SetInputConnection(this->ROIClipper->GetOutputPort());
+  this->OutputInsideCleaner->PointMergingOff();
+  this->OutputInsideCleaner->ConvertLinesToPointsOff();
+  this->OutputInsideCleaner->ConvertPolysToLinesOff();
+  this->OutputInsideCleaner->ConvertStripsToPolysOff();
+
+  this->OutputOutsideCleaner = vtkSmartPointer<vtkCleanPolyData>::New();
+  this->OutputOutsideCleaner->SetInputConnection(this->ROIClipper->GetClippedOutputPort());
+  this->OutputOutsideCleaner->PointMergingOff();
+  this->OutputOutsideCleaner->ConvertLinesToPointsOff();
+  this->OutputOutsideCleaner->ConvertPolysToLinesOff();
+  this->OutputOutsideCleaner->ConvertStripsToPolysOff();
+
   this->OutputInsideWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputInsideWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputInsideWorldToModelTransformFilter->SetInputConnection(this->ROIClipper->GetOutputPort());
+  this->OutputInsideWorldToModelTransformFilter->SetInputConnection(this->OutputInsideCleaner->GetOutputPort());
   this->OutputInsideWorldToModelTransformFilter->SetTransform(this->OutputInsideWorldToModelTransform);
 
   this->OutputOutsideWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputOutsideWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
-  this->OutputOutsideWorldToModelTransformFilter->SetInputConnection(this->ROIClipper->GetClippedOutputPort());
+  this->OutputOutsideWorldToModelTransformFilter->SetInputConnection(this->OutputOutsideCleaner->GetOutputPort());
   this->OutputOutsideWorldToModelTransformFilter->SetTransform(this->OutputOutsideWorldToModelTransform);
 }
 

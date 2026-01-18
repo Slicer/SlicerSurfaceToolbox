@@ -279,6 +279,8 @@ bool vtkSlicerDynamicModelerCurveCutTool::RunInternal(vtkMRMLDynamicModelerNode*
     this->ClipFilter->SetInputConnection(this->SelectionFilter->GetOutputPort());
     this->OutputWorldToModelTransformFilter->SetInputConnection(this->ConnectivityFilter->GetOutputPort());
     this->ClipFilter->SetGenerateClippedOutput(outputOutsideModelNode != nullptr);
+    // Enabling GenerateClippedOutputOn generates orphan points in the output, but they do not cause issues,
+    // because the connectivity filter removes them.
     if (outputInsideModelNode)
       {
       this->ConnectivityFilter->SetInputConnection(this->ClipFilter->GetOutputPort());

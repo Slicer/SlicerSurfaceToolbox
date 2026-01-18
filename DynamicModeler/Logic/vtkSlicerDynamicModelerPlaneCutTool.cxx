@@ -30,6 +30,7 @@
 
 // VTK includes
 #include <vtkAppendPolyData.h>
+#include <vtkCleanPolyData.h>
 #include <vtkClipClosedSurface.h>
 #include <vtkClipPolyData.h>
 #include <vtkCollection.h>
@@ -156,6 +157,23 @@ vtkSlicerDynamicModelerPlaneCutTool::vtkSlicerDynamicModelerPlaneCutTool()
   this->PlaneClipper = vtkSmartPointer<vtkClipPolyData>::New();
   this->PlaneClipper->SetInputConnection(this->InputModelToWorldTransformFilter->GetOutputPort());
   this->PlaneClipper->SetValue(0.0);
+
+  // vtkClipPolyData leaves points in the output that are not used in any cells.
+  // Set up cleaner filter to remove those (and do nothing else).
+
+  this->OutputPositiveCleanFilter = vtkSmartPointer<vtkCleanPolyData>::New();
+  this->OutputPositiveCleanFilter->SetInputConnection(this->PlaneClipper->GetOutputPort());
+  this->OutputPositiveCleanFilter->PointMergingOff();
+  this->OutputPositiveCleanFilter->ConvertLinesToPointsOff();
+  this->OutputPositiveCleanFilter->ConvertPolysToLinesOff();
+  this->OutputPositiveCleanFilter->ConvertStripsToPolysOff();
+
+  this->OutputNegativeCleanFilter = vtkSmartPointer<vtkCleanPolyData>::New();
+  this->OutputNegativeCleanFilter->SetInputConnection(this->PlaneClipper->GetClippedOutputPort());
+  this->OutputNegativeCleanFilter->PointMergingOff();
+  this->OutputNegativeCleanFilter->ConvertLinesToPointsOff();
+  this->OutputNegativeCleanFilter->ConvertPolysToLinesOff();
+  this->OutputNegativeCleanFilter->ConvertStripsToPolysOff();
 
   this->OutputPositiveWorldToModelTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   this->OutputPositiveWorldToModelTransform = vtkSmartPointer<vtkGeneralTransform>::New();
@@ -380,7 +398,6 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
     {
     this->PlaneClipper->GenerateClippedOutputOn();
     }
-  this->PlaneClipper->Update();
 
   bool capSurface = this->GetNthInputParameterValue(0, surfaceEditorNode).ToInt() != 0;
   vtkNew<vtkPolyData> endCapPolyData;
@@ -392,7 +409,8 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   if (outputPositiveModelNode)
     {
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->ShallowCopy(this->PlaneClipper->GetOutput());
+    this->OutputPositiveCleanFilter->Update();
+    outputMesh->ShallowCopy(this->OutputPositiveCleanFilter->GetOutput());
     if (capSurface)
       {
       vtkNew<vtkAppendPolyData> appendEndCap;
@@ -414,7 +432,8 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   if (outputNegativeModelNode)
     {
     vtkNew<vtkPolyData> outputMesh;
-    outputMesh->ShallowCopy(this->PlaneClipper->GetClippedOutput());
+    this->OutputNegativeCleanFilter->Update();
+    outputMesh->ShallowCopy(this->OutputNegativeCleanFilter->GetOutput());
     if (capSurface)
       {
       vtkNew<vtkReverseSense> reverseSense;
