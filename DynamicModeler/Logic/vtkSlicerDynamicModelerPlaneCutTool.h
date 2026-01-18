@@ -33,6 +33,7 @@
 #include <vector>
 
 class vtkClipPolyData;
+class vtkCleanPolyData;
 class vtkDataObject;
 class vtkGeneralTransform;
 class vtkGeometryFilter;
@@ -77,9 +78,11 @@ protected:
 
   vtkSmartPointer<vtkClipPolyData>            PlaneClipper;
 
+  vtkSmartPointer<vtkCleanPolyData>           OutputPositiveCleanFilter;
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputPositiveWorldToModelTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputPositiveWorldToModelTransform;
 
+  vtkSmartPointer<vtkCleanPolyData>           OutputNegativeCleanFilter;
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputNegativeWorldToModelTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputNegativeWorldToModelTransform;
 

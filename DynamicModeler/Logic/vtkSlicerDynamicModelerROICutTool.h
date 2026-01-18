@@ -26,6 +26,7 @@
 // VTK includes
 #include <vtkSmartPointer.h>
 
+class vtkCleanPolyData;
 class vtkClipPolyData;
 class vtkGeneralTransform;
 class vtkMRMLDynamicModelerNode;
@@ -81,6 +82,9 @@ protected:
   vtkSmartPointer<vtkGeneralTransform>        InputModelNodeToWorldTransform;
 
   vtkSmartPointer<vtkClipPolyData>            ROIClipper;
+
+  vtkSmartPointer<vtkCleanPolyData>           OutputInsideCleaner;
+  vtkSmartPointer<vtkCleanPolyData>           OutputOutsideCleaner;
 
   vtkSmartPointer<vtkTransformPolyDataFilter> OutputInsideWorldToModelTransformFilter;
   vtkSmartPointer<vtkGeneralTransform>        OutputInsideWorldToModelTransform;
