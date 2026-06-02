@@ -47,7 +47,6 @@
 #include <vtkMRMLDynamicModelerNode.h>
 
 // Terminologies includes
-#include "qSlicerTerminologyItemDelegate.h"
 #include "vtkSlicerTerminologiesModuleLogic.h"
 
 // MRML widgets includes
