@@ -403,6 +403,10 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
   vtkNew<vtkPolyData> endCapPolyData;
   if (capSurface)
     {
+    // The end cap is generated from the output data object of the transform filter (not from its output port),
+    // so the filter must be updated explicitly. Otherwise the end cap is computed from the mesh of the previous
+    // run (empty on the first run of the tool).
+    this->InputModelToWorldTransformFilter->Update();
     this->CreateEndCap(planeCollection, this->InputModelToWorldTransformFilter->GetOutput(), planes, endCapPolyData);
     }
 
