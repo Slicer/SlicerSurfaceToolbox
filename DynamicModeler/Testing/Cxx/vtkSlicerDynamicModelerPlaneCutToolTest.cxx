@@ -8,7 +8,6 @@
 
 // VTK includes
 #include <vtkCellArray.h>
-#include <vtkCleanPolyData.h>
 #include <vtkFeatureEdges.h>
 #include <vtkMath.h>
 #include <vtkNew.h>
@@ -71,14 +70,10 @@ vtkSmartPointer<vtkPolyData> CreateTorus()
 
 bool IsClosedSurface(vtkPolyData* polyData, const char* outputName)
 {
-  vtkNew<vtkCleanPolyData> cleaner;
-  cleaner->SetInputData(polyData);
-  cleaner->PointMergingOn();
-  cleaner->ToleranceIsAbsoluteOn();
-  cleaner->SetAbsoluteTolerance(1e-6);
-
+  // The output is checked without merging points, because seam points that are only nearly coincident
+  // leave cracks that make the surface unusable for exact mesh processing (e.g. CGAL boolean operations).
   vtkNew<vtkFeatureEdges> boundaryEdges;
-  boundaryEdges->SetInputConnection(cleaner->GetOutputPort());
+  boundaryEdges->SetInputData(polyData);
   boundaryEdges->BoundaryEdgesOn();
   boundaryEdges->NonManifoldEdgesOff();
   boundaryEdges->FeatureEdgesOff();
@@ -86,7 +81,7 @@ bool IsClosedSurface(vtkPolyData* polyData, const char* outputName)
   boundaryEdges->Update();
 
   vtkNew<vtkFeatureEdges> nonManifoldEdges;
-  nonManifoldEdges->SetInputConnection(cleaner->GetOutputPort());
+  nonManifoldEdges->SetInputData(polyData);
   nonManifoldEdges->BoundaryEdgesOff();
   nonManifoldEdges->NonManifoldEdgesOn();
   nonManifoldEdges->FeatureEdgesOff();
@@ -208,6 +203,36 @@ int vtkSlicerDynamicModelerPlaneCutToolTest(int, char*[])
   if (outputBounds[0] < 30.0)
     {
     std::cerr << "Plane cut reused input geometry from the previous run" << std::endl;
+    return EXIT_FAILURE;
+    }
+
+  // Segmentation closed surfaces use fixed-size cell storage, which vtkClipClosedSurface
+  // does not handle when clipping with three or more planes.
+  vtkSmartPointer<vtkPolyData> fixedSizeStorageInputPolyData = CreateTorus();
+  if (!fixedSizeStorageInputPolyData->GetPolys()->ConvertToFixedSizeDefaultStorage())
+    {
+    std::cerr << "Failed to convert the input torus to fixed-size cell storage" << std::endl;
+    return EXIT_FAILURE;
+    }
+  inputModelNode->SetAndObservePolyData(fixedSizeStorageInputPolyData);
+  dynamicModelerNode->SetAttribute("CapSurface", "1");
+
+  vtkNew<vtkMRMLMarkupsPlaneNode> thirdPlaneNode;
+  scene->AddNode(thirdPlaneNode);
+  thirdPlaneNode->SetOrigin(-1.0, 12.5, 0.0);
+  thirdPlaneNode->SetNormal(0.3, -1.0, 0.5);
+  dynamicModelerNode->AddNodeReferenceID("PlaneCut.InputPlane", thirdPlaneNode->GetID());
+  for (const char* operationType : operationTypes)
+    {
+    if (!runAndCheckPlaneCut(operationType))
+      {
+      std::cerr << "Plane cut with three planes failed" << std::endl;
+      return EXIT_FAILURE;
+      }
+    }
+  if (!fixedSizeStorageInputPolyData->GetPolys()->IsStorageFixedSize())
+    {
+    std::cerr << "Plane cut modified the cell storage of the input model" << std::endl;
     return EXIT_FAILURE;
     }
 

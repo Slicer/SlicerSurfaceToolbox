@@ -31,6 +31,7 @@
 // VTK includes
 #include <vtkAlgorithm.h>
 #include <vtkAppendPolyData.h>
+#include <vtkCellArray.h>
 #include <vtkCleanPolyData.h>
 #include <vtkClipClosedSurface.h>
 #include <vtkClipPolyData.h>
@@ -67,6 +68,24 @@ bool IntersectionOutputIsPositive(int operationType)
   return operationType == vtkImplicitBoolean::VTK_UNION;
 }
 
+void CreateClipClosedSurfaceInput(vtkPolyData* inputPolyData, vtkPolyData* clipInputPolyData)
+{
+  clipInputPolyData->ShallowCopy(inputPolyData);
+  vtkCellArray* inputPolys = inputPolyData->GetPolys();
+  if (!inputPolys || !inputPolys->IsStorageFixedSize())
+    {
+    return;
+    }
+
+  // vtkClipClosedSurface corrupts its output when the input polygons use fixed-size cell storage
+  // (e.g. segmentation closed surfaces), see https://gitlab.kitware.com/vtk/vtk/-/issues/20127.
+  // Convert a copy of the polygons to explicit storage, so that the input mesh is not modified.
+  vtkNew<vtkCellArray> polys;
+  polys->DeepCopy(inputPolys);
+  polys->ConvertToDefaultStorage();
+  clipInputPolyData->SetPolys(polys);
+}
+
 void CreateIntersectionPlanes(vtkPlaneCollection* planes, int operationType, vtkPlaneCollection* intersectionPlanes)
 {
   for (int planeIndex = 0; planeIndex < planes->GetNumberOfItems(); ++planeIndex)
@@ -91,7 +110,7 @@ void CreateIntersectionPlanes(vtkPlaneCollection* planes, int operationType, vtk
     }
 }
 
-void AppendEndCap(vtkPolyData* clippedPolyData, vtkPolyData* endCapPolyData, vtkPolyData* outputPolyData)
+void AppendEndCap(vtkPolyData* clippedPolyData, vtkPolyData* endCapPolyData, double tolerance, vtkPolyData* outputPolyData)
 {
   vtkNew<vtkAppendPolyData> appendFilter;
   appendFilter->AddInputData(clippedPolyData);
@@ -102,7 +121,7 @@ void AppendEndCap(vtkPolyData* clippedPolyData, vtkPolyData* endCapPolyData, vtk
   cleanFilter->SetInputConnection(appendFilter->GetOutputPort());
   cleanFilter->PointMergingOn();
   cleanFilter->ToleranceIsAbsoluteOn();
-  cleanFilter->SetAbsoluteTolerance(0.0);
+  cleanFilter->SetAbsoluteTolerance(tolerance);
   cleanFilter->ConvertLinesToPointsOff();
   cleanFilter->ConvertPolysToLinesOff();
   cleanFilter->ConvertStripsToPolysOff();
@@ -147,8 +166,11 @@ void CreateCappedOutputs(vtkPlaneCollection* planes, vtkPolyData* inputPolyData,
   vtkNew<vtkPlaneCollection> intersectionPlanes;
   CreateIntersectionPlanes(planes, operationType, intersectionPlanes);
 
+  vtkNew<vtkPolyData> clipInputPolyData;
+  CreateClipClosedSurfaceInput(inputPolyData, clipInputPolyData);
+
   vtkNew<vtkClipClosedSurface> intersectionClipper;
-  intersectionClipper->SetInputData(inputPolyData);
+  intersectionClipper->SetInputData(clipInputPolyData);
   intersectionClipper->SetClippingPlanes(intersectionPlanes);
   intersectionClipper->GenerateClipFaceOutputOn();
   intersectionClipper->Update();
@@ -175,7 +197,7 @@ void CreateCappedOutputs(vtkPlaneCollection* planes, vtkPolyData* inputPolyData,
     complementPiecePlanes->AddItem(complementPlane);
 
     vtkNew<vtkClipClosedSurface> complementPieceClipper;
-    complementPieceClipper->SetInputData(inputPolyData);
+    complementPieceClipper->SetInputData(clipInputPolyData);
     complementPieceClipper->SetClippingPlanes(complementPiecePlanes);
     complementPieceClipper->SetScalarModeToLabels();
 
@@ -207,8 +229,12 @@ void CreateCappedOutputs(vtkPlaneCollection* planes, vtkPolyData* inputPolyData,
   reverseCap->ReverseNormalsOn();
   reverseCap->Update();
 
+  // The complement pieces and the end cap are computed by different clippers, which interpolate the
+  // seam points from opposite sides of the planes. The seam points therefore only agree within the
+  // clipper tolerance and have to be merged with it to obtain a closed surface without cracks.
   vtkNew<vtkPolyData> complementOutput;
-  AppendEndCap(complementBodyAppendFilter->GetOutput(), reverseCap->GetOutput(), complementOutput);
+  AppendEndCap(complementBodyAppendFilter->GetOutput(), reverseCap->GetOutput(),
+    intersectionClipper->GetTolerance(), complementOutput);
 
   if (IntersectionOutputIsPositive(operationType))
     {
@@ -362,8 +388,11 @@ void vtkSlicerDynamicModelerPlaneCutTool::CreateEndCap(vtkPlaneCollection* plane
   vtkNew<vtkPlaneCollection> intersectionPlanes;
   CreateIntersectionPlanes(planes, operationType, intersectionPlanes);
 
+  vtkNew<vtkPolyData> clipInputPolyData;
+  CreateClipClosedSurfaceInput(originalPolyData, clipInputPolyData);
+
   vtkNew<vtkClipClosedSurface> capGenerator;
-  capGenerator->SetInputData(originalPolyData);
+  capGenerator->SetInputData(clipInputPolyData);
   capGenerator->SetClippingPlanes(intersectionPlanes);
   capGenerator->GenerateClipFaceOutputOn();
   capGenerator->Update();
