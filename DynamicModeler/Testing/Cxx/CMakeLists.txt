@@ -2,6 +2,7 @@ set(KIT qSlicer${MODULE_NAME}Module)
 
 #-----------------------------------------------------------------------------
 set(KIT_TEST_SRCS
+  vtkSlicerDynamicModelerPlaneCutToolRegressionTest.cxx
   vtkSlicerDynamicModelerPlaneCutToolTest.cxx
   )
 
@@ -15,3 +16,4 @@ slicerMacroConfigureModuleCxxTestDriver(
 
 #-----------------------------------------------------------------------------
 simple_test(vtkSlicerDynamicModelerPlaneCutToolTest)
+simple_test(vtkSlicerDynamicModelerPlaneCutToolRegressionTest)

@@ -32,6 +32,7 @@
 #include <vtkAlgorithm.h>
 #include <vtkAppendPolyData.h>
 #include <vtkCellArray.h>
+#include <vtkCellData.h>
 #include <vtkCleanPolyData.h>
 #include <vtkClipClosedSurface.h>
 #include <vtkClipPolyData.h>
@@ -46,6 +47,7 @@
 #include <vtkObjectFactory.h>
 #include <vtkPlane.h>
 #include <vtkPlaneCollection.h>
+#include <vtkPointData.h>
 #include <vtkReverseSense.h>
 #include <vtkSmartPointer.h>
 #include <vtkStringArray.h>
@@ -63,6 +65,12 @@ const char* PLANE_CUT_OUTPUT_NEGATIVE_MODEL_REFERENCE_ROLE = "PlaneCut.OutputNeg
 
 namespace
 {
+// vtkClipClosedSurface labels original cells as 0 and generated cut faces as 1 or 2.
+const char* CLIP_LABELS_ARRAY_NAME = "Labels";
+constexpr double ORIGINAL_CELL_LABEL = 0.0;
+constexpr double FIRST_CUT_FACE_LABEL = 1.0;
+constexpr double LAST_CUT_FACE_LABEL = 2.0;
+
 bool IntersectionOutputIsPositive(int operationType)
 {
   return operationType == vtkImplicitBoolean::VTK_UNION;
@@ -70,7 +78,19 @@ bool IntersectionOutputIsPositive(int operationType)
 
 void CreateClipClosedSurfaceInput(vtkPolyData* inputPolyData, vtkPolyData* clipInputPolyData)
 {
-  clipInputPolyData->ShallowCopy(inputPolyData);
+  // vtkClipClosedSurface does not output vertices and uses lines only as outlines,
+  // so only the surface is clipped by it. Vertices and lines are clipped separately.
+  clipInputPolyData->SetPoints(inputPolyData->GetPoints());
+  clipInputPolyData->SetPolys(inputPolyData->GetPolys());
+  clipInputPolyData->SetStrips(inputPolyData->GetStrips());
+
+  // The cap shares its points with the clipped surface, so a single normal per point cannot represent both:
+  // the normals of the surface would shade the cap as if it was facing the same way. Point normals are therefore
+  // not passed to the capped outputs, the other point data is interpolated.
+  vtkPointData* clipInputPointData = clipInputPolyData->GetPointData();
+  clipInputPointData->CopyNormalsOff();
+  clipInputPointData->PassData(inputPolyData->GetPointData());
+
   vtkCellArray* inputPolys = inputPolyData->GetPolys();
   if (!inputPolys || !inputPolys->IsStorageFixedSize())
     {
@@ -160,9 +180,64 @@ void SplitPolyDataByPlanes(vtkPlaneCollection* planes, int firstPlaneIndex,
     }
 }
 
-void CreateCappedOutputs(vtkPlaneCollection* planes, vtkPolyData* inputPolyData, int operationType,
+void ExtractLabeledCells(vtkPolyData* labeledPolyData, double lowerLabel, double upperLabel, vtkPolyData* outputPolyData)
+{
+  vtkNew<vtkThreshold> threshold;
+  threshold->SetInputData(labeledPolyData);
+  threshold->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_CELLS, CLIP_LABELS_ARRAY_NAME);
+  threshold->SetLowerThreshold(lowerLabel);
+  threshold->SetUpperThreshold(upperLabel);
+  threshold->SetThresholdFunction(vtkThreshold::THRESHOLD_BETWEEN);
+
+  vtkNew<vtkGeometryFilter> geometryFilter;
+  geometryFilter->SetInputConnection(threshold->GetOutputPort());
+  geometryFilter->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+  geometryFilter->Update();
+  outputPolyData->ShallowCopy(geometryFilter->GetOutput());
+  outputPolyData->GetCellData()->RemoveArray(CLIP_LABELS_ARRAY_NAME);
+}
+
+void ClipVerticesAndLines(vtkPolyData* inputPolyData, vtkImplicitFunction* cutFunction,
   vtkPolyData* positiveOutput, vtkPolyData* negativeOutput)
 {
+  vtkNew<vtkPolyData> verticesAndLines;
+  verticesAndLines->SetPoints(inputPolyData->GetPoints());
+  verticesAndLines->SetVerts(inputPolyData->GetVerts());
+  verticesAndLines->SetLines(inputPolyData->GetLines());
+  verticesAndLines->GetPointData()->PassData(inputPolyData->GetPointData());
+
+  vtkNew<vtkClipPolyData> clipper;
+  clipper->SetInputData(verticesAndLines);
+  clipper->SetClipFunction(cutFunction);
+  clipper->SetValue(0.0);
+  clipper->GenerateClippedOutputOn();
+  clipper->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+
+  vtkAlgorithmOutput* clipperOutputPorts[] = { clipper->GetOutputPort(), clipper->GetClippedOutputPort() };
+  vtkPolyData* outputs[] = { positiveOutput, negativeOutput };
+  for (int outputIndex = 0; outputIndex < 2; ++outputIndex)
+    {
+    // vtkClipPolyData leaves points in the output that are not used in any cells.
+    vtkNew<vtkCleanPolyData> cleanFilter;
+    cleanFilter->SetInputConnection(clipperOutputPorts[outputIndex]);
+    cleanFilter->PointMergingOff();
+    cleanFilter->ConvertLinesToPointsOff();
+    cleanFilter->ConvertPolysToLinesOff();
+    cleanFilter->ConvertStripsToPolysOff();
+
+    vtkNew<vtkAppendPolyData> appendFilter;
+    appendFilter->AddInputData(outputs[outputIndex]);
+    appendFilter->AddInputConnection(cleanFilter->GetOutputPort());
+    appendFilter->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+    appendFilter->Update();
+    outputs[outputIndex]->ShallowCopy(appendFilter->GetOutput());
+    }
+}
+
+void CreateCappedOutputs(vtkPlaneCollection* planes, vtkImplicitBoolean* cutFunction, vtkPolyData* inputPolyData,
+  vtkPolyData* positiveOutput, vtkPolyData* negativeOutput)
+{
+  int operationType = cutFunction->GetOperationType();
   vtkNew<vtkPlaneCollection> intersectionPlanes;
   CreateIntersectionPlanes(planes, operationType, intersectionPlanes);
 
@@ -172,8 +247,13 @@ void CreateCappedOutputs(vtkPlaneCollection* planes, vtkPolyData* inputPolyData,
   vtkNew<vtkClipClosedSurface> intersectionClipper;
   intersectionClipper->SetInputData(clipInputPolyData);
   intersectionClipper->SetClippingPlanes(intersectionPlanes);
-  intersectionClipper->GenerateClipFaceOutputOn();
+  intersectionClipper->PassPointDataOn();
+  intersectionClipper->SetScalarModeToLabels();
   intersectionClipper->Update();
+
+  vtkNew<vtkPolyData> intersectionOutput;
+  intersectionOutput->ShallowCopy(intersectionClipper->GetOutput());
+  intersectionOutput->GetCellData()->RemoveArray(CLIP_LABELS_ARRAY_NAME);
 
   vtkNew<vtkAppendPolyData> complementBodyAppendFilter;
   for (int planeIndex = 0; planeIndex < intersectionPlanes->GetNumberOfItems(); ++planeIndex)
@@ -199,32 +279,26 @@ void CreateCappedOutputs(vtkPlaneCollection* planes, vtkPolyData* inputPolyData,
     vtkNew<vtkClipClosedSurface> complementPieceClipper;
     complementPieceClipper->SetInputData(clipInputPolyData);
     complementPieceClipper->SetClippingPlanes(complementPiecePlanes);
+    complementPieceClipper->PassPointDataOn();
     complementPieceClipper->SetScalarModeToLabels();
+    complementPieceClipper->Update();
 
-    // vtkClipClosedSurface labels original cells as 0 and generated cut faces as 1 or 2.
-    vtkNew<vtkThreshold> originalSurfaceThreshold;
-    originalSurfaceThreshold->SetInputConnection(complementPieceClipper->GetOutputPort());
-    originalSurfaceThreshold->SetInputArrayToProcess(
-      0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_CELLS, "Labels");
-    originalSurfaceThreshold->SetLowerThreshold(0.0);
-    originalSurfaceThreshold->SetUpperThreshold(0.0);
-    originalSurfaceThreshold->SetThresholdFunction(vtkThreshold::THRESHOLD_BETWEEN);
-
-    vtkNew<vtkGeometryFilter> originalSurfaceFilter;
-    originalSurfaceFilter->SetInputConnection(originalSurfaceThreshold->GetOutputPort());
-    originalSurfaceFilter->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
-    originalSurfaceFilter->Update();
+    vtkNew<vtkPolyData> originalSurface;
+    ExtractLabeledCells(complementPieceClipper->GetOutput(), ORIGINAL_CELL_LABEL, ORIGINAL_CELL_LABEL, originalSurface);
 
     vtkNew<vtkPolyData> conformingOriginalSurface;
-    SplitPolyDataByPlanes(intersectionPlanes, planeIndex + 1,
-      originalSurfaceFilter->GetOutput(), conformingOriginalSurface);
+    SplitPolyDataByPlanes(intersectionPlanes, planeIndex + 1, originalSurface, conformingOriginalSurface);
     complementBodyAppendFilter->AddInputData(conformingOriginalSurface);
     }
   complementBodyAppendFilter->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
   complementBodyAppendFilter->Update();
 
+  // The cut faces are extracted from the output of the clipper instead of using its clip face output,
+  // because only the output has the interpolated point data.
+  vtkNew<vtkPolyData> endCapPolyData;
+  ExtractLabeledCells(intersectionClipper->GetOutput(), FIRST_CUT_FACE_LABEL, LAST_CUT_FACE_LABEL, endCapPolyData);
   vtkNew<vtkReverseSense> reverseCap;
-  reverseCap->SetInputData(intersectionClipper->GetClipFaceOutput());
+  reverseCap->SetInputData(endCapPolyData);
   reverseCap->ReverseCellsOn();
   reverseCap->ReverseNormalsOn();
   reverseCap->Update();
@@ -238,13 +312,18 @@ void CreateCappedOutputs(vtkPlaneCollection* planes, vtkPolyData* inputPolyData,
 
   if (IntersectionOutputIsPositive(operationType))
     {
-    positiveOutput->ShallowCopy(intersectionClipper->GetOutput());
+    positiveOutput->ShallowCopy(intersectionOutput);
     negativeOutput->ShallowCopy(complementOutput);
     }
   else
     {
     positiveOutput->ShallowCopy(complementOutput);
-    negativeOutput->ShallowCopy(intersectionClipper->GetOutput());
+    negativeOutput->ShallowCopy(intersectionOutput);
+    }
+
+  if (inputPolyData->GetNumberOfVerts() > 0 || inputPolyData->GetNumberOfLines() > 0)
+    {
+    ClipVerticesAndLines(inputPolyData, cutFunction, positiveOutput, negativeOutput);
     }
 }
 }
@@ -526,8 +605,7 @@ bool vtkSlicerDynamicModelerPlaneCutTool::RunInternal(vtkMRMLDynamicModelerNode*
     {
     this->InputModelToWorldTransformFilter->Update();
     vtkPolyData* inputModelWorldPolyData = this->InputModelToWorldTransformFilter->GetOutput();
-    CreateCappedOutputs(planeCollection, inputModelWorldPolyData, planes->GetOperationType(),
-      cappedPositiveOutput, cappedNegativeOutput);
+    CreateCappedOutputs(planeCollection, planes, inputModelWorldPolyData, cappedPositiveOutput, cappedNegativeOutput);
     }
 
   if (outputPositiveModelNode)
