@@ -89,6 +89,11 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       (self.ui.remeshButton, "remesh"),
       (self.ui.remeshSubdivideSlider, "remeshSubdivide"),
       (self.ui.remeshClustersSlider, "remeshClustersK"),
+      (self.ui.remeshMaximumIterationsSlider, "remeshMaximumIterations"),
+      (self.ui.remeshIsolatedClusterAttemptsSlider, "remeshIsolatedClusterAttempts"),
+      (self.ui.remeshFastClusteringCheckBox, "remeshFastClustering"),
+      (self.ui.remeshProjectToSurfaceCheckBox, "remeshProjectToSurface"),
+      (self.ui.remeshAlignNormalsCheckBox, "remeshAlignNormals"),
       (self.ui.decimationButton, "decimation"),
       (self.ui.reductionSlider, "decimationReduction"),
       (self.ui.boundaryDeletionCheckBox, "decimationBoundaryDeletion"),
@@ -243,6 +248,11 @@ class SurfaceToolboxWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.taubinPassBandLabel.setVisible(not isLaplace)
     self.ui.taubinPassBandSlider.setVisible(not isLaplace)
 
+    # Fast clustering does not make cluster sizes uniform, so these are not used
+    isFastClustering = (self._parameterNode.GetParameter('remeshFastClustering') == "true")
+    self.ui.remeshMaximumIterationsSlider.enabled = not isFastClustering
+    self.ui.remeshIsolatedClusterAttemptsSlider.enabled = not isFastClustering
+
     modelsSelected = (self._parameterNode.GetNodeReference("inputModel") and self._parameterNode.GetNodeReference("outputModel"))
     self.ui.toggleModelsButton.enabled = modelsSelected
     self.ui.applyButton.enabled = modelsSelected
@@ -332,6 +342,11 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       ("remesh", "false"),
       ("remeshSubdivide", "0"),
       ("remeshClustersK", "10"),
+      ("remeshMaximumIterations", "100"),
+      ("remeshIsolatedClusterAttempts", "10"),
+      ("remeshFastClustering", "false"),
+      ("remeshProjectToSurface", "true"),
+      ("remeshAlignNormals", "true"),
       ("decimation", "false"),
       ("decimationReduction", "0.8"),
       ("decimationBoundaryDeletion", "true"),
@@ -381,46 +396,30 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
     self.updateProcessCallback(message)
 
   @staticmethod
-  def installRemeshPrerequisites(force=False):
-      # install required pyacvd package
-      try:
-          import pyacvd
-      except ModuleNotFoundError as e:
-          if force or slicer.util.confirmOkCancelDisplay("This function requires 'pyacvd' Python package. Click OK to install it now."):
-              # Some pyacvd versions before 0.3.1 relied on OpenCV, which did not work on computers where OpenCV binaries were not installed.
-              # (see https://discourse.slicer.org/t/surface-toolbox-of-3d-slicer-do-not-work-in-windows/40717/4).
-              # Therefore, if import fails (because pyacvd is not installed or OpenCV is not available) then we
-              # install a specific pyacvd version that is known to work well.
-              slicer.util.pip_install("pyacvd==0.3.1")
-          else:
-              return False
-      return True
-
-  @staticmethod
-  def remesh(inputModel, outputModel, subdivide=0, clusters=10000):
-    """Uniformly remesh the surface using ACVD algorithm (https://github.com/pyvista/pyacvd). It requires pyacvd Python package.
+  def remesh(inputModel, outputModel, subdivide=0, clusters=10000, maximumIterations=100, isolatedClusterAttempts=10,
+             fastClustering=False, projectToSurface=True, alignNormals=True):
+    """Uniformly remesh the surface using ACVD algorithm. It uses a C++ port of pyacvd (https://github.com/pyvista/pyacvd).
 
     :param subdivide: Subdivide each cells this number of times before remesh. Each subdivision creates 4 triangles for each input triangle.
       This is needed if the required number of desired points is higher than the number of points in the input mesh, or there are some too large cells in the input mesh.
     :param clusters: Number of desired points in the output mesh. Use higher number to preserve more details.
+    :param maximumIterations: Maximum number of iterations to make cluster sizes uniform.
+    :param isolatedClusterAttempts: Number of attempts to remove disconnected parts of clusters.
+    :param fastClustering: Skip making cluster sizes uniform. Faster, but triangle sizes vary more.
+    :param projectToSurface: Move the output points onto the input surface.
+    :param alignNormals: Orient the output triangles to match the normals of the input surface.
     """
-
-    if not SurfaceToolboxLogic.installRemeshPrerequisites():
-      return
-
-    import pyacvd
-    import pyvista as pv
-    tri_filter = vtk.vtkTriangleFilter()
-    tri_filter.SetInputData(inputModel.GetPolyData())
-    tri_filter.Update()
-    inputMesh = pv.wrap(tri_filter.GetOutput())
-    clus = pyacvd.Clustering(inputMesh)
-    if subdivide > -1:
-        clus.subdivide(subdivide)
-    clus.cluster(clusters)
-    outputMesh = vtk.vtkPolyData()
-    outputMesh.DeepCopy(clus.create_mesh())
-    outputModel.SetAndObservePolyData(outputMesh)
+    remesher = slicer.vtkACVDRemeshFilter()
+    remesher.SetInputData(inputModel.GetPolyData())
+    remesher.SetNumberOfSubdivisions(subdivide)
+    remesher.SetNumberOfClusters(clusters)
+    remesher.SetMaximumNumberOfIterations(maximumIterations)
+    remesher.SetIsolatedClusterRemovalAttempts(isolatedClusterAttempts)
+    remesher.SetFastClustering(fastClustering)
+    remesher.SetProjectPointsToSurface(projectToSurface)
+    remesher.SetAlignNormals(alignNormals)
+    remesher.Update()
+    outputModel.SetAndObservePolyData(remesher.GetOutput())
 
   @staticmethod
   def decimate(inputModel, outputModel, reductionFactor=0.8, decimateBoundary=True, lossless=False, aggressiveness=7.0):
@@ -582,7 +581,12 @@ class SurfaceToolboxLogic(ScriptedLoadableModuleLogic):
       self.updateProcess("Remeshing...")
       SurfaceToolboxLogic.remesh(outputModel, outputModel,
         subdivide=int(float(parameterNode.GetParameter("remeshSubdivide"))),
-        clusters=int(1000 * float(parameterNode.GetParameter("remeshClustersK"))))
+        clusters=int(1000 * float(parameterNode.GetParameter("remeshClustersK"))),
+        maximumIterations=int(float(parameterNode.GetParameter("remeshMaximumIterations"))),
+        isolatedClusterAttempts=int(float(parameterNode.GetParameter("remeshIsolatedClusterAttempts"))),
+        fastClustering=parameterNode.GetParameter("remeshFastClustering") == "true",
+        projectToSurface=parameterNode.GetParameter("remeshProjectToSurface") == "true",
+        alignNormals=parameterNode.GetParameter("remeshAlignNormals") == "true")
 
     if parameterNode.GetParameter("decimation") == "true":
       self.updateProcess("Decimation...")
@@ -675,6 +679,8 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     """
     self.setUp()
     self.test_AllProcessing()
+    self.setUp()
+    self.test_Remesh()
 
   def test_AllProcessing(self):
     """ Ideally you should have several levels of tests.  At the lowest level
@@ -712,7 +718,8 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "output")
     parameterNode.SetNodeReferenceID("outputModel", outputModelNode.GetID())
 
-    parameterNode.SetParameter("remesh", "false")  # do not install pyacvd
+    parameterNode.SetParameter("remesh", "true")
+    parameterNode.SetParameter("remeshClustersK", "1")
     parameterNode.SetParameter("decimation", "true")
     parameterNode.SetParameter("smoothing", "true")
     parameterNode.SetParameter("normals", "true")
@@ -731,5 +738,30 @@ class SurfaceToolboxTest(ScriptedLoadableModuleTest):
     self.delayDisplay('Module selected, input and output configured')
 
     logic.applyFilters(parameterNode)
+
+    self.delayDisplay('Test passed!')
+
+  def test_Remesh(self):
+    """Uniform remeshing creates one output point for each cluster."""
+
+    self.delayDisplay("Starting the remesh test")
+
+    sphere = vtk.vtkSphereSource()
+    sphere.SetThetaResolution(60)
+    sphere.SetPhiResolution(60)
+    sphere.Update()
+    inputModelNode = slicer.modules.models.logic().AddModel(sphere.GetOutput())
+    outputModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "output")
+
+    SurfaceToolboxLogic.remesh(inputModelNode, outputModelNode, clusters=1000)
+    self.assertEqual(outputModelNode.GetPolyData().GetNumberOfPoints(), 1000)
+    self.assertEqual(outputModelNode.GetPolyData().GetNumberOfPolys(), outputModelNode.GetPolyData().GetNumberOfCells())
+
+    # The input has fewer points than clusters, so it needs to be subdivided
+    SurfaceToolboxLogic.remesh(inputModelNode, outputModelNode, subdivide=1, clusters=5000)
+    self.assertEqual(outputModelNode.GetPolyData().GetNumberOfPoints(), 5000)
+
+    SurfaceToolboxLogic.remesh(inputModelNode, outputModelNode, clusters=1000, fastClustering=True)
+    self.assertGreater(outputModelNode.GetPolyData().GetNumberOfPoints(), 0)
 
     self.delayDisplay('Test passed!')

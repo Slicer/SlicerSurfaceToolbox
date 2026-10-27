@@ -1,6 +1,11 @@
 #-----------------------------------------------------------------------------
 set(MODULE_NAME SurfaceToolbox)
 
+string(TOUPPER ${MODULE_NAME} MODULE_NAME_UPPER)
+
+#-----------------------------------------------------------------------------
+add_subdirectory(Logic)
+
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
